@@ -1,0 +1,34 @@
+{
+  "bumps": [
+    {
+      "id": 5,
+      "name": "short_bump",
+      "height_m": 0.025,
+      "width_m": 0.92
+    },
+    {
+      "id": 6,
+      "name": "medium_bump",
+      "height_m": 0.0625,
+      "width_m": 2.22
+    },
+    {
+      "id": 7,
+      "name": "severe_bump",
+      "height_m": 0.1,
+      "width_m": 1.0
+    },
+    {
+      "id": 8,
+      "name": "long_bump",
+      "height_m": 0.125,
+      "width_m": 9.5
+    },
+    {
+      "id": 9,
+      "name": "raised_crosswalk",
+      "height_m": 0.1,
+      "width_m": 5.0
+    }
+  ]
+}
