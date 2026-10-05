@@ -1,0 +1,30 @@
+v_min_kmh: 15.0
+v_max_kmh: 30.0
+per_level: 200
+flat_start_range: [30.0, 50.0]
+obstacle_mode: bumps
+
+real_range:
+  height_mm: [30.0, 120.0]
+  width_m: [1.5, 7.0]
+  samples: 1500
+
+bump_rank:
+  8: 0.00
+  9: 0.25
+  5: 0.50
+  6: 0.75
+  7: 1.00
+
+pothole_rank:
+  0: 0.00
+  1: 0.25
+  2: 0.50
+  3: 0.75
+  4: 1.00
+
+difficulty_thresholds:
+  easy:   [0.00, 0.30]
+  medium: [0.30, 0.57]
+  hard:   [0.57, 0.78]
+  expert: [0.78, 1.01]
