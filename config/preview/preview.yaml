@@ -1,0 +1,26 @@
+perception_mode:     model
+model_path:          config/perception/perception_model.yaml
+
+preview_distance:    40.0
+h_clip:              0.15
+n_peaks:             3
+peak_height_min:     0.01
+peak_distance_min_m: 0.5
+
+noise_active:        false
+noise_height_std:    0.005
+noise_distance_std:  0.5
+noise_width_std:     0.05
+
+pt1_tau:             0.05
+
+on_bump_m:           0.5
+baseline_nominal_bump_h: 0.05
+baseline_nominal_bump_w:  1.0
+sentinel:            0.0
+
+use_dist_obs:        true
+
+dense_n:             200
+freq_max:            21.74
+v_min_preview:       0.5
