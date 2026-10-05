@@ -1,0 +1,22 @@
+N: 150
+
+nlp_solver_max_iter: 50
+
+weights:
+  track_scale: 0.05
+  Q_step: 0.0
+
+velocity:
+  v_min: 8.0
+  v_hard_min: 8.0
+
+comfort_map:
+  x0:         20.0
+  pre_m:      2.0
+  settle_s:   2.0
+  max_steps:  10000
+  dv:         0.25
+  iso_weighted: false
+  vehicle:
+    k_S_scale: 1.06
+    D_scale:   0.16
