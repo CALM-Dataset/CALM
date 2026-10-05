@@ -1,0 +1,29 @@
+default_speed_kmh: 30.0
+suites:
+  01_single_bump:
+    count: 5
+    enabled: true
+  02_two_bumps:
+    count: 15
+    enabled: false
+  03_three_bumps:
+    count: 35
+    enabled: false
+  04_four_bumps:
+    count: 70
+    enabled: false
+  05_one_bump_one_hole:
+    count: 25
+    enabled: false
+  06_two_bumps_one_hole:
+    count: 15
+    enabled: false
+  07_two_bumps_two_holes:
+    count: 15
+    enabled: false
+  # "08_italy_bumps_only"/"09_italy_full" referenced synthetic-suite folders
+  # that don't exist under config/eval/scenarios - the real dataset (Germany
+  # + Italy) is loaded via the special "real" key below, which pulls from
+  # config/eval/scenarios/real (populated by `just fetch-scenarios`).
+  real:
+    enabled: true
