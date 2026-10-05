@@ -1,0 +1,11 @@
+services:
+  planner:
+    build: .
+    image: calm
+    stdin_open: true
+    tty: true
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    volumes:
+      - ./logs:/workspace/logs
+      - ./data:/workspace/data
+    command: bash
