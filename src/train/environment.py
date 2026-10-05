@@ -1,0 +1,170 @@
+from __future__ import annotations
+
+from typing import Callable
+
+import gymnasium as gym
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+
+__import__("gym_env.quarter_car.envs")
+from gym_env.quarter_car.wrappers import (
+    EpisodeLogger, PreviewWrapper, CurriculumWrapper, TerminationWrapper,
+    TerminalRewardWrapper,
+)
+
+ENV_ID = "gym_env/QuarterCar"
+
+
+def _vehicle_bits(vehicle: str):
+    if vehicle == "half":
+        __import__("gym_env.half_car.envs")
+        from gym_env.half_car.wrappers import (
+            EpisodeLogger as EL, PreviewWrapper as PW,
+            CurriculumWrapper as CW, TerminationWrapper as TW,
+            TerminalRewardWrapper as TRW,
+        )
+        return "gym_env/HalfCar", (EL, PW, CW, TW, TRW)
+    if vehicle not in ("quarter", None):
+        raise ValueError(f"unknown vehicle {vehicle!r} (expected 'quarter' or 'half')")
+    return ENV_ID, (EpisodeLogger, PreviewWrapper, CurriculumWrapper,
+                    TerminationWrapper, TerminalRewardWrapper)
+
+
+def _make_env(
+    seed: int,
+    monitor_dir: str | None,
+    env_kwargs: dict,
+    curriculum_cfg: dict,
+    n_envs: int = 1,
+    sparse_reward: bool = False,
+    vehicle: str = "half",
+) -> Callable[[], gym.Env]:
+
+    env_id, (EpisodeLogger, PreviewWrapper, CurriculumWrapper,
+             TerminationWrapper, TerminalRewardWrapper) = _vehicle_bits(vehicle)
+
+    def _init() -> gym.Env:
+        env = gym.make(env_id, **env_kwargs)
+        env = TerminationWrapper(env)
+        if sparse_reward:
+            env = TerminalRewardWrapper(env)
+        env = PreviewWrapper(env)
+        env = CurriculumWrapper(env, curriculum_cfg, n_envs=n_envs)
+        env = Monitor(env, monitor_dir)
+        if monitor_dir:
+            env = EpisodeLogger(env, log_dir=monitor_dir)
+        env.reset(seed=seed)
+        env.action_space.seed(seed)
+        env.observation_space.seed(seed)
+        return env
+    return _init
+
+
+def make_vec_env(
+    n_envs: int,
+    base_seed: int,
+    curriculum_cfg: dict,
+    monitor_dir: str | None = None,
+    gamma: float = 0.99,
+    norm_obs: bool = True,
+    norm_reward: bool = True,
+    env_kwargs: dict | None = None,
+    sparse_reward: bool = False,
+    vehicle: str = "half",
+) -> VecNormalize:
+    env_kwargs = env_kwargs or {}
+    fns = [
+        _make_env(base_seed + i, monitor_dir, env_kwargs, curriculum_cfg, n_envs, sparse_reward, vehicle)
+        for i in range(n_envs)
+    ]
+    venv = DummyVecEnv(fns)
+    venv = VecNormalize(
+        venv,
+        norm_obs=norm_obs,
+        norm_reward=norm_reward,
+        gamma=gamma,
+        clip_obs=10.0,
+        clip_reward=10.0,
+    )
+    return venv
+
+
+def make_eval_vec_env(
+    n_envs: int,
+    base_seed: int,
+    train_venv: VecNormalize,
+    curriculum_cfg: dict,
+    monitor_dir: str | None = None,
+    env_kwargs: dict | None = None,
+    sparse_reward: bool = False,
+    vehicle: str = "half",
+) -> VecNormalize:
+    env_kwargs = env_kwargs or {}
+    fns = [
+        _make_env(base_seed + i, monitor_dir, env_kwargs, curriculum_cfg, n_envs, sparse_reward, vehicle)
+        for i in range(n_envs)
+    ]
+    venv = DummyVecEnv(fns)
+    eval_venv = VecNormalize(
+        venv,
+        norm_obs=True,
+        norm_reward=False,
+        gamma=train_venv.gamma,
+        clip_obs=train_venv.clip_obs,
+    )
+    eval_venv.obs_rms  = train_venv.obs_rms
+    eval_venv.ret_rms  = train_venv.ret_rms
+    eval_venv.training = False
+
+    try:
+        eval_venv.venv.env_method("set_forced_level", 0)
+    except Exception:
+        pass
+
+    return eval_venv
+
+
+def load_real_val_scenarios(n: int = 20, seed: int = 0) -> list[tuple]:
+    from pathlib import Path
+    import numpy as np
+    from utils.scenario_loader import load_scenario_json
+
+    rsd = Path("config/train/scenarios/real")
+    files = sorted(p for p in rsd.glob("*.json")
+                   if p.name not in ("manifest.json", "curriculum.json"))
+    if not files:
+        return []
+    rng = np.random.default_rng(seed)
+    idx = rng.choice(len(files), size=min(n, len(files)), replace=False)
+    out = []
+    for i in sorted(idx):
+        road, track = load_scenario_json(str(files[i]))
+        out.append((files[i].stem, road, track))
+    return out
+
+
+def make_real_val_env(vehicle: str, seed: int = 0) -> VecNormalize:
+    env_id, (_, PreviewW, _, TerminationW, _) = _vehicle_bits(vehicle)
+
+    def _init() -> gym.Env:
+        env = gym.make(env_id, random_road_on_reset=False)
+        env = TerminationW(env)
+        env = PreviewW(env)
+        env.reset(seed=seed)
+        return env
+
+    venv = DummyVecEnv([_init])
+    venv = VecNormalize(venv, norm_obs=True, norm_reward=False, clip_obs=10.0)
+    venv.training = False
+    return venv
+
+
+def restore_vecnormalize(venv: VecNormalize, path: str) -> bool:
+    from pathlib import Path
+    p = Path(path)
+    if not p.is_file():
+        return False
+    saved = VecNormalize.load(str(p), venv.venv)
+    venv.obs_rms = saved.obs_rms
+    venv.ret_rms = saved.ret_rms
+    return True

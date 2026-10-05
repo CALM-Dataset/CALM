@@ -1,0 +1,35 @@
+
+
+mode: timesteps
+
+advance_time_threshold:
+  0:    2_000_000
+  1:    4_000_000
+  2:    6_000_000
+
+advance_reward_threshold:
+  0:    120.0
+  1:    105.0
+  2:    150.0
+
+advance_window: 6
+
+advance_min_steps: 1_500_000
+
+scenarios_dir: config/train/scenarios/curriculum
+
+real_scenarios_dir: config/train/scenarios/real
+real_fraction: 0.75
+
+levels:
+  0:
+    difficulty: easy
+
+  1:
+    difficulty: medium
+
+  2:
+    difficulty: hard
+
+  3:
+    difficulty: expert
