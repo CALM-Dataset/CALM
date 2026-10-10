@@ -47,6 +47,7 @@ class HalfCarEnv(gym.Env):
         max_episode_steps: int = EPISODE_STEPS,
         random_road_on_reset: bool = True,
         road_override_kwargs: Optional[dict] = None,
+        action_mode: Optional[str] = None,
     ):
         super().__init__()
         self.render_mode        = render_mode
@@ -60,6 +61,7 @@ class HalfCarEnv(gym.Env):
         self._v_init_fn: Optional[Callable[[float], float]] = (road_params or {}).get('v_init_fn', None)
 
         self._rcfg = reward_config or load_reward_config()
+        self._action_mode = action_mode or ACTION_MODE
 
         self.action_space = spaces.Box(
             low=np.array([-1.0], dtype=np.float32),
@@ -209,7 +211,7 @@ class HalfCarEnv(gym.Env):
         u     = float(np.clip(action[0], -1.0, 1.0))
         v_old = self._v
         v_top = max(cfg.v_hard_min, self._v_episode_ref)
-        if ACTION_MODE == "target_speed":
+        if self._action_mode == "target_speed":
             v_target = cfg.v_hard_min + (v_top - cfg.v_hard_min) * 0.5 * (u + 1.0)
             a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
         else:

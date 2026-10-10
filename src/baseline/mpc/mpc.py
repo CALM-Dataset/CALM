@@ -71,7 +71,7 @@ def mpc_reward_config(load_reward_config):
 
 def make_env(bits: dict, cfg, render_mode: str = 'none'):
     return bits['TerminationWrapper'](gym.make(bits['env_id'], render_mode=render_mode,
-                                               reward_config=cfg))
+                                               reward_config=cfg, **bits.get('env_kwargs', {})))
 
 
 def _vehicle_bits(vehicle: str) -> dict:
@@ -83,7 +83,7 @@ def _vehicle_bits(vehicle: str) -> dict:
         from gym_env.half_car.reward.utils import reward_bounds as rb
         from gym_env.half_car.envs.render import wait_for_episode_nav as nav
         from gym_env.half_car.config.preview_params import load_preview_config as lpc
-        return dict(env_id='gym_env/HalfCar', PHYSICS=PH, EPISODE_STEPS=ES,
+        return dict(env_id='gym_env/HalfCar', env_kwargs={'action_mode': 'acceleration'}, PHYSICS=PH, EPISODE_STEPS=ES,
                     load_reward_config=lambda: mpc_reward_config(lrc), TerminationWrapper=TW,
                     reward_bounds=rb, wait_for_episode_nav=nav, load_preview_config=lpc)
     if vehicle not in ('quarter', None):

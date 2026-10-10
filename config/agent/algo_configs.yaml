@@ -1,6 +1,6 @@
 
 PPO:
-  policy: MlpPolicy
+  policy: TanhMeanPolicy
   learning_rate: lin_3e-4_5e-5
   n_steps: 2048
   batch_size: 2048

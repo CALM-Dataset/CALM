@@ -55,6 +55,9 @@ def build_model(
     cls    = _REGISTRY[algo]
     kw     = copy.deepcopy(algo_kwargs)
     policy = kw.pop("policy", "MlpPolicy")
+    if policy == "TanhMeanPolicy":
+        from train.policy import TanhMeanPolicy
+        policy = TanhMeanPolicy
     if "learning_rate" in kw:
         kw["learning_rate"] = _parse_lr(kw["learning_rate"])
     if "policy_kwargs" in kw:
