@@ -378,3 +378,35 @@ class TrackScaleAnneal(BaseCallback):
     def _on_training_end(self) -> None:
         from gym_env.half_car.reward.reward import set_track_scale_override
         set_track_scale_override(None)
+
+
+class SpeedWeightController(BaseCallback):
+    def __init__(self, target: float, init: float, gain: float, w_max: float):
+        super().__init__()
+        self._target, self._w, self._gain, self._w_max = float(target), float(init), float(gain), float(w_max)
+        self._ratios: list[float] = []
+
+    def _on_training_start(self) -> None:
+        from gym_env.half_car.reward.reward import set_track_scale_override
+        set_track_scale_override(self._w)
+
+    def _on_step(self) -> bool:
+        for info in self.locals.get("infos", []):
+            v, v_nom = info.get("speed"), info.get("v_init")
+            if v is not None and v_nom:
+                self._ratios.append(float(v) / float(v_nom))
+        return True
+
+    def _on_rollout_end(self) -> None:
+        from gym_env.half_car.reward.reward import set_track_scale_override
+        if self._ratios:
+            rho = sum(self._ratios) / len(self._ratios)
+            self._w = min(max(self._w + self._gain * (self._target - rho), 0.0), self._w_max)
+            self.logger.record("reward/speed_ratio", rho)
+            self._ratios.clear()
+        set_track_scale_override(self._w)
+        self.logger.record("reward/track_scale", self._w)
+
+    def _on_training_end(self) -> None:
+        from gym_env.half_car.reward.reward import set_track_scale_override
+        set_track_scale_override(None)
