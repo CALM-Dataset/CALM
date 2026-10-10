@@ -1,4 +1,4 @@
-perception_mode:     model
+perception_mode:     none
 model_path:          config/perception/perception_model.yaml
 
 preview_distance:    40.0

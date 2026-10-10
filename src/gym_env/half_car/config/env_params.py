@@ -87,6 +87,8 @@ PLANT_PARAMS = {
     "rear":  {"k_S": PHYSICS_R["k_S"] * _KS, "D": PHYSICS_R["D"] * _DD},
 }
 
+ACTION_MODE = str(_cfg.get("action_mode", "acceleration"))
+SPEED_GAIN = float(_cfg.get("speed_gain", 2.0))
 DT = float(_cfg["DT"])
 DT_SIM = float(_cfg["DT_SIM"])
 N_SUB = int(DT / DT_SIM)

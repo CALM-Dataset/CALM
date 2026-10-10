@@ -32,3 +32,7 @@ training:
   checkpoint_freq: 500_000
   norm_obs: true
   norm_reward: true
+  action_saturation_penalty: 0.1
+  track_scale_anneal:
+    start: 1.0
+    steps: 4_000_000

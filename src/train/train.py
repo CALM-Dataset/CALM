@@ -15,7 +15,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 
 from train.agent import build_model, load_algo_config, supported_algos
 from stable_baselines3.common.callbacks import CallbackList
-from train.monitoring import build_callbacks, RealValidationCallback
+from train.monitoring import build_callbacks, RealValidationCallback, TrackScaleAnneal
 from train.environment import (
     make_eval_vec_env, make_vec_env, restore_vecnormalize,
     make_real_val_env, load_real_val_scenarios,
@@ -299,6 +299,7 @@ def main() -> None:
         curriculum_cfg=curriculum_cfg,
         sparse_reward=args.sparse_reward,
         vehicle=args.vehicle,
+        action_penalty=float(train_meta.get("action_saturation_penalty", 0.0)),
     )
     if args.resume and normalize:
         vn_path = Path(args.resume).parent / "vecnormalize.pkl"
@@ -347,6 +348,11 @@ def main() -> None:
         )
         callbacks = CallbackList([callbacks, real_val_cb])
         print(f"  real-val   : {len(real_val_scenarios)} scenarios → best_real/best_model")
+
+    anneal = train_meta.get("track_scale_anneal")
+    if anneal:
+        callbacks = CallbackList([callbacks, TrackScaleAnneal(anneal["start"], rcfg.track_scale, anneal["steps"])])
+        print(f"  track_scale: {anneal['start']} -> {rcfg.track_scale} over {anneal['steps']:,} steps")
 
     bounds = _reward_bounds(rcfg, _EPISODE_STEPS, n_bumps=5)
 

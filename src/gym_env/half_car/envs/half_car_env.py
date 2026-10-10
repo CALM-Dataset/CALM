@@ -9,7 +9,7 @@ from road.road_generator import RoadGenerator
 from gym_env.half_car.config.reward_params import RewardConfig, load_reward_config
 from gym_env.half_car.reward.reward import compute_reward, compute_terminal_reward
 from gym_env.half_car.config.env_params import (
-    DT, EPISODE_STEPS, PLANT_PARAMS,
+    DT, EPISODE_STEPS, PLANT_PARAMS, ACTION_MODE, SPEED_GAIN,
     OBS_HIGH, OBS_LOW,
 )
 from gym_env.half_car.config.render_params import (
@@ -207,9 +207,14 @@ class HalfCarEnv(gym.Env):
         cfg = self._rcfg
 
         u     = float(np.clip(action[0], -1.0, 1.0))
-        a_cmd = u * cfg.a_max
         v_old = self._v
-        v_new = float(np.clip(v_old + a_cmd * DT, cfg.v_hard_min, cfg.v_limit * 2.0))
+        v_top = max(cfg.v_hard_min, self._v_episode_ref)
+        if ACTION_MODE == "target_speed":
+            v_target = cfg.v_hard_min + (v_top - cfg.v_hard_min) * 0.5 * (u + 1.0)
+            a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
+        else:
+            a_cmd = u * cfg.a_max
+        v_new = float(np.clip(v_old + a_cmd * DT, cfg.v_hard_min, v_top))
         a_actual = (v_new - v_old) / DT
         self._v        = v_new
         self._state[8] = v_new

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Callable
 
 import gymnasium as gym
+import numpy as np
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
@@ -30,6 +31,21 @@ def _vehicle_bits(vehicle: str):
                     TerminationWrapper, TerminalRewardWrapper)
 
 
+class ActionSaturationPenalty(gym.Wrapper):
+    def __init__(self, env: gym.Env, coef: float):
+        super().__init__(env)
+        self._coef = float(coef)
+        self._low = env.action_space.low
+        self._high = env.action_space.high
+        self.action_space = gym.spaces.Box(-10.0, 10.0, shape=env.action_space.shape, dtype=np.float32)
+
+    def step(self, action):
+        a = np.asarray(action, dtype=np.float32)
+        over = np.maximum(a - self._high, 0.0) + np.maximum(self._low - a, 0.0)
+        obs, reward, terminated, truncated, info = self.env.step(np.clip(a, self._low, self._high))
+        return obs, reward - self._coef * float(np.sum(over ** 2)), terminated, truncated, info
+
+
 def _make_env(
     seed: int,
     monitor_dir: str | None,
@@ -38,6 +54,7 @@ def _make_env(
     n_envs: int = 1,
     sparse_reward: bool = False,
     vehicle: str = "half",
+    action_penalty: float = 0.0,
 ) -> Callable[[], gym.Env]:
 
     env_id, (EpisodeLogger, PreviewWrapper, CurriculumWrapper,
@@ -50,6 +67,8 @@ def _make_env(
             env = TerminalRewardWrapper(env)
         env = PreviewWrapper(env)
         env = CurriculumWrapper(env, curriculum_cfg, n_envs=n_envs)
+        if action_penalty > 0.0:
+            env = ActionSaturationPenalty(env, action_penalty)
         env = Monitor(env, monitor_dir)
         if monitor_dir:
             env = EpisodeLogger(env, log_dir=monitor_dir)
@@ -71,10 +90,11 @@ def make_vec_env(
     env_kwargs: dict | None = None,
     sparse_reward: bool = False,
     vehicle: str = "half",
+    action_penalty: float = 0.0,
 ) -> VecNormalize:
     env_kwargs = env_kwargs or {}
     fns = [
-        _make_env(base_seed + i, monitor_dir, env_kwargs, curriculum_cfg, n_envs, sparse_reward, vehicle)
+        _make_env(base_seed + i, monitor_dir, env_kwargs, curriculum_cfg, n_envs, sparse_reward, vehicle, action_penalty)
         for i in range(n_envs)
     ]
     venv = DummyVecEnv(fns)

@@ -352,3 +352,29 @@ def build_callbacks(
     sync_cb     = VecNormalizeSyncCallback(train_venv, eval_venv)
 
     return CallbackList([eval_cb, ckpt_cb, metrics_cb, sync_cb]), curriculum_cb
+
+
+class TrackScaleAnneal(BaseCallback):
+    def __init__(self, start: float, end: float, steps: int):
+        super().__init__()
+        self._start, self._end, self._steps = float(start), float(end), max(int(steps), 1)
+
+    def _value(self) -> float:
+        frac = min(self.num_timesteps / self._steps, 1.0)
+        return self._start + (self._end - self._start) * frac
+
+    def _on_training_start(self) -> None:
+        from gym_env.half_car.reward.reward import set_track_scale_override
+        set_track_scale_override(self._value())
+
+    def _on_rollout_end(self) -> None:
+        from gym_env.half_car.reward.reward import set_track_scale_override
+        set_track_scale_override(self._value())
+        self.logger.record("reward/track_scale", self._value())
+
+    def _on_step(self) -> bool:
+        return True
+
+    def _on_training_end(self) -> None:
+        from gym_env.half_car.reward.reward import set_track_scale_override
+        set_track_scale_override(None)

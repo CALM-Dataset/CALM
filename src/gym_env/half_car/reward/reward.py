@@ -1,6 +1,16 @@
+from __future__ import annotations
+
 import numpy as np
 
 from gym_env.half_car.config.reward_params import RewardConfig
+
+
+_track_scale_override: float | None = None
+
+
+def set_track_scale_override(value: float | None) -> None:
+    global _track_scale_override
+    _track_scale_override = value
 
 
 def j_heave(z_B_ddot: float, g: float, clip: float) -> float:
@@ -63,7 +73,7 @@ def compute_reward(
     Ja = j_long_acc(a_actual, cfg.g)
     Jj = j_long_jerk(a_actual, a_prev, cfg.g)
     Jv = j_speed_track(v, v_nom)
-    Qv_eff = cfg.Q_v * cfg.track_scale
+    Qv_eff = cfg.Q_v * (cfg.track_scale if _track_scale_override is None else _track_scale_override)
     Jas = -((a_actual - a_prev) / max(cfg.a_max, 1e-6)) ** 2
 
     total = (
