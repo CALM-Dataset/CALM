@@ -19,7 +19,7 @@ baseline_nominal_bump_h: 0.05
 baseline_nominal_bump_w:  1.0
 sentinel:            0.0
 
-use_dist_obs:        true
+use_dist_obs:        false
 
 dense_n:             200
 freq_max:            21.74

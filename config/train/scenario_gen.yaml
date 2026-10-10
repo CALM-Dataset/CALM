@@ -1,7 +1,7 @@
 v_min_kmh: 15.0
 v_max_kmh: 30.0
 per_level: 200
-flat_start_range: [30.0, 50.0]
+flat_start_range: [10.0, 20.0]
 obstacle_mode: bumps
 
 real_range:

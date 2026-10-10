@@ -15,7 +15,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 
 from train.agent import build_model, load_algo_config, supported_algos
 from stable_baselines3.common.callbacks import CallbackList
-from train.monitoring import build_callbacks, RealValidationCallback, SpeedWeightController, TrackScaleAnneal
+from train.monitoring import build_callbacks, RealValidationCallback, SpeedWeightController
 from train.environment import (
     make_eval_vec_env, make_vec_env, restore_vecnormalize,
     make_real_val_env, load_real_val_scenarios,
@@ -353,10 +353,6 @@ def main() -> None:
     if ctrl:
         callbacks = CallbackList([callbacks, SpeedWeightController(ctrl["target"], ctrl["init"], ctrl["gain"], ctrl["max"])])
         print(f"  speed weight controller: target speed ratio {ctrl['target']}")
-    anneal = None if ctrl else train_meta.get("track_scale_anneal")
-    if anneal:
-        callbacks = CallbackList([callbacks, TrackScaleAnneal(anneal["start"], rcfg.track_scale, anneal["steps"])])
-        print(f"  track_scale: {anneal['start']} -> {rcfg.track_scale} over {anneal['steps']:,} steps")
 
     bounds = _reward_bounds(rcfg, _EPISODE_STEPS, n_bumps=5)
 
