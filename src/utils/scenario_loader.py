@@ -88,16 +88,6 @@ def load_scenario(
     return obstacles, speed_m_s, cfg['name'], cfg.get('description', '')
 
 
-def get_sequence_path(name_or_path: str) -> Optional[Path]:
-    path = _find_scenario_path(name_or_path)
-    with open(path) as fh:
-        cfg = yaml.safe_load(fh)
-    raw = cfg.get('sequence_path')
-    if raw is None:
-        return None
-    return Path(raw).expanduser()
-
-
 def _prettify_scenario_name(name: str) -> str:
     pretty = str(name).replace('_', ' ').strip()
     return pretty.rstrip('0123456789').strip() or pretty

@@ -1,5 +1,6 @@
 set shell := ["bash", "-c"]
 set positional-arguments := true
+set quiet := true
 
 venv := ".venv/bin/python3"
 pip  := ".venv/bin/pip3"
@@ -89,7 +90,7 @@ mpc *args:
 reactive-driver *args:
     {{calm}} reactive "$@"
 
-# zero-action baseline run through the training pipeline (smoke test)
+# constant-action baseline (target speed halfway between floor and scenario speed) through the training pipeline
 [group('baselines')]
 dummy *args:
     {{calm}} dummy "$@"

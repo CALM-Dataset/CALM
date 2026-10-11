@@ -10,15 +10,13 @@ import numpy as np
 
 from eval.data_logger import EpisodeData, RunLogger
 from gym_env.common.env_params import DT
-from utils.paths import ROOT
+from utils.paths import DATA
 from utils.scenario_loader import enabled_eval_suites, load_scenario_any
 
 try:
     from tqdm import tqdm
 except ImportError:
     tqdm = None
-
-DATA_ROOT = ROOT / 'data'
 
 NO_SCENARIOS = ('No scenarios. Enable a suite in config/eval/eval_suites.yaml '
                 '(incl. `real`), or pass --suites <folder|real>.')
@@ -45,7 +43,7 @@ def add_common_args(ap, method: str) -> None:
 
 def log_root(args) -> Path | None:
     if args.log_data == '__default__':
-        return DATA_ROOT
+        return DATA
     return Path(args.log_data) if args.log_data else None
 
 

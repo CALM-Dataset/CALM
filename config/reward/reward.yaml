@@ -25,7 +25,6 @@ velocity:
 
 eval:
   a_comfort:   2.0
-  j_max:       2.0
 
 terminal:
   bonus:          100.0

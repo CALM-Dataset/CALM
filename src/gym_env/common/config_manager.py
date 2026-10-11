@@ -1,50 +1,22 @@
 import yaml
-from pathlib import Path
-from dataclasses import dataclass
+
+from utils.paths import CONFIG
+
+_DIRS = {
+    "env.yaml": "gym_env",
+    "render.yaml": "gym_env",
+    "reward.yaml": "reward",
+    "preview.yaml": "preview",
+}
 
 
-@dataclass
-class ParamsFiles:
-
-    gym_env = "env.yaml"
-    gym_env_dir = "gym_env"
-
-    render  = "render.yaml"
-    render_dir = "gym_env"
-
-    reward  = "reward.yaml"
-    reward_dir = "reward"
-
-    preview = "preview.yaml"
-    preview_dir = "preview"
-
-    road    = "random_road.yaml"
-    road_dir = "catalog"
-
-def _find_config_file(filename: str) -> Path:
-
-    _known = [ParamsFiles.gym_env, ParamsFiles.render, ParamsFiles.reward,
-              ParamsFiles.preview, ParamsFiles.road]
-    if filename not in _known:
+def _find_config_file(filename: str):
+    if filename not in _DIRS:
         raise ValueError(f"Unknown config file: {filename}")
-
-    if filename == ParamsFiles.gym_env:
-        config_dir = ParamsFiles.gym_env_dir
-    elif filename == ParamsFiles.render:
-        config_dir = ParamsFiles.render_dir
-    elif filename == ParamsFiles.reward:
-        config_dir = ParamsFiles.reward_dir
-    elif filename == ParamsFiles.preview:
-        config_dir = ParamsFiles.preview_dir
-    else:
-        config_dir = ParamsFiles.road_dir
-
-    here = Path(__file__).resolve()
-    for parent in [here] + list(here.parents):
-        candidate = parent / "config" / config_dir / filename
-        if candidate.is_file():
-            return candidate
-    raise FileNotFoundError(f"Config file not found: {filename}")
+    path = CONFIG / _DIRS[filename] / filename
+    if not path.is_file():
+        raise FileNotFoundError(f"Config file not found: {path}")
+    return path
 
 
 def _load_yaml(filename: str) -> dict:

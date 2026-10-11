@@ -25,7 +25,6 @@ class RewardConfig:
     a_max:      float = 5.0
     v_max:      float = 13.889
     a_comfort:  float = 2.0
-    j_max:      float = 2.0
     terminal_bonus:   float =  100.0
     terminal_penalty: float = -250.0
     terminal_v_min:   float =    0.0
@@ -72,7 +71,6 @@ def load_reward_config() -> RewardConfig:
         v_max      = float(tr.get("v_max",     50.0)) / 3.6,
 
         a_comfort  = float(e.get("a_comfort", 2.0)),
-        j_max      = float(e.get("j_max",     2.0)),
 
         terminal_bonus   = float(t.get("bonus",    100.0)),
         terminal_penalty = float(t.get("penalty", -250.0)),

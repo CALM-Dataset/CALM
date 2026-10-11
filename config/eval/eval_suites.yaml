@@ -1,7 +1,7 @@
 suites:
   01_single_bump:
     count: 5
-    enabled: true
+    enabled: false
   02_two_bumps:
     count: 15
     enabled: false

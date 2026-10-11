@@ -240,7 +240,6 @@ class CarEnv(gym.Env):
         self._last_z_B_ddot  = z_B_ddot
         self._last_phi_ddot  = phi_ddot
         self._last_z_W_ddot  = z_Wf_ddot
-        self._last_z_Wr_ddot = z_Wr_ddot
 
         self._accel_sq  += z_B_ddot ** 2
         self._peak_accel = max(self._peak_accel, abs(z_B_ddot))

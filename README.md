@@ -15,7 +15,9 @@ Gymnasium environment. Two plant models are available:
 - **Half-car** (default): 4 degrees of freedom, heave and pitch, with separate
   front and rear axles. The rear axle rides the road one wheelbase behind the
   front.
-- **Quarter-car**: 2 degrees of freedom, single-axle heave only.
+- **Quarter-car**: 2 degrees of freedom, single-axle heave only. It shares the reward,
+  action mode and scenarios with the half-car (select with `--vehicle quarter`); the
+  original thesis implementation is kept at the git tag `thesis-quarter-car`.
 
 The vehicle dynamics use a nonlinear suspension (progressive spring with
 bumpstops, asymmetric compression/rebound damping) integrated with RK4. The
@@ -118,7 +120,7 @@ just train --vehicle quarter    # quarter-car plant (same reward and settings)
 just eval demo --render         # evaluate logs/models/PPO/demo/PPO_final.zip
 just mpc --render               # MPC baseline
 just reactive-driver --render   # rule-based driver baseline
-just dummy                      # zero-action baseline through the training pipeline
+just dummy                      # constant-action baseline through the training pipeline
 
 just tb                         # TensorBoard
 just tune --trials 50           # Optuna hyperparameter search
