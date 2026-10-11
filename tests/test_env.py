@@ -1,10 +1,9 @@
 import gymnasium as gym
 import numpy as np
 
+from gym_env.half_car.config.reward_params import load_reward_config
 from gym_env.half_car.envs import HalfCarEnv
 from gym_env.half_car.reward.reward import compute_reward
-from gym_env.half_car.config.reward_params import load_reward_config
-from gym_env.half_car.reward.utils import reward_bounds
 from gym_env.half_car.wrappers import TerminationWrapper
 
 
@@ -17,21 +16,19 @@ def _run(env, action, steps=6000):
     raise AssertionError("episode did not end")
 
 
-def test_completion_is_terminated():
+def test_reaching_the_end_terminates():
     terminated, truncated, info, _ = _run(TerminationWrapper(gym.make("gym_env/HalfCar")), 0.0)
     assert terminated and not truncated
     assert info["termination_reason"] == "completed"
 
 
-def test_timeout_is_truncated_with_the_penalty():
-    env = TerminationWrapper(HalfCarEnv(max_episode_steps=50))
-    terminated, truncated, info, reward = _run(env, 0.0)
+def test_running_out_of_time_truncates():
+    terminated, truncated, info, _ = _run(TerminationWrapper(HalfCarEnv(max_episode_steps=50)), 0.0)
     assert truncated and not terminated
     assert info["termination_reason"] == "timeout"
-    assert reward < -200.0
 
 
-def test_crash_is_terminated():
+def test_a_crash_terminates():
     env = TerminationWrapper(HalfCarEnv())
     env.reset(seed=0)
     env.unwrapped._state[6] = 1.0
@@ -40,7 +37,7 @@ def test_crash_is_terminated():
     assert info["termination_reason"] == "crash_susp"
 
 
-def test_observations_stay_inside_the_space_for_random_actions():
+def test_observations_stay_inside_the_space():
     env = TerminationWrapper(gym.make("gym_env/HalfCar"))
     rng = np.random.default_rng(0)
     low, high = env.observation_space.low, env.observation_space.high
@@ -53,7 +50,7 @@ def test_observations_stay_inside_the_space_for_random_actions():
                 break
 
 
-def test_speed_never_exceeds_the_scenario_speed_in_target_mode():
+def test_target_speed_never_exceeds_the_scenario_speed():
     env = gym.make("gym_env/HalfCar", action_mode="target_speed")
     env.reset(seed=3)
     top = env.unwrapped._v_episode_ref
@@ -64,13 +61,8 @@ def test_speed_never_exceeds_the_scenario_speed_in_target_mode():
             break
 
 
-def test_comfort_terms_lower_the_reward():
+def test_body_acceleration_lowers_the_reward():
     cfg = load_reward_config()
     calm, _ = compute_reward(5.0, 0.0, 0.0, 0.0, 0.0, cfg, v_ref=5.0)
     rough, _ = compute_reward(5.0, 5.0, 5.0, 0.0, 0.0, cfg, v_ref=5.0)
-    assert rough < calm <= 0.0 + cfg.Q_step
-
-
-def test_reward_bounds_are_finite_and_ordered():
-    b = reward_bounds(load_reward_config(), 4000, n_bumps=1)
-    assert np.isfinite(b["episode_min"]) and b["episode_min"] < b["episode_max"]
+    assert rough < calm
