@@ -10,7 +10,8 @@ __pycache__
 assets/music
 acados
 .env
-config/eval/scenarios
+config/eval/scenarios/real
+config/eval/scenarios/real_train
 config/train/scenarios
 config/perception
 config/dataset

@@ -24,6 +24,7 @@ from gym_env.common.reward_params import load_reward_config
 from gym_env.common.env_params import EPISODE_STEPS, DT
 from utils.scenario_loader import load_scenario_any, enabled_eval_suites
 
+from utils.gif import keep, save_gif, shrink
 from eval.data_logger import RunLogger, EpisodeData
 from baseline.dummy_agent import DummyAgent
 
@@ -124,26 +125,6 @@ def _record(ep: dict, action: float, reward: float, info: dict) -> None:
         ep[k].append(info.get(k, 0.0))
 
 
-def save_gif(frames: list, path: Path, dt: float, skip: int = 1) -> None:
-    frames = frames[::skip]
-    fps = max(1, round(1.0 / (dt * skip)))
-    try:
-        import imageio
-        imageio.mimsave(str(path), frames, fps=fps)
-    except ImportError:
-        try:
-            from PIL import Image
-            pil = [Image.fromarray(f) for f in frames]
-            pil[0].save(
-                str(path), save_all=True, append_images=pil[1:],
-                duration=int(dt * skip * 1000), loop=0,
-            )
-        except ImportError:
-            print("  install imageio or Pillow to save GIFs:  pip install imageio pillow")
-            return
-    print(f"  gif saved  → {path}  ({len(frames)} frames @ {fps} fps)")
-
-
 def run_episode(
     model,
     vecnorm_path: Path,
@@ -215,8 +196,8 @@ def run_episode(
 
         if capture_frames:
             frame = venv.venv.envs[0].render()
-            if frame is not None:
-                frames.append(frame)
+            if frame is not None and keep(len(ep["speeds"])):
+                frames.append(shrink(frame))
 
         if render_mode == 'human':
             base_env = venv.venv.envs[0].unwrapped
@@ -368,12 +349,11 @@ def plot_timeseries(ep: dict, ep_i: int, rcfg, bounds: dict, save_dir: Path | No
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    import matplotlib.gridspec as gridspec
 
     t = np.arange(len(ep["rewards"])) * DT
 
-    fig = plt.figure(figsize=(13, 16))
-    gs  = gridspec.GridSpec(7, 1, hspace=0.45)
+    fig = plt.figure(figsize=(13, 16), layout="constrained")
+    gs  = fig.add_gridspec(7, 1)
     axes = [fig.add_subplot(gs[i]) for i in range(7)]
     ax_accel, ax_wheel, ax_speed, ax_rms, ax_action, ax_reward, ax_breakdown = axes
 
@@ -427,6 +407,7 @@ def plot_timeseries(ep: dict, ep_i: int, rcfg, bounds: dict, save_dir: Path | No
         "J_long_acc":  "#1E88E5",
         "J_long_jerk": "#FB8C00",
         "J_long_vel":  "#E53935",
+        "J_pitch":     "#8E24AA",
     }
     for k, color in term_colors.items():
         vals = ep.get(k, [0.0] * len(t))
@@ -442,7 +423,6 @@ def plot_timeseries(ep: dict, ep_i: int, rcfg, bounds: dict, save_dir: Path | No
         ax.spines[["top", "right"]].set_visible(False)
 
     fig.suptitle(f"Episode {ep_i + 1}", fontsize=12, fontweight="bold")
-    fig.tight_layout(rect=(0, 0, 1, 0.97))
 
     if save_dir:
         fname = save_dir / f"timeseries_ep{ep_i + 1}.png"
@@ -611,7 +591,7 @@ def _run_one_scenario(
 
     if args.save_gif and frames:
         save_dir.mkdir(parents=True, exist_ok=True)
-        save_gif(frames, save_dir / f"{sc_name}.gif", dt=DT, skip=2)
+        save_gif(frames, save_dir / f"{sc_name}.gif")
     if args.save_plots:
         save_dir.mkdir(parents=True, exist_ok=True)
         plot_timeseries(ep, ep_index, rcfg, bounds, save_dir)
@@ -859,7 +839,7 @@ def main() -> None:
         if args.save_gif and frames:
             save_dir.mkdir(parents=True, exist_ok=True)
             gif_path = save_dir / f"ep{ep_i + 1}.gif"
-            save_gif(frames, gif_path, dt=DT, skip=2)
+            save_gif(frames, gif_path)
 
         if args.save_plots:
             save_dir.mkdir(parents=True, exist_ok=True)

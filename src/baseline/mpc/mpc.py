@@ -35,6 +35,7 @@ from gym_env.common.reward_params import load_reward_config
 from gym_env.common.reward_utils import reward_bounds
 from gym_env.vehicles import get_vehicle
 from baseline import runner
+from utils.gif import save_gif
 from baseline.mpc.controller import MPCController
 from utils.scenario_loader import load_scenario_any
 from eval.data_logger import RunLogger, EpisodeData
@@ -103,7 +104,6 @@ def _render_scenarios(env, ctrl: MPCController, args, terminal_out=None,
 
 
 _obst_str = runner.obst_str
-_save_gif = runner.save_gif
 
 
 def _save_plot(result: dict, ep_i: int, save_dir: Path) -> None:
@@ -239,7 +239,7 @@ def main() -> None:
             if args.save_plots:
                 _save_plot(r, 0, save_dir)
             if args.save_gif and r['_frames']:
-                _save_gif(r['_frames'], save_dir / 'mpc_ep1.gif')
+                save_gif(r['_frames'], save_dir / 'mpc_ep1.gif')
 
             n_bumps = r['bumps_total']
             bounds = bits['reward_bounds'](cfg, bits['EPISODE_STEPS'], n_bumps=n_bumps)

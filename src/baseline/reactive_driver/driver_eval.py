@@ -18,6 +18,7 @@ from gym_env.common.reward_params import load_reward_config
 from gym_env.common.reward_utils import reward_bounds
 from gym_env.vehicles import get_vehicle
 from baseline import runner
+from utils.gif import save_gif
 from baseline.reactive_driver.driver import ReactiveController
 from utils.scenario_loader import load_scenario_any
 from eval.data_logger import RunLogger, EpisodeData
@@ -64,7 +65,6 @@ def _render_scenarios(env, ctrl: ReactiveController, args, nav_fn=None,
 
 
 _obst_str = runner.obst_str
-_save_gif = runner.save_gif
 
 
 def _save_plot(result: dict, ep_i: int, save_dir: Path) -> None:
@@ -189,7 +189,7 @@ def main() -> None:
             episode_return=r['episode_return'],
             rms_accel=r['rms_accel'],
             comfort_score=r['comfort_score'],
-            solve_ms_mean=r['solve_ms_mean'],
+            solve_ms_mean=r['act_ms_mean'],
             cpu_ms_mean=r['cpu_ms_mean'],
             n_params=r['n_params'],
         ))
@@ -198,7 +198,7 @@ def main() -> None:
     if args.save_plots:
         _save_plot(r, 0, save_dir)
     if args.save_gif and r['_frames']:
-        _save_gif(r['_frames'], save_dir / 'reactive_driver_ep1.gif')
+        save_gif(r['_frames'], save_dir / 'reactive_driver_ep1.gif')
 
     n_bumps = r['bumps_total']
     bounds = bits['reward_bounds'](cfg, bits['EPISODE_STEPS'], n_bumps=n_bumps)

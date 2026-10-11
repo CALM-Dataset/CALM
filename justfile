@@ -2,9 +2,9 @@ set shell := ["bash", "-c"]
 set positional-arguments := true
 set quiet := true
 
-venv := ".venv/bin/python3"
-pip  := ".venv/bin/pip3"
-calm := ".venv/bin/python3 -m calm"
+venv := env("CALM_PYTHON", ".venv/bin/python3")
+pip  := env("CALM_PIP", ".venv/bin/pip3")
+calm := venv + " -m calm"
 
 export PYTHONPATH := "src"
 export ACADOS_SOURCE_DIR := justfile_directory() + "/acados"

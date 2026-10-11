@@ -10,6 +10,7 @@ import numpy as np
 
 from eval.data_logger import EpisodeData, RunLogger
 from gym_env.common.env_params import DT
+from utils.gif import keep, shrink
 from utils.paths import DATA
 from utils.scenario_loader import enabled_eval_suites, load_scenario_any
 
@@ -52,17 +53,6 @@ def obst_str(r: dict) -> str:
     if r.get('holes_total'):
         s += f' H{r["holes_passed"]}/{r["holes_total"]}'
     return s
-
-
-def save_gif(frames: list, path: Path) -> None:
-    try:
-        from PIL import Image
-        imgs = [Image.fromarray(f) for f in frames]
-        imgs[0].save(path, save_all=True, append_images=imgs[1:],
-                     optimize=False, duration=20, loop=0)
-        print(f'  GIF saved → {path}')
-    except ImportError:
-        print('  [PIL not installed - cannot save GIF; run: pip install Pillow]')
 
 
 def save_plot(result: dict, ep_i: int, save_dir: Path, title: str, stem: str) -> None:
@@ -145,8 +135,8 @@ def run_episode(env, ctrl, seed: int, steps_fn, scenario_road=None,
                     break
             if collect_frames:
                 frame = env.render()
-                if frame is not None:
-                    frames.append(frame)
+                if frame is not None and keep(n_steps):
+                    frames.append(shrink(frame))
 
             if plan_road is not raw._road:
                 plan_road.set_s_pos(raw._s_pos)
