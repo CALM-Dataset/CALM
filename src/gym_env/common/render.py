@@ -109,14 +109,14 @@ def build_bump_vlines(env, ax_r):
             ls    = '--'
         lines = []
         for j, ax in enumerate(ax_r):
-            vl = ax.axvline(x=0, color=col, lw=0.8, ls=ls, alpha=0.55,
+            vl = ax.axvline(x=0, color=col, lw=1.0, ls=ls, alpha=0.8,
                             label=(label if j == 0 else None), visible=False)
             lines.append(vl)
         bump_vlines.append(lines)
 
     if bump_vlines:
-        ax_r[0].legend(fontsize=6.5, loc='upper left',
-                       framealpha=0.85, edgecolor='#cccccc', borderpad=0.3)
+        ax_r[0].legend(fontsize=9, loc='lower left', bbox_to_anchor=(0.0, 1.03), ncol=2,
+                       frameon=False, labelcolor='#1b1f24', columnspacing=1.2, handlelength=1.8)
     return bump_vlines, bump_signature(bumps)
 
 
@@ -135,7 +135,7 @@ class Hud:
                 ax.plot([x0, x0], [y0 + 0.012, y0 + h - 0.012], transform=ax.transAxes,
                         color='#bbbbbb', lw=0.7, clip_on=False, zorder=10)
             ax.text(x0 + w / 2, y0 + h * 0.76, label, transform=ax.transAxes,
-                    ha='center', va='center', fontsize=8, style='italic', color='#555555',
+                    ha='center', va='center', fontsize=9, style='italic', color='#3a444e',
                     zorder=11, clip_on=False)
             t = ax.text(x0 + w / 2, y0 + h * 0.31, '', transform=ax.transAxes,
                         ha='center', va='center', fontsize=11, color='#111111',

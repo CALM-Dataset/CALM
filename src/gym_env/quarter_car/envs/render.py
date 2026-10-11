@@ -45,11 +45,11 @@ def _build_ts_specs(env):
     specs = []
     flags = getattr(env, "_ts_flags", {})
     if flags.get("z", False):
-        specs.append(('z_B', 'z_W', r'$z\ \mathrm{[cm]}$', '#2c6fad', '#c0392b'))
+        specs.append(('z_B', 'z_W', r'$z\ \mathrm{[cm]}$', '#1f4e79', '#c0392b'))
     if flags.get("f", False):
-        specs.append(('F', None, r'$F_D\ \mathrm{[N]}$', '#27ae60', None))
+        specs.append(('F', None, r'$F_D\ \mathrm{[N]}$', '#2e7d4f', None))
     if flags.get("speed", False):
-        specs.append(('s_dot', None, r'$v\ \mathrm{[km/h]}$', '#7b2d8b', None))
+        specs.append(('s_dot', None, r'$v\ \mathrm{[km/h]}$', '#0b6e8a', None))
     if flags.get("z_ddot", False):
         specs.append(('z_B_ddot', None, r'$\ddot{z}_B\ \mathrm{[m/s^2]}$', '#222222', None))
     return specs
@@ -89,7 +89,7 @@ def init_render(env):
 
     if env._show_ts:
         fig = plt.figure(figsize=(14, 7))
-        fig.suptitle(ep_title, fontsize=9, color='#444444', x=0.5, y=0.995, va='top')
+        fig.suptitle(ep_title, fontsize=11, color='#1b1f24', x=0.5, y=0.995, va='top')
         gs  = GridSpec(1, 2, figure=fig, width_ratios=[3, 2],
                        left=0.06, right=0.97, bottom=0.09, top=0.87, wspace=0.40)
         ax_s = fig.add_subplot(gs[0, 0])
@@ -98,7 +98,7 @@ def init_render(env):
         ax_r = [fig.add_subplot(gs_r[i]) for i in range(n_ts)]
     else:
         fig  = plt.figure(figsize=(9, 7))
-        fig.suptitle(ep_title, fontsize=9, color='#444444', x=0.5, y=0.995, va='top')
+        fig.suptitle(ep_title, fontsize=11, color='#1b1f24', x=0.5, y=0.995, va='top')
         ax_s = fig.add_subplot(1, 1, 1)
         ax_r = []
 
@@ -110,9 +110,9 @@ def init_render(env):
     ax_s.set_facecolor('#f4f8fc')
     ax_s.set_xlim(RENDER_XLIM)
     ax_s.set_ylim(RENDER_YLIM)
-    ax_s.set_xlabel('Longitudinal position [cm]', fontsize=9)
-    ax_s.set_ylabel('Height [cm]', fontsize=9)
-    ax_s.tick_params(labelsize=8, direction='in')
+    ax_s.set_xlabel('Longitudinal position [cm]', fontsize=11, color='#1b1f24')
+    ax_s.set_ylabel('Height [cm]', fontsize=11, color='#1b1f24')
+    ax_s.tick_params(labelsize=10, direction='in', colors='#1b1f24')
     ax_s.grid(True, axis='x', lw=0.3, alpha=0.35, color='#b8c4d0', linestyle=':')
     ax_s.set_axisbelow(True)
     ax_s.xaxis.set_major_formatter(
@@ -168,11 +168,11 @@ def init_render(env):
     mb_dot   = ax_s.plot(0, RENDER_Y_B_NOM, 'o', color='#333333', ms=4, zorder=7)[0]
     mb_label = ax_s.text(-RENDER_W_MB / 2 + 0.05, RENDER_Y_B_NOM,
                           r'$m_B$', ha='left', va='center',
-                          fontsize=9, color='#333333', zorder=7)
+                          fontsize=11, color='#1b1f24', zorder=7)
 
     hud = Hud(ax_s, [('Time', 't'), ('Position', 's'), ('Speed', 'v'), ('Body heave', 'zb'), ('Reward', 'R'), ('Bumps', 'b')])
 
-    ax_s.legend(fontsize=7.5, loc='upper right', frameon=False,
+    ax_s.legend(fontsize=10, loc='upper right', frameon=False, labelcolor='#1b1f24',
                 handlelength=1.5, borderpad=0.4)
 
     ts = {}
@@ -185,38 +185,38 @@ def init_render(env):
             ts[k2], = ax.plot([], [], '--', color=c2, lw=1.2, label=_label2)
 
         ax.spines[['top', 'right']].set_visible(False)
-        ax.tick_params(labelsize=7.5, direction='in', top=False, right=False)
+        ax.tick_params(labelsize=9.5, direction='in', top=False, right=False, colors='#1b1f24')
         ax.grid(True, lw=0.25, alpha=0.35, color='gray', linestyle=':')
-        ax.axhline(0, color='#bbbbbb', lw=0.6)
-        ax.set_ylabel(ylabel, fontsize=8.5)
+        ax.axhline(0, color='#8fa3b8', lw=0.8)
+        ax.set_ylabel(ylabel, fontsize=11, color='#1b1f24')
 
-        if k1 in ('z_B', 's_dot'):
-            ax.legend(fontsize=7.5, loc='upper left',
-                      framealpha=0.85, edgecolor='#cccccc', borderpad=0.3)
+        if k1 == 'z_B':
+            ax.legend(fontsize=9, loc='lower left', bbox_to_anchor=(0.0, 1.03), ncol=3,
+                      frameon=False, labelcolor='#1b1f24', columnspacing=1.2, handlelength=1.8)
 
         if i < len(ax_r) - 1:
             ax.tick_params(labelbottom=False)
         else:
-            ax.set_xlabel('$t$ [s]', fontsize=8.5)
+            ax.set_xlabel('$t$ [s]', fontsize=11, color='#1b1f24')
 
     bump_vlines, bump_sig = build_bump_vlines(env, ax_r)
 
     v_line, = ax_s.plot([_ARR_X0, _ARR_X0], [_ARR_Y_V, _ARR_Y_V], '-',
-                        color='#7b2d8b', lw=2.2, zorder=8)
+                        color='#0b6e8a', lw=2.2, zorder=8)
     v_head, = ax_s.plot([_ARR_X0],          [_ARR_Y_V],            '>',
-                        color='#7b2d8b', ms=7,  zorder=8)
+                        color='#0b6e8a', ms=7,  zorder=8)
     ax_s.text(_ARR_X0 - 0.15, _ARR_Y_V, r'$v$', ha='right', va='center',
-              fontsize=8, color='#7b2d8b', zorder=8)
+              fontsize=11, color='#0b6e8a', zorder=8)
     ax_s.plot([_ARR_X0 + _ARR_MAX_LEN] * 2,
               [_ARR_Y_V - 0.20, _ARR_Y_V + 0.20],
-              color='#e74c3c', lw=2.0, ls='-', zorder=8)
+              color='#c0392b', lw=2.2, ls='-', zorder=8)
     ax_s.text(_ARR_X0 + _ARR_MAX_LEN, _ARR_Y_V - 0.32,
               f'{env._rcfg.v_max * 3.6:.0f} km/h', ha='center', va='top',
-              fontsize=7.0, color='#e74c3c', fontweight='bold', zorder=8)
+              fontsize=10, color='#c0392b', fontweight='bold', zorder=8)
     vmax_tick, = ax_s.plot([_ARR_X0, _ARR_X0], [_ARR_Y_V - 0.16, _ARR_Y_V + 0.16],
-                           color='#7b2d8b', lw=1.1, ls='--', alpha=0.85, zorder=7)
+                           color='#b9770e', lw=1.6, ls='--', zorder=7)
     vmax_label = ax_s.text(_ARR_X0, _ARR_Y_V + 0.28, '', ha='center', va='bottom',
-                           fontsize=6.5, color='#7b2d8b', zorder=8)
+                           fontsize=10, color='#b9770e', fontweight='bold', zorder=8)
 
     if env.render_mode == 'human':
         plt.ion()
