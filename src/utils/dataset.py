@@ -120,7 +120,16 @@ def ensure_local() -> None:
 
     skipped = 0
     with tempfile.TemporaryDirectory() as tmp:
-        snapshot_download(repo_id=SCENARIOS_REPO, repo_type='dataset', local_dir=tmp)
+        try:
+            snapshot_download(repo_id=SCENARIOS_REPO, repo_type='dataset', local_dir=tmp)
+        except Exception as exc:
+            from huggingface_hub.utils import HfHubHTTPError
+            if isinstance(exc, HfHubHTTPError):
+                raise SystemExit(
+                    f"cannot download {SCENARIOS_REPO} ({type(exc).__name__}). The dataset is gated: "
+                    "request access on its Hugging Face page, then run `hf auth login` with a token that can read it."
+                ) from None
+            raise
         for region in REGIONS:
             for split, dsts in (('train', (_real_dir(), seen_dir)), ('eval', (_eval_dir() / 'real',))):
                 for f in Path(tmp, region, split).glob('*.json'):

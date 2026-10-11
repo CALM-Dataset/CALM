@@ -255,6 +255,9 @@ def main() -> None:
     _load_rcfg, _load_pcfg, _EPISODE_STEPS, _reward_bounds = _vehicle_cfg(args.vehicle)
     rcfg           = _load_rcfg()
     curriculum_cfg = load_curriculum_config(_CURRICULUM_PATH)
+    real_dir = curriculum_cfg.get("real_scenarios_dir")
+    if curriculum_cfg.get("real_fraction", 0.0) > 0 and not (real_dir and any(Path(real_dir).glob("*.json"))):
+        print(f"WARNING: no real scenarios in {real_dir}; training on synthetic roads only (just fetch-scenarios)", file=sys.stderr)
 
     start_level = max(0, int(args.start_level))
 

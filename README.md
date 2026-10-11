@@ -30,28 +30,29 @@ A model-based MPC planner and rule-based drivers are included as baselines.
 
 ## Installation
 
+Python 3.10 or newer and [just](https://github.com/casey/just) (`cargo install just`, `pip install rust-just` or a package manager) are required.
+
 ```bash
-just install          # create .venv, install dependencies and the package (pip install -e .)
+just install          # creates .venv, installs CPU PyTorch, the dependencies and the package
+just lint             # the static check CI runs
 ```
 
-Python dependencies are listed in `requirements.txt` (Gymnasium,
-Stable-Baselines3, PyTorch, NumPy, SciPy, Numba, Matplotlib, TensorBoard).
+PyTorch comes from the CPU wheel index first; nothing here uses a GPU. The remaining
+dependencies are listed in `requirements.txt` (Gymnasium, Stable-Baselines3, NumPy, SciPy,
+Numba, Matplotlib, TensorBoard).
 
 ### acados (MPC baseline only)
 
-The MPC baseline uses [acados](https://github.com/acados/acados) for the optimal
-control problem. It is a separate C library and is not bundled here. To build
-and install it:
+The MPC uses [acados](https://github.com/acados/acados), included as a git submodule.
+It needs cmake and a C compiler:
 
 ```bash
-git clone https://github.com/acados/acados.git
-cd acados && git submodule update --init --recursive
-mkdir build && cd build && cmake -DACADOS_WITH_QPOASES=ON .. && make install -j4
-pip install -e ../interfaces/acados_template
-export LD_LIBRARY_PATH=$PWD/../lib:$LD_LIBRARY_PATH
+git submodule update --init --recursive
+just build-acados     # builds acados/ and installs its Python interface
 ```
 
-The RL agent, the rule-based driver and evaluation do not require acados.
+The first MPC run downloads acados' template renderer from GitHub, so it needs network access once.
+The RL agent, the rule-based driver and the evaluation do not require acados.
 
 ## Docker
 
@@ -82,24 +83,25 @@ library, which is not included in the image.
 
 ## Scenarios
 
-The measured (real) training roads and the evaluation suites extend the
-[CARD dataset](https://huggingface.co/CARD-Data) with comfort labels, hosted on
-HuggingFace as [CALM-Dataset/CALM-Germany](https://huggingface.co/datasets/CALM-Dataset/CALM-Germany)
-(CC BY 4.0) and [CALM-Dataset/CALM-Italy](https://huggingface.co/datasets/CALM-Dataset/CALM-Italy)
-(CC BY-NC 4.0), not committed to the repository.
+The synthetic evaluation suites (`config/eval/scenarios/0*`, `10_potholes`) are part of the repository.
+The measured (real) roads extend the [CARD dataset](https://huggingface.co/CARD-Data) and are hosted on
+HuggingFace as [CALM-Dataset/CALM-Scenarios](https://huggingface.co/datasets/CALM-Dataset/CALM-Scenarios)
+(German part CC BY 4.0, Italian part CC BY-NC 4.0), not committed to the repository.
+The recorded drives used for the human profile (`CALM_SEQUENCES`) come from the CALM-Germany and
+CALM-Italy sequence datasets.
 
-Both are gated: request access on each dataset page (agreeing to its license
+The scenarios are gated: request access on the dataset page (agreeing to its license
 and usage terms), then authenticate locally before downloading:
 
 ```bash
 hf auth login                   # once, with a token from huggingface.co/settings/tokens
-just fetch-scenarios            # writes config/train/scenarios/real and config/eval/scenarios
+just fetch-scenarios            # writes config/train/scenarios/real and config/eval/scenarios/{real,real_train}
 ```
 
 The procedural training scenarios are generated locally, not stored anywhere:
 
 ```bash
-just gen-scene                  # writes config/train/scenarios/{curriculum,normal}
+just gen-scene                  # writes config/train/scenarios/curriculum
 ```
 
 `just build-index` writes `config/dataset/index.json`, a metadata table over
@@ -114,7 +116,7 @@ just train --vehicle quarter    # quarter-car plant
 just eval PPO <run-name> --render     # evaluate a trained model
 just mpc --render                           # MPC baseline
 just reactive-driver --render               # rule-based driver baseline
-just dummy                                  # zero-action baseline
+just dummy                                  # zero-action baseline through the training pipeline
 
 just tb                         # TensorBoard
 just tune --trials 50           # Optuna hyperparameter search
