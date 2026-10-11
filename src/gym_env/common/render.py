@@ -9,6 +9,12 @@ from gym_env.common.render_params import (
     RENDER_MUSIC_VOLUME, RENDER_Y_SCALE,
 )
 
+import matplotlib as mpl
+
+mpl.rcParams['font.family'] = 'serif'
+mpl.rcParams['font.serif'] = ['Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Times', 'DejaVu Serif']
+mpl.rcParams['mathtext.fontset'] = 'stix'
+
 _BUMP_COLOURS = ['#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#d35400']
 _SPEED_SEQ = (0.1, 0.25, 0.5, 1, 2, 4, 8, 16)
 _CONTROLS = (
@@ -20,7 +26,7 @@ _CONTROLS = (
     ('R', 'replay'),
     ('Q', 'quit'),
 )
-_CONTROLS_TEXT = '\n'.join(f'{key:<7}{text}' for key, text in _CONTROLS)
+_CONTROLS_TEXT = '\n'.join(f'{key}    {text}' for key, text in _CONTROLS)
 _ZOOM_MIN, _ZOOM_MAX, _ZOOM_STEP = 0.3, 6.0, 1.25
 _NAV_KEYS = {'right': 'next', 'left': 'prev', 'r': 'replay'}
 _NAV_DEBOUNCE = 0.6
@@ -112,6 +118,34 @@ def build_bump_vlines(env, ax_r):
         ax_r[0].legend(fontsize=6.5, loc='upper left',
                        framealpha=0.85, edgecolor='#cccccc', borderpad=0.3)
     return bump_vlines, bump_signature(bumps)
+
+
+class Hud:
+    def __init__(self, ax, fields):
+        from matplotlib.patches import Rectangle
+        n = len(fields)
+        h, y0 = 0.075, 1.02
+        w = 1.0 / n
+        ax.add_patch(Rectangle((0, y0), 1.0, h, transform=ax.transAxes, clip_on=False,
+                               fc='white', ec='#555555', lw=0.8, zorder=9))
+        self._values = []
+        for i, (label, key) in enumerate(fields):
+            x0 = i * w
+            if i:
+                ax.plot([x0, x0], [y0 + 0.012, y0 + h - 0.012], transform=ax.transAxes,
+                        color='#bbbbbb', lw=0.7, clip_on=False, zorder=10)
+            ax.text(x0 + w / 2, y0 + h * 0.76, label, transform=ax.transAxes,
+                    ha='center', va='center', fontsize=8, style='italic', color='#555555',
+                    zorder=11, clip_on=False)
+            t = ax.text(x0 + w / 2, y0 + h * 0.31, '', transform=ax.transAxes,
+                        ha='center', va='center', fontsize=11, color='#111111',
+                        zorder=11, clip_on=False)
+            t._skip_zoom = True
+            self._values.append((key, t))
+
+    def update(self, **values):
+        for key, t in self._values:
+            t.set_text(values[key])
 
 
 class RenderQuit(KeyboardInterrupt):
@@ -224,21 +258,21 @@ def _ensure_play_keys(env):
         return
     _free_matplotlib_keys()
     if not hasattr(env, '_render_speed'):
-        env._render_speed = 1
+        env._render_speed = 0.5
     if not hasattr(env, '_nav_request'):
         env._nav_request = None
     env._paused = False
     env._speed_hud = fig.text(0.988, 0.012, '', ha='right', va='bottom',
-                              fontsize=9, color='#c0392b', fontweight='bold')
+                              fontsize=11, color='#a33', style='italic')
     env._info_dot = fig.text(0.985, 0.965, '?', ha='center', va='center',
-                             fontsize=11, color='#2c6fad', fontweight='bold',
+                             fontsize=12, color='#444444', style='italic',
                              bbox=dict(boxstyle='circle,pad=0.3', facecolor='white',
-                                       edgecolor='#2c6fad', lw=1.2))
+                                       edgecolor='#777777', lw=0.9))
     env._info_tip = fig.text(
-        0.985, 0.945, _CONTROLS_TEXT, ha='right', va='top', fontsize=8.5,
-        family='monospace', multialignment='left', color='#2b3440', visible=False, zorder=20,
-        bbox=dict(facecolor='#fbfcfe', alpha=0.97, edgecolor='#c5ced8',
-                  boxstyle='round,pad=0.7', lw=0.7))
+        0.985, 0.945, _CONTROLS_TEXT, ha='right', va='top', fontsize=10,
+        multialignment='left', color='#222222', visible=False, zorder=20, linespacing=1.5,
+        bbox=dict(facecolor='white', alpha=0.97, edgecolor='#999999',
+                  boxstyle='square,pad=0.7', lw=0.7))
 
     if not hasattr(env, '_render_zoom'):
         env._render_zoom = 1.0

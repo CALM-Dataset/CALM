@@ -133,7 +133,7 @@ The vehicle at evaluation time must match the one the model was trained on (`--v
 
 ### Render controls
 
-- `space` pause, `f` / `s` faster / slower playback (down to 0.1x)
+- `space` pause, `f` / `s` faster / slower playback (starts at 0.5x)
 - `+` / `-` or scroll wheel zoom, `0` reset zoom
 - Left / right arrow: previous / next scenario
 

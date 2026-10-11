@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 from gym_env.common.render import (
-    build_bump_vlines, bump_signature, close_env, damper_xy, ground_symbol_xy,
+    Hud, build_bump_vlines, bump_signature, close_env, damper_xy, ground_symbol_xy,
     init_music, render_bumps, render_env, spring_xy, wait_for_episode_nav,
 )
 from gym_env.common.render_params import RENDER_MUSIC
@@ -89,16 +89,16 @@ def init_render(env):
 
     if env._show_ts:
         fig = plt.figure(figsize=(14, 7))
-        fig.suptitle(ep_title, fontsize=9, color='#444444', x=0.5, y=0.98)
+        fig.suptitle(ep_title, fontsize=9, color='#444444', x=0.5, y=0.995, va='top')
         gs  = GridSpec(1, 2, figure=fig, width_ratios=[3, 2],
-                       left=0.06, right=0.97, bottom=0.09, top=0.90, wspace=0.40)
+                       left=0.06, right=0.97, bottom=0.09, top=0.87, wspace=0.40)
         ax_s = fig.add_subplot(gs[0, 0])
         n_ts = len(ts_specs)
         gs_r = gs[0, 1].subgridspec(n_ts, 1, hspace=0.10)
         ax_r = [fig.add_subplot(gs_r[i]) for i in range(n_ts)]
     else:
         fig  = plt.figure(figsize=(9, 7))
-        fig.suptitle(ep_title, fontsize=9, color='#444444', x=0.5, y=0.98)
+        fig.suptitle(ep_title, fontsize=9, color='#444444', x=0.5, y=0.995, va='top')
         ax_s = fig.add_subplot(1, 1, 1)
         ax_r = []
 
@@ -170,13 +170,7 @@ def init_render(env):
                           r'$m_B$', ha='left', va='center',
                           fontsize=9, color='#333333', zorder=7)
 
-    status_text = ax_s.text(
-        0.02, 0.97, '', transform=ax_s.transAxes,
-        va='top', ha='left', fontsize=8,
-        bbox=dict(facecolor='white', alpha=0.92, edgecolor='#888888',
-                  boxstyle='square,pad=0.45', lw=0.7),
-        zorder=9,
-    )
+    hud = Hud(ax_s, [('Time', 't'), ('Position', 's'), ('Speed', 'v'), ('Bumps', 'b'), ('Body heave', 'zb'), ('Reward', 'R')])
 
     ax_s.legend(fontsize=7.5, loc='upper right', frameon=False,
                 handlelength=1.5, borderpad=0.4)
@@ -254,7 +248,7 @@ def init_render(env):
         'mb_patch':            mb_patch,
         'mb_dot':              mb_dot,
         'mb_label':            mb_label,
-        'status_text':         status_text,
+        'hud':                 hud,
         'ts':                  ts,
         'bump_vlines':         bump_vlines,
         'bump_sig':            bump_sig,
@@ -349,15 +343,9 @@ def update_artists(env):
     obst_str = f'{int(env._bumps_passed)}/{env._bumps_total}' if env._bumps_total else '-'
     if getattr(env, '_holes_total', 0):
         obst_str += f' H{int(env._holes_passed)}/{env._holes_total}'
-    art['status_text'].set_text(
-        f'$t$ = {env._t:.2f} s'
-        f'    $s$ = {env._s_pos:.1f} m'
-        f'    $z_B$ = {z_B*1000:+.2f} mm'
-        f'    $z_W$ = {z_W*1000:+.2f} mm'
-        f'    $\\zeta$ = {zeta_0*1000:.3f} mm\n'
-        f'$v$ = {env._v*3.6:.1f} km/h'
-        f'    obst {obst_str}'
-        f'    $R$ = {env._episode_reward:.2f}'
+    art['hud'].update(
+        t=f'{env._t:.2f} s', s=f'{env._s_pos:.1f} m', v=f'{env._v*3.6:.1f} km/h',
+        b=obst_str, zb=f'{z_B*1000:+.1f} mm', R=f'{env._episode_reward:.1f}',
     )
 
     v_scale = env._rcfg.v_max
