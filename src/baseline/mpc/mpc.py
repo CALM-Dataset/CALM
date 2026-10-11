@@ -34,6 +34,7 @@ from gym_env.common.reward_params import load_reward_config
 from gym_env.common.reward_utils import reward_bounds
 from gym_env.vehicles import get_vehicle
 from baseline import runner
+from gym_env.common.render import RenderQuit
 from utils.gif import save_gif
 from baseline.mpc.config import load_mpc_cfg, reward_config as mpc_reward_config
 from baseline.mpc.controller import MPCController
@@ -268,6 +269,8 @@ def main() -> None:
 if __name__ == '__main__':
     try:
         main()
+    except RenderQuit:
+        print('\n  closed')
     except KeyboardInterrupt:
         print('\n  interrupted')
         raise SystemExit(130)

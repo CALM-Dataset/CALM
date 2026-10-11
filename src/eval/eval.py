@@ -18,6 +18,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from gym_env.common import PreviewWrapper, TerminationWrapper
+from gym_env.common.render import RenderQuit
 from gym_env.vehicles import get_vehicle
 from gym_env.common.reward_utils import reward_bounds
 from gym_env.common.reward_params import load_reward_config
@@ -229,6 +230,8 @@ def _count_params(model) -> float:
 
 
 def episode_metrics(ep: dict) -> dict:
+    if not ep["rewards"]:
+        return {"n_steps": 0}
     rewards = np.asarray(ep["rewards"])
     accels  = np.asarray(ep["body_accels"])
     speeds  = np.asarray(ep["speeds"])
@@ -557,24 +560,28 @@ def _run_one_scenario(
     ep_index: int,
     log_root: Path | None = None,
 ) -> tuple[str, str, float, dict] | None:
-    scenario_road, perception_track, speed_ms, sc_desc = load_scenario_any(sc_name)
-
-    ep, frames, nav = run_episode(
-        model, vecnorm_path,
-        seed=args.seed,
-        render=args.render,
-        deterministic=deterministic,
-        scenario_road=scenario_road,
-        perception_track=perception_track,
-        capture_frames=args.save_gif,
-        pause_at_end=args.render,
-        render_label=f'{args.algo} · {sc_name} - {sc_desc}',
-        vehicle=args.vehicle,
-    )
+    while True:
+        scenario_road, perception_track, speed_ms, sc_desc = load_scenario_any(sc_name)
+        ep, frames, nav = run_episode(
+            model, vecnorm_path,
+            seed=args.seed,
+            render=args.render,
+            deterministic=deterministic,
+            scenario_road=scenario_road,
+            perception_track=perception_track,
+            capture_frames=args.save_gif,
+            pause_at_end=args.render,
+            render_label=f'{args.algo} · {sc_name} - {sc_desc}',
+            vehicle=args.vehicle,
+        )
+        if nav != 'replay':
+            break
     if nav == 'quit':
         return None
 
     m = episode_metrics(ep)
+    if m["n_steps"] == 0:
+        return sc_name, sc_desc, speed_ms, m
     bumps_str = f'{m["bumps_passed"]}/{m["bumps_total"]}' if m.get("bumps_total") else "-"
     if m.get("holes_total"):
         bumps_str += f' H{m["holes_passed"]}/{m["holes_total"]}'
@@ -695,6 +702,8 @@ def _run_suite(args, model, vecnorm_path: Path, deterministic: bool,
             if result is None:
                 aborted = True
                 break
+            if result[3]["n_steps"] == 0:
+                continue
             suite_rows.append(result)
             all_rows.append(result)
             ep_index += 1
@@ -810,6 +819,11 @@ def main() -> None:
         if nav == 'replay':
             continue
         m = episode_metrics(ep)
+        if m["n_steps"] == 0:
+            if nav == 'quit':
+                break
+            ep_i += 1
+            continue
         all_eps.append(ep)
         all_metrics.append(m)
         print_episode_line(ep_i, args.n_episodes, m)
@@ -868,6 +882,8 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
+    except RenderQuit:
+        print("\n  closed")
     except KeyboardInterrupt:
         print("\n  interrupted")
         sys.exit(130)

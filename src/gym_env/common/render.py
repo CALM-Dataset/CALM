@@ -1,3 +1,4 @@
+import time
 from typing import Tuple
 
 import numpy as np
@@ -107,13 +108,29 @@ def build_bump_vlines(env, ax_r):
     return bump_vlines, bump_signature(bumps)
 
 
+class RenderQuit(KeyboardInterrupt):
+    pass
+
+
+_DRAW_PERIOD = 1.0 / 30.0
+_MAX_STALE = 0.25
+
+
+def _sleep_until(plt, deadline: float) -> None:
+    while True:
+        remaining = deadline - time.perf_counter()
+        if remaining <= 0:
+            return
+        plt.pause(min(remaining, 0.02))
+
+
 def _render_env(env):
     if env.render_mode == 'none':
         return None
+    mod = env._vehicle.render()
     if env._ren_hist is None:
-        env._vehicle.render().init_render(env)
-    env._vehicle.render().push_history(env)
-    env._vehicle.render().update_artists(env)
+        mod.init_render(env)
+    mod.push_history(env)
     jb = getattr(env, '_jukebox', None)
     if jb is not None:
         jb.tick()
@@ -121,6 +138,9 @@ def _render_env(env):
         import matplotlib.pyplot as plt
         _ensure_play_keys(env)
         hud = getattr(env, '_speed_hud', None)
+        if getattr(env, '_paused', False):
+            mod.update_artists(env)
+            env._pace = None
         while (getattr(env, '_paused', False) and getattr(env, '_nav_request', None) is None
                and not _window_gone(env)):
             if hud is not None:
@@ -132,21 +152,26 @@ def _render_env(env):
             if speed > 1:   hud.set_text(f'>> {speed:g}x')
             elif speed < 1: hud.set_text(f'<< {speed:g}x')
             else:           hud.set_text('')
-        env._frame_i = int(getattr(env, '_frame_i', 0)) + 1
-        if speed >= 1.0:
-            stride = max(1, int(round(speed)))
-            if env._frame_i % stride == 0:
-                env._fig.canvas.draw_idle()
-                plt.pause(1e-3)
-            else:
-                env._fig.canvas.flush_events()
-        else:
+        now = time.perf_counter()
+        pace = getattr(env, '_pace', None)
+        if pace is None or pace[2] != speed or env._t < pace[1]:
+            pace = env._pace = (now, env._t, speed)
+        due = pace[0] + (env._t - pace[1]) / speed
+        stale = now - getattr(env, '_last_draw', -1.0)
+        if (stale >= _DRAW_PERIOD and now <= due) or stale >= _MAX_STALE or env._t < pace[1] + 1e-9:
+            mod.update_artists(env)
             env._fig.canvas.draw_idle()
-            plt.pause(min(0.25, 0.02 / speed))
+            plt.pause(1e-3)
+            env._last_draw = time.perf_counter()
+        else:
+            env._fig.canvas.flush_events()
+        _sleep_until(plt, due)
         if getattr(env, "_freeze_render", False):
+            mod.update_artists(env)
             env._freeze_render = False
             plt.show(block=True)
         return None
+    mod.update_artists(env)
     env._fig.canvas.draw()
     buf = env._fig.canvas.buffer_rgba()
     w, h = env._fig.canvas.get_width_height()
@@ -311,12 +336,12 @@ def render_env(env):
     if env.render_mode != 'human':
         return _render_env(env)
     if _window_gone(env):
-        raise KeyboardInterrupt('render window closed')
+        raise RenderQuit('render window closed')
     try:
         return _render_env(env)
     except Exception:
         if _window_gone(env):
-            raise KeyboardInterrupt('render window closed') from None
+            raise RenderQuit('render window closed') from None
         raise
 
 
@@ -429,6 +454,7 @@ def wait_for_episode_nav(env, allow_prev: bool = True) -> str:
     if fig is None:
         return 'next'
 
+    raw._vehicle.render().update_artists(raw)
     fig.canvas.draw_idle()
 
     _nav = [None]

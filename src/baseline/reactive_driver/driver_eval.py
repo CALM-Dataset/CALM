@@ -12,6 +12,7 @@ import gymnasium as gym
 from utils.paths import ROOT as _ROOT
 
 from gym_env.common import TerminationWrapper
+from gym_env.common.render import RenderQuit
 from gym_env.common.env_params import DT, EPISODE_STEPS
 from gym_env.common.preview_params import load_preview_config
 from gym_env.common.reward_params import load_reward_config
@@ -236,6 +237,8 @@ def main() -> None:
 if __name__ == '__main__':
     try:
         main()
+    except RenderQuit:
+        print('\n  closed')
     except KeyboardInterrupt:
         print('\n  interrupted: no data saved')
         sys.exit(0)
