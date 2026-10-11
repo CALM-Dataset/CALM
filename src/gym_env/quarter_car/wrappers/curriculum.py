@@ -99,6 +99,8 @@ class CurriculumWrapper(gym.Wrapper):
         return scenarios
 
     def reset(self, **kwargs):
+        if kwargs.get("seed") is not None:
+            self._rng = np.random.default_rng(kwargs["seed"])
         preview = self._preview_wrapper()
 
         real_pool = [p for lvl in range(self.current_level + 1)

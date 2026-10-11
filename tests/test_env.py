@@ -66,3 +66,25 @@ def test_body_acceleration_lowers_the_reward():
     calm, _ = compute_reward(5.0, 0.0, 0.0, 0.0, 0.0, cfg, v_ref=5.0)
     rough, _ = compute_reward(5.0, 5.0, 5.0, 0.0, 0.0, cfg, v_ref=5.0)
     assert rough < calm
+
+
+def test_the_same_seed_gives_the_same_training_episodes():
+    from pathlib import Path
+
+    from gym_env.half_car.wrappers.curriculum import load_curriculum_config
+    from train.environment import _make_env
+
+    cfg = load_curriculum_config(Path(__file__).resolve().parents[1] / "config" / "curriculum" / "curriculum.yaml")
+
+    def rollout(seed):
+        env = _make_env(seed, None, {"render_mode": "none"}, cfg)()
+        rng = np.random.default_rng(0)
+        out = []
+        for _ in range(4):
+            out.append(env.reset()[0])
+            for _ in range(30):
+                out.append(env.step(rng.uniform(-1, 1, 1).astype(np.float32))[0])
+        return np.array(out)
+
+    assert np.array_equal(rollout(5), rollout(5))
+    assert not np.array_equal(rollout(5), rollout(6))
