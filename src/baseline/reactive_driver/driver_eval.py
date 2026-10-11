@@ -317,11 +317,11 @@ def _render_scenarios(env, ctrl: ReactiveController, args, nav_fn=None,
         r = run_episode(env, ctrl, seed=args.seed, scenario_road=road,
                         collect_frames=False, render_live=True,
                         perception_track=_track, preview_cfg=preview_cfg)
-        print(f'  [{idx+1}/{n}] {sc_name:<24}  return={r["episode_return"]:+.1f}  '
-              f'RMS={r["rms_accel"]:.3f}  obst={_obst_str(r)}')
         nav = getattr(raw, '_nav_request', None)
         raw._nav_request = None
         if nav is None:
+            print(f'  [{idx+1}/{n}] {sc_name:<24}  return={r["episode_return"]:+.1f}  '
+                  f'RMS={r["rms_accel"]:.3f}  obst={_obst_str(r)}')
             nav = nav_fn(env, allow_prev=True)
         if nav == 'quit':
             break
@@ -454,7 +454,9 @@ def main() -> None:
         print(f'  {sc_name:<{w}}  {r["episode_return"]:>+9.1f}  '
               f'{r["rms_accel"]:>10.3f}{p_col}  {r["comfort_score"]:>8.3f}  '
               f'{bumps_str:>7}  {r["act_us_mean"]:>8.1f}')
-        if args.render and wait_for_episode_nav(env) == 'replay':
+        nr = getattr(env.unwrapped, '_nav_request', None)
+        env.unwrapped._nav_request = None
+        if args.render and (nr == 'replay' or (nr is None and wait_for_episode_nav(env) == 'replay')):
             continue
         break
 

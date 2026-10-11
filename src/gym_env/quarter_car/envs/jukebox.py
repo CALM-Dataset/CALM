@@ -78,6 +78,20 @@ def _synth(song) -> "np.ndarray":
     return np.column_stack([mono, mono])
 
 
+def _safe(fn):
+    def wrapper(self, *args, **kwargs):
+        if not self.ok:
+            return None
+        try:
+            return fn(self, *args, **kwargs)
+        except Exception as exc:
+            import sys
+            print(f'[render] audio disabled: {type(exc).__name__}: {exc}', file=sys.stderr)
+            self.ok = False
+            return None
+    return wrapper
+
+
 class Jukebox:
 
     def __init__(self, track: str = DEFAULT_TRACK,
@@ -104,6 +118,7 @@ class Jukebox:
             self._pygame = None
             self.ok = False
 
+    @_safe
     def _load(self):
         if not self.ok:
             return
@@ -117,6 +132,7 @@ class Jukebox:
             self._mode = 'synth'
         self._apply_volume()
 
+    @_safe
     def _apply_volume(self):
         vol = 0.0 if self.muted else self.volume
         if self._mode == 'file':
@@ -124,6 +140,7 @@ class Jukebox:
         elif self._sound is not None:
             self._sound.set_volume(vol)
 
+    @_safe
     def start(self):
         if not self.ok:
             return
@@ -136,6 +153,7 @@ class Jukebox:
             self._channel = self._sound.play(loops=loops)
         self._apply_volume()
 
+    @_safe
     def tick(self):
         if not self.ok or not self.jukebox:
             return
@@ -147,6 +165,7 @@ class Jukebox:
             return bool(self._pygame.mixer.music.get_busy())
         return self._channel is not None and bool(self._channel.get_busy())
 
+    @_safe
     def stop(self):
         if not self.ok:
             return
@@ -166,6 +185,7 @@ class Jukebox:
             self.muted = False
         self._apply_volume()
 
+    @_safe
     def set_track(self, track: str):
         if track not in SONGS:
             return

@@ -233,7 +233,7 @@ def _build_bump_vlines(env, ax_r):
     return bump_vlines, _bump_signature(bumps)
 
 
-def render_env(env):
+def _render_env(env):
     if env.render_mode == 'none':
         return None
     if env._ren_hist is None:
@@ -247,7 +247,8 @@ def render_env(env):
         import matplotlib.pyplot as plt
         _ensure_play_keys(env)
         hud = getattr(env, '_speed_hud', None)
-        while getattr(env, '_paused', False) and getattr(env, '_nav_request', None) is None:
+        while (getattr(env, '_paused', False) and getattr(env, '_nav_request', None) is None
+               and not _window_gone(env)):
             if hud is not None:
                 hud.set_text('|| paused')
             env._fig.canvas.draw_idle()
@@ -307,13 +308,17 @@ def _grab_key_focus(fig):
 
 def _free_matplotlib_keys():
     import matplotlib as mpl
-    for km, keys in (('keymap.fullscreen', ('f',)),
-                     ('keymap.grid', ('g', 'G')),
-                     ('keymap.save', ('s',))):
-        try:
-            mpl.rcParams[km] = [k for k in mpl.rcParams[km] if k not in keys]
-        except Exception:
-            pass
+    for name in [k for k in mpl.rcParams if k.startswith('keymap.')]:
+        mpl.rcParams[name] = []
+
+
+def _window_gone(env) -> bool:
+    import matplotlib.pyplot as plt
+    fig = getattr(env, '_fig', None)
+    if fig is None:
+        return False
+    return (getattr(env, '_quit_request', False) or getattr(env, '_window_closed', False)
+            or not plt.fignum_exists(fig.number))
 
 
 def _ensure_play_keys(env):
@@ -378,9 +383,20 @@ def _ensure_play_keys(env):
                                    _ZOOM_MIN), _ZOOM_MAX)
         _apply_zoom()
 
+    def _guarded(fn):
+        def wrapper(ev):
+            try:
+                fn(ev)
+            except Exception as exc:
+                import sys
+                print(f'[render] ignored {type(exc).__name__}: {exc}', file=sys.stderr)
+        return wrapper
+
     def _on_key(ev):
         k = ev.key
-        if k == ' ':
+        if k in ('q', 'escape'):
+            env._quit_request = True
+        elif k == ' ':
             env._paused = not getattr(env, '_paused', False)
         elif k == 'f':
             cur = float(getattr(env, '_render_speed', 1.0))
@@ -397,6 +413,8 @@ def _ensure_play_keys(env):
         elif k == '0':
             env._render_zoom = 1.0
             _apply_zoom()
+        elif k == 'r':
+            env._nav_request = 'replay'
         elif k == 'right':
             env._nav_request = 'next'
         elif k == 'left':
@@ -419,9 +437,23 @@ def _ensure_play_keys(env):
             tip.set_visible(over)
             fig.canvas.draw_idle()
 
-    env._play_keys_cid = fig.canvas.mpl_connect('key_press_event', _on_key)
-    fig.canvas.mpl_connect('motion_notify_event', _on_move)
-    fig.canvas.mpl_connect('scroll_event', _on_scroll)
+    env._play_keys_cid = fig.canvas.mpl_connect('key_press_event', _guarded(_on_key))
+    fig.canvas.mpl_connect('motion_notify_event', _guarded(_on_move))
+    fig.canvas.mpl_connect('scroll_event', _guarded(_on_scroll))
+    fig.canvas.mpl_connect('close_event', lambda ev: setattr(env, '_window_closed', True))
+
+
+def render_env(env):
+    if env.render_mode != 'human':
+        return _render_env(env)
+    if _window_gone(env):
+        raise KeyboardInterrupt('render window closed')
+    try:
+        return _render_env(env)
+    except Exception:
+        if _window_gone(env):
+            raise KeyboardInterrupt('render window closed') from None
+        raise
 
 
 def close_env(env):

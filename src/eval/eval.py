@@ -248,7 +248,7 @@ def run_episode(
             nr = getattr(base_env, '_nav_request', None)
             if nr is not None:
                 base_env._nav_request = None
-                nav_override = 'replay' if nr == 'prev' else 'next'
+                nav_override = 'replay' if nr in ('prev', 'replay') else 'next'
                 ep["termination_reason_running"].append("skipped")
                 break
 

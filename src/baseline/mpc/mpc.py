@@ -379,15 +379,15 @@ def _render_scenarios(env, ctrl: MPCController, args, terminal_out=None,
         r = run_episode(env, ctrl, seed=args.seed, scenario_road=road,
                         collect_frames=False, render_live=True,
                         perception_track=_track, preview_cfg=preview_cfg)
-        if terminal_out is not None:
-            terminal_out.write(
-                f'  [{idx+1}/{n}] {sc_name:<24}  return={r["episode_return"]:+.1f}  '
-                f'RMS={r["rms_accel"]:.3f}  obst={_obst_str(r)}\n'
-            )
         raw = env.unwrapped
         nav = getattr(raw, '_nav_request', None)
         raw._nav_request = None
         if nav is None:
+            if terminal_out is not None:
+                terminal_out.write(
+                    f'  [{idx+1}/{n}] {sc_name:<24}  return={r["episode_return"]:+.1f}  '
+                    f'RMS={r["rms_accel"]:.3f}  obst={_obst_str(r)}\n'
+                )
             nav = nav_fn(env, allow_prev=True)
         if nav == 'quit':
             break
@@ -526,7 +526,9 @@ def main() -> None:
                 print(f'  {sc_name:<{w}}  {r["episode_return"]:>+9.1f}  '
                       f'{r["rms_accel"]:>10.3f}{p_col}  {r["comfort_score"]:>8.3f}  '
                       f'{bumps_str:>7}  {r["solve_ms_mean"]:>9.2f}')
-                if args.render and wait_for_episode_nav(env) == 'replay':
+                nr = getattr(env.unwrapped, '_nav_request', None)
+                env.unwrapped._nav_request = None
+                if args.render and (nr == 'replay' or (nr is None and wait_for_episode_nav(env) == 'replay')):
                     continue
                 break
 
@@ -588,7 +590,9 @@ def main() -> None:
     finally:
         try:
             terminal_out.close()
-            os.write(saved_stdout, output.getvalue().encode('utf-8'))
+            os.dup2(saved_stdout, 1)
+            os.dup2(saved_stderr, 2)
+            os.write(1, output.getvalue().encode('utf-8'))
         finally:
             os.close(saved_stdout)
             os.close(saved_stderr)
@@ -596,4 +600,8 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('\n  interrupted')
+        raise SystemExit(130)
