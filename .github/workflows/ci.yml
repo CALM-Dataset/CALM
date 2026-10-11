@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,8 +20,16 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install pyflakes
-        run: pip install pyflakes
+      - name: Install
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev]"
 
-      - name: Lint (pyflakes)
-        run: pyflakes src/
+      - name: Lint
+        run: pyflakes src tests
+
+      - name: Test
+        env:
+          MPLBACKEND: Agg
+          SDL_AUDIODRIVER: dummy
+        run: pytest -q

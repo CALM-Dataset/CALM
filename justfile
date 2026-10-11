@@ -22,7 +22,12 @@ install:
 # static check, as in CI
 [group('setup')]
 lint:
-    {{venv}} -m pyflakes src
+    {{venv}} -m pyflakes src tests
+
+# fast tests, as in CI (no data or GPU needed)
+[group('setup')]
+test *args:
+    MPLBACKEND=Agg SDL_AUDIODRIVER=dummy {{venv}} -m pytest -q "$@"
 
 # build the acados submodule (only the MPC needs it)
 [group('setup')]
