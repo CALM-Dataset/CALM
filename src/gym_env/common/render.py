@@ -11,13 +11,19 @@ from gym_env.common.render_params import (
 
 _BUMP_COLOURS = ['#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#d35400']
 _SPEED_SEQ = (0.1, 0.25, 0.5, 1, 2, 4, 8, 16)
-_CONTROLS_TEXT = ('space   pause / resume\n'
-                  'f  /  d    faster / slower\n'
-                  '+  /  −    zoom in / out  (or scroll)\n'
-                  '0   reset zoom\n'
-                  '→  /  ←    next / prev scenario\n'
-                  'r   replay      q   quit')
+_CONTROLS = (
+    ('Space', 'pause / resume'),
+    ('F / S', 'faster / slower'),
+    ('+ / −', 'zoom (or scroll)'),
+    ('0', 'reset zoom'),
+    ('← / →', 'previous / next'),
+    ('R', 'replay'),
+    ('Q', 'quit'),
+)
+_CONTROLS_TEXT = '\n'.join(f'{key:<7}{text}' for key, text in _CONTROLS)
 _ZOOM_MIN, _ZOOM_MAX, _ZOOM_STEP = 0.3, 6.0, 1.25
+_NAV_KEYS = {'right': 'next', 'left': 'prev', 'r': 'replay'}
+_NAV_DEBOUNCE = 0.6
 
 
 def spring_xy(x_c: float, y_top: float, y_bot: float,
@@ -229,10 +235,10 @@ def _ensure_play_keys(env):
                              bbox=dict(boxstyle='circle,pad=0.3', facecolor='white',
                                        edgecolor='#2c6fad', lw=1.2))
     env._info_tip = fig.text(
-        0.985, 0.945, _CONTROLS_TEXT, ha='right', va='top', fontsize=8,
-        family='monospace', visible=False, zorder=20,
-        bbox=dict(facecolor='white', alpha=0.95, edgecolor='#2c6fad',
-                  boxstyle='round,pad=0.5', lw=0.8))
+        0.985, 0.945, _CONTROLS_TEXT, ha='right', va='top', fontsize=8.5,
+        family='monospace', multialignment='left', color='#2b3440', visible=False, zorder=20,
+        bbox=dict(facecolor='#fbfcfe', alpha=0.97, edgecolor='#c5ced8',
+                  boxstyle='round,pad=0.7', lw=0.7))
 
     if not hasattr(env, '_render_zoom'):
         env._render_zoom = 1.0
@@ -291,7 +297,7 @@ def _ensure_play_keys(env):
             cur = float(getattr(env, '_render_speed', 1.0))
             i = _SPEED_SEQ.index(cur) if cur in _SPEED_SEQ else _SPEED_SEQ.index(1)
             env._render_speed = _SPEED_SEQ[min(i + 1, len(_SPEED_SEQ) - 1)]
-        elif k == 'd':
+        elif k == 's':
             cur = float(getattr(env, '_render_speed', 1.0))
             i = _SPEED_SEQ.index(cur) if cur in _SPEED_SEQ else _SPEED_SEQ.index(1)
             env._render_speed = _SPEED_SEQ[max(i - 1, 0)]
@@ -302,12 +308,11 @@ def _ensure_play_keys(env):
         elif k == '0':
             env._render_zoom = 1.0
             _apply_zoom()
-        elif k == 'r':
-            env._nav_request = 'replay'
-        elif k == 'right':
-            env._nav_request = 'next'
-        elif k == 'left':
-            env._nav_request = 'prev'
+        elif k in _NAV_KEYS:
+            now = time.perf_counter()
+            if now - getattr(env, '_nav_time', -1.0) >= _NAV_DEBOUNCE:
+                env._nav_time = now
+                env._nav_request = _NAV_KEYS[k]
 
     def _on_scroll(ev):
         _zoom_by(_ZOOM_STEP if ev.button == 'up' else 1.0 / _ZOOM_STEP)
