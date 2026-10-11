@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from utils.paths import ROOT
@@ -93,6 +94,13 @@ def _prettify_scenario_name(name: str) -> str:
     return pretty.rstrip('0123456789').strip() or pretty
 
 
+def _real_label(name: str) -> str:
+    m = re.fullmatch(r'(.+)_sb0*(\d+)', str(name))
+    if not m:
+        return _prettify_scenario_name(name)
+    return f'{m.group(1).replace("_", " ").title()} SB {m.group(2)}'
+
+
 def _real_scenarios_dir() -> Path:
     return ROOT / 'config' / 'eval' / 'scenarios' / 'real'
 
@@ -127,7 +135,7 @@ def load_scenario_json(path):
     gen = RoadGenerator.from_profile(r["z"], float(r["ds_m"]), s_bump=s_bump)
     gen._bumps = [(float(b["s_bump_m"]), float(b.get("peak_z_m", 0.0)),
                    float(b.get("width_m", 1.0))) for b in (d.get("bumps") or [])]
-    label = _prettify_scenario_name(d.get("source_sequence", d.get("name", "")))
+    label = _real_label(d["name"]) if d.get("name") else _prettify_scenario_name(d.get("source_sequence", ""))
     if label:
         gen._bump_labels = [label] * max(len(gen._bumps), 1)
     track = d.get("perception")
