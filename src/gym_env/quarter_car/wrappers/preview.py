@@ -85,10 +85,7 @@ class PreviewWrapper(gym.ObservationWrapper):
         self._track = None
         self._model = None
         if self._cfg.perception_mode == "model":
-            try:
-                self._model = load_perception_model(self._cfg.model_path)
-            except Exception:
-                self._model = None
+            self._model = load_perception_model(self._cfg.model_path)
 
     def set_perception_track(self, track):
         self._track = track

@@ -13,10 +13,9 @@ from baseline.mpc.vehicle import make_vehicle_spec
 
 def _load_comfort_cfg() -> dict:
     p = Path(__file__).resolve().parents[3] / "config" / "baseline" / "mpc.yaml"
-    try:
-        return (yaml.safe_load(p.read_text()) or {}).get("comfort_map", {})
-    except Exception:
+    if not p.is_file():
         return {}
+    return (yaml.safe_load(p.read_text()) or {}).get("comfort_map", {})
 
 
 _CM = _load_comfort_cfg()

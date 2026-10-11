@@ -142,7 +142,7 @@ def make_eval_vec_env(
 
     try:
         eval_venv.venv.env_method("set_forced_level", 0)
-    except Exception:
+    except AttributeError:
         pass
 
     return eval_venv

@@ -460,6 +460,8 @@ def main() -> None:
         eval_curve=eval_curve,
     )
     print(f"Summary  → {summary_path}")
+    if _error:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

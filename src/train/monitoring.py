@@ -62,7 +62,7 @@ class MetricsCallback(BaseCallback):
             levels = self.training_env.get_attr("current_level")
             if levels:
                 log("curriculum/level", float(levels[0]))
-        except Exception:
+        except AttributeError:
             pass
 
         if term_reasons:
@@ -124,11 +124,11 @@ class PerformanceCurriculumCallback(EvalCallback):
         if self._start_level > 0:
             try:
                 self._train_venv.venv.env_method("set_level", self._start_level)
-            except Exception:
+            except AttributeError:
                 pass
             try:
                 self.eval_env.venv.env_method("set_forced_level", self._start_level)
-            except Exception:
+            except AttributeError:
                 pass
 
 
@@ -186,7 +186,7 @@ class PerformanceCurriculumCallback(EvalCallback):
 
         try:
             self._train_venv.venv.env_method("set_level", self._current_level)
-        except Exception:
+        except AttributeError:
             pass
 
         recent = self._level_returns[prev][-self._window:]

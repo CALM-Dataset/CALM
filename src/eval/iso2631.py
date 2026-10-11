@@ -49,7 +49,8 @@ def weight_wk(x, dt: float) -> np.ndarray:
         return np.zeros_like(x)
     fs = _OVERSAMPLE / dt
     up = signal.resample_poly(x, _OVERSAMPLE, 1)
-    y = signal.sosfilt(_wk_sos(fs), up)
+    sos = _wk_sos(fs)
+    y, _ = signal.sosfilt(sos, up, zi=signal.sosfilt_zi(sos) * up[0])
     return y[::_OVERSAMPLE][: x.size]
 
 
