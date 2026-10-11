@@ -20,7 +20,7 @@ RUN grep -v '^torch' requirements.txt > req.txt \
     && rm req.txt
 
 COPY . .
-RUN pip install --no-cache-dir -e . \
+RUN pip install --no-cache-dir -e ".[dev]" \
     && python -m utils.generate_train_scenarios
 
 RUN useradd --create-home --shell /bin/bash calm \

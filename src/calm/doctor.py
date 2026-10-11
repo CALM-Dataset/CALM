@@ -79,8 +79,9 @@ def _data() -> list[tuple[str, str, str]]:
 
 
 def _tools() -> list[tuple[str, str, str]]:
+    in_env = sys.prefix != sys.base_prefix or (ROOT / '.venv').is_dir() or os.path.exists('/.dockerenv')
     return [(OK if shutil.which('just') else WARN, 'just', shutil.which('just') or 'optional: every recipe is also a calm command'),
-            (OK if (ROOT / '.venv').is_dir() else WARN, 'virtual environment', '.venv' if (ROOT / '.venv').is_dir() else 'none in the repo: just install creates it')]
+            (OK if in_env else WARN, 'virtual environment', sys.prefix if in_env else 'not in one: just install creates .venv')]
 
 
 def run_checks(data_only: bool = False) -> int:
