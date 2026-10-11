@@ -51,6 +51,7 @@ def build_model(
     tensorboard_log: str,
     seed: int,
     resume: str | None = None,
+    verbose: int = 1,
 ) -> BaseAlgorithm:
     cls    = _REGISTRY[algo]
     kw     = copy.deepcopy(algo_kwargs)
@@ -75,7 +76,7 @@ def build_model(
         model = cls(
             policy,
             venv,
-            verbose=1,
+            verbose=verbose,
             seed=seed,
             tensorboard_log=tensorboard_log,
             **kw,

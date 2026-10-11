@@ -21,9 +21,7 @@ from gym_env.quarter_car.config.env_params import DT, EPISODE_STEPS
 from gym_env.quarter_car.wrappers import TerminationWrapper
 from gym_env.quarter_car.reward.utils import reward_bounds
 from baseline.reactive_driver.driver import ReactiveController
-from utils.scenario_loader import (
-    load_scenario, make_road_generator, load_scenario_any, enabled_eval_suites,
-)
+from utils.scenario_loader import load_scenario_any, enabled_eval_suites
 from eval.data_logger import RunLogger, EpisodeData
 
 
@@ -35,14 +33,14 @@ def _vehicle_bits(vehicle: str) -> dict:
         from gym_env.half_car.reward.utils import reward_bounds as rb
         from gym_env.half_car.envs.render import wait_for_episode_nav as nav
         from gym_env.half_car.config.preview_params import load_preview_config as lpc
-        return dict(env_id='gym_env.half_car/HalfCar', EPISODE_STEPS=ES, v_index=8,
+        return dict(env_id='gym_env/HalfCar', EPISODE_STEPS=ES, v_index=8,
                     TerminationWrapper=TW, reward_bounds=rb, wait_for_episode_nav=nav,
                     load_preview_config=lpc)
     if vehicle not in ('quarter', None):
         raise ValueError(f"unknown vehicle {vehicle!r} (expected 'quarter' or 'half')")
     from gym_env.quarter_car.envs.render import wait_for_episode_nav as nav
     from gym_env.quarter_car.config.preview_params import load_preview_config as lpc
-    return dict(env_id='gym_env.quarter_car/QuarterCar', EPISODE_STEPS=EPISODE_STEPS, v_index=4,
+    return dict(env_id='gym_env/QuarterCar', EPISODE_STEPS=EPISODE_STEPS, v_index=4,
                 TerminationWrapper=TerminationWrapper, reward_bounds=reward_bounds,
                 wait_for_episode_nav=nav, load_preview_config=lpc)
 
@@ -401,8 +399,8 @@ def main() -> None:
     scenario_road  = None
     scenario_label = 'speed_bump'
     if args.scenario:
-        _, _, sc_name, sc_desc = load_scenario(args.scenario)
-        scenario_road  = make_road_generator(args.scenario)
+        scenario_road, _track, _v, sc_desc = load_scenario_any(args.scenario)
+        sc_name = args.scenario
         scenario_label = args.scenario
         print(f'\n  Scenario : {sc_name}')
         print(f'           : {sc_desc}')

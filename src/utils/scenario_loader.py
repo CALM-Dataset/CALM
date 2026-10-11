@@ -10,9 +10,9 @@ import yaml
 def _find_root() -> Path:
     here = Path(__file__).resolve()
     for parent in here.parents:
-        if (parent / 'config' / 'eval' / 'scenarios').is_dir():
+        if (parent / 'pyproject.toml').is_file() and (parent / 'config').is_dir():
             return parent
-    raise FileNotFoundError("repo root with config/eval/scenarios not found")
+    raise FileNotFoundError("repo root with pyproject.toml and config/ not found")
 
 
 def _load_catalog() -> dict[int, dict]:

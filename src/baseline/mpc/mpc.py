@@ -41,9 +41,7 @@ from gym_env.quarter_car.config.reward_params import load_reward_config
 from gym_env.quarter_car.wrappers import TerminationWrapper
 from gym_env.quarter_car.reward.utils import reward_bounds
 from baseline.mpc.controller import MPCController
-from utils.scenario_loader import (
-    load_scenario, make_road_generator, load_scenario_any, enabled_eval_suites,
-)
+from utils.scenario_loader import load_scenario_any, enabled_eval_suites
 from eval.data_logger import RunLogger, EpisodeData
 
 
@@ -480,8 +478,8 @@ def main() -> None:
                 env.close()
                 return
 
-            _, speed, sc_name, sc_desc = load_scenario(args.scenario)
-            sc_road = make_road_generator(args.scenario)
+            sc_road, _track, speed, sc_desc = load_scenario_any(args.scenario)
+            sc_name = args.scenario
             print(f'\n  Scenario : {sc_name}')
             print(f'           : {sc_desc}')
             print(f'           : v={speed*3.6:.1f} km/h, {len(sc_road._bumps)} bump(s)')
@@ -490,7 +488,7 @@ def main() -> None:
             print(f'  horizon  : {args.horizon} steps  ({args.horizon * 0.02:.2f}s)  '
                   '(config/baseline/mpc.yaml)')
             print(f'  scenarios: {scenario_label}')
-            print('  solver   : acados SQP-RTI + HPIPM\n')
+            print('  solver   : acados SQP + HPIPM\n')
             w = max(len(sc_name), 8)
             half = getattr(args, 'vehicle', 'quarter') == 'half'
             p_hdr = f'  {"Pitch r/s²":>10}' if half else ''

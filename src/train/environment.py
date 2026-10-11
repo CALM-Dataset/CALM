@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Callable
 
 import gymnasium as gym
@@ -69,9 +70,12 @@ def _make_env(
         env = CurriculumWrapper(env, curriculum_cfg, n_envs=n_envs)
         if action_penalty > 0.0:
             env = ActionSaturationPenalty(env, action_penalty)
-        env = Monitor(env, monitor_dir)
         if monitor_dir:
-            env = EpisodeLogger(env, log_dir=monitor_dir)
+            Path(monitor_dir).mkdir(parents=True, exist_ok=True)
+            env = Monitor(env, str(Path(monitor_dir) / f"env{seed}"))
+            env = EpisodeLogger(env, log_dir=monitor_dir, tag=f"env{seed}")
+        else:
+            env = Monitor(env, None)
         env.reset(seed=seed)
         env.action_space.seed(seed)
         env.observation_space.seed(seed)
@@ -144,12 +148,13 @@ def make_eval_vec_env(
     return eval_venv
 
 
-def load_real_val_scenarios(n: int = 20, seed: int = 0) -> list[tuple]:
-    from pathlib import Path
+def load_real_val_scenarios(real_dir: str | Path | None, n: int = 20, seed: int = 0) -> list[tuple]:
     import numpy as np
     from utils.scenario_loader import load_scenario_json
 
-    rsd = Path("config/train/scenarios/real")
+    if not real_dir or not Path(real_dir).is_dir():
+        return []
+    rsd = Path(real_dir)
     files = sorted(p for p in rsd.glob("*.json")
                    if p.name not in ("manifest.json", "curriculum.json"))
     if not files:

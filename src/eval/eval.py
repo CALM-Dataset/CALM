@@ -208,11 +208,12 @@ def run_episode(
 
     reset_opts = {"road": scenario_road} if scenario_road is not None else None
     if reset_opts is not None:
-        raw_obs_single, _ = venv.venv.envs[0].reset(options=reset_opts)
+        raw_obs_single, _ = venv.venv.envs[0].reset(seed=seed, options=reset_opts)
         raw_obs = np.expand_dims(raw_obs_single, axis=0)
         venv.ret = np.zeros(venv.num_envs)
         obs: np.ndarray = venv.normalize_obs(raw_obs)
     else:
+        venv.seed(seed)
         reset_out       = venv.reset()
         obs: np.ndarray = reset_out[0] if isinstance(reset_out, tuple) else reset_out
 

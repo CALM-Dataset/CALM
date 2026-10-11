@@ -336,7 +336,7 @@ def main() -> None:
         start_level=start_level,
     )
 
-    real_val_scenarios = load_real_val_scenarios(n=20, seed=seed)
+    real_val_scenarios = load_real_val_scenarios(curriculum_cfg.get("real_scenarios_dir"), n=20, seed=seed)
     if real_val_scenarios:
         real_val_venv = make_real_val_env(vehicle=args.vehicle, seed=seed + 20_000)
         real_val_cb = RealValidationCallback(

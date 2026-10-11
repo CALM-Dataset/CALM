@@ -1,4 +1,6 @@
+import atexit
 import os
+import shutil
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
@@ -64,8 +66,9 @@ class MPCController:
 
         self._comfort_map = ComfortMap(self._cfg, self._physics, vehicle=vehicle)
 
-        gen_dir = str(self._gen_base / (_OCP_VERSION + '_simple'))
+        gen_dir = str(self._gen_base / f'{_OCP_VERSION}_N{self._N}_{os.getpid()}')
         os.makedirs(gen_dir, exist_ok=True)
+        atexit.register(shutil.rmtree, gen_dir, ignore_errors=True)
         with _suppress_native_output():
             self._solver = build_solver_simple(
                 self._physics, self._cfg,

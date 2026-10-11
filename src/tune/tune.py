@@ -98,7 +98,8 @@ def save_best_yaml(study: optuna.Study, out_dir: Path) -> None:
 
     config = {**base, **best}
     config["policy_kwargs"] = {
-        "net_arch": {"pi": [n_units, n_units], "vf": [n_units, n_units]}
+        **base.get("policy_kwargs", {}),
+        "net_arch": {"pi": [n_units, n_units], "vf": [n_units, n_units]},
     }
 
     out_path = out_dir / "best_params.yaml"
@@ -135,6 +136,10 @@ def main() -> None:
         storage=args.storage,
         load_if_exists=True,
     )
+
+    with open(_ALGO_CONFIG_PATH) as fh:
+        if args.n_jobs > 1 and yaml.safe_load(fh)["training"].get("speed_controller"):
+            raise SystemExit("--n-jobs > 1 shares one speed-weight controller between trials; remove training.speed_controller or run with --n-jobs 1")
 
     objective = Objective(
         timesteps=timesteps,

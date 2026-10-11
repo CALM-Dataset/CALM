@@ -280,10 +280,9 @@ class RealValidationCallback(BaseCallback):
             action, _ = self.model.predict(obs, deterministic=self._deterministic)
             step = self._venv.step(action)
             obs, reward = step[0], step[1]
-            done = bool(step[2][0] if len(step) == 4 else np.logical_or(step[2], step[3])[0])
-            info = (step[3] if len(step) == 4 else step[4])[0]
-            total = info.get("episode_reward", total + float(reward[0]))
-        return float(total)
+            done = bool(step[2][0])
+            total += float(reward[0])
+        return total
 
     def _on_step(self) -> bool:
         if self._eval_freq <= 0 or self.n_calls % self._eval_freq != 0 or not self._scenarios:

@@ -105,6 +105,8 @@ def _gen_single(catalog: list[dict], rank: dict[int, float], per_level: int,
     selected: dict[str, list[dict]] = {d: [] for d in _DIFFICULTIES}
     for diff in _DIFFICULTIES:
         items = by_diff[diff]
+        if not items:
+            raise ValueError(f"no {diff} scenarios: difficulty_thresholds do not cover any bump and speed in scenario_gen.yaml")
         if len(items) < per_level:
             print(f"  WARNING: only {len(items)} unique {diff} single scenarios; upsampling to {per_level}")
             idxs = rng.choice(len(items), per_level, replace=True)

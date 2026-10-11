@@ -13,9 +13,9 @@ REGIONS = ['italy', 'germany']
 def _root() -> Path:
     here = Path(__file__).resolve()
     for parent in here.parents:
-        if (parent / 'config' / 'eval' / 'scenarios').is_dir():
+        if (parent / 'pyproject.toml').is_file() and (parent / 'config').is_dir():
             return parent
-    raise FileNotFoundError("repo root with config/ not found")
+    raise FileNotFoundError("repo root with pyproject.toml and config/ not found")
 
 
 def _real_dir() -> Path:
@@ -24,6 +24,19 @@ def _real_dir() -> Path:
 
 def _eval_dir() -> Path:
     return _root() / 'config' / 'eval' / 'scenarios'
+
+
+def real_files() -> list[tuple[Path, str]]:
+    seen = {p.name: (p, 'seen') for p in sorted(_real_dir().glob('*.json')) if p.name not in ('manifest.json', 'curriculum.json')}
+    held = {p.name: (p, 'unseen') for p in sorted((_eval_dir() / 'real').glob('*.json')) if p.name != 'manifest.json'}
+    return sorted({**seen, **held}.values(), key=lambda t: t[0].name)
+
+
+ITALY_LOCATIONS = ('carmiano', 'salice_salentino', 'nardo', 'monteroni_di_lecce')
+
+
+def region_of(name: str) -> str:
+    return 'italy' if name.startswith(ITALY_LOCATIONS) else 'germany'
 
 
 def index_path() -> Path:
@@ -37,15 +50,14 @@ def _source_of(name: str) -> str:
 
 def _real_rows() -> list[dict]:
     rows: list[dict] = []
-    for p in sorted(_real_dir().glob('*.json')):
-        if p.name in ('manifest.json', 'curriculum.json'):
-            continue
+    for p, split in real_files():
         d = json.loads(p.read_text())
         bumps = d.get('bumps') or []
         peak = max((float(b.get('peak_z_m', 0.0)) for b in bumps), default=0.0)
         rows.append({
             'id': d.get('name', p.stem),
             'group': 'real',
+            'split': split,
             'source': _source_of(d.get('name', p.stem)),
             'n_bumps': len(bumps),
             'peak_z_m': round(peak, 4),
@@ -92,15 +104,17 @@ def load_index() -> list[dict]:
 
 
 def ensure_local() -> None:
-    if _real_dir().is_dir() and any(_real_dir().glob('*.json')):
+    train_dir, eval_dir = _real_dir(), _eval_dir() / 'real'
+    seen_dir = _eval_dir() / 'real_train'
+    if all(d.is_dir() and any(d.glob('*.json')) for d in (train_dir, eval_dir, seen_dir)):
         return
     import shutil
     import tempfile
 
     from huggingface_hub import snapshot_download
 
-    _real_dir().mkdir(parents=True, exist_ok=True)
-    (_eval_dir() / 'real').mkdir(parents=True, exist_ok=True)
+    for d in (_real_dir(), _eval_dir() / 'real', seen_dir):
+        d.mkdir(parents=True, exist_ok=True)
     perception_dir = _root() / 'config' / 'perception'
     perception_dir.mkdir(parents=True, exist_ok=True)
 
@@ -108,7 +122,7 @@ def ensure_local() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         snapshot_download(repo_id=SCENARIOS_REPO, repo_type='dataset', local_dir=tmp)
         for region in REGIONS:
-            for split, dst in (('train', _real_dir()), ('eval', _eval_dir() / 'real')):
+            for split, dsts in (('train', (_real_dir(), seen_dir)), ('eval', (_eval_dir() / 'real',))):
                 for f in Path(tmp, region, split).glob('*.json'):
                     # low_confidence means the road-height sensors found no real,
                     # trustworthy localized bump near the camera-flagged crossing
@@ -119,7 +133,8 @@ def ensure_local() -> None:
                     if bumps and bumps[0].get('low_confidence'):
                         skipped += 1
                         continue
-                    shutil.copy2(f, dst / f.name)
+                    for dst in dsts:
+                        shutil.copy2(f, dst / f.name)
             model = Path(tmp, region, 'perception_model.yaml')
             if model.is_file() and not (perception_dir / 'perception_model.yaml').is_file():
                 shutil.copy2(model, perception_dir / 'perception_model.yaml')
