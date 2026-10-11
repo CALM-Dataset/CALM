@@ -14,7 +14,7 @@ import numpy as np
 from utils.paths import ROOT as _ROOT
 
 import gymnasium as gym
-from stable_baselines3 import PPO, TD3
+from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from gym_env.common import PreviewWrapper, TerminationWrapper
@@ -26,10 +26,9 @@ from utils.scenario_loader import load_scenario_any, enabled_eval_suites
 
 from utils.gif import keep, save_gif, shrink
 from eval.data_logger import RunLogger, EpisodeData
-from baseline.dummy_agent import DummyAgent
 
 
-_ALGO_MAP: dict[str, type] = {"PPO": PPO, "TD3": TD3, "DUMMY_AGENT": DummyAgent}
+_ALGO_MAP: dict[str, type] = {"PPO": PPO}
 
 
 def _render_nav(vehicle: str):

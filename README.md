@@ -120,7 +120,6 @@ just train --vehicle quarter    # quarter-car plant (same reward and settings)
 just eval demo --render         # evaluate logs/models/PPO/demo/PPO_final.zip
 just mpc --render               # MPC baseline
 just reactive-driver --render   # rule-based driver baseline
-just dummy                      # constant-action baseline through the training pipeline
 
 just tb                         # TensorBoard
 just tune --trials 50           # Optuna hyperparameter search

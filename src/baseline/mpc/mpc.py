@@ -22,7 +22,6 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 import gymnasium as gym
-import yaml
 
 _acados_py = str(_ROOT / 'acados' / 'interfaces' / 'acados_template')
 if _acados_py not in sys.path:
@@ -36,31 +35,10 @@ from gym_env.common.reward_utils import reward_bounds
 from gym_env.vehicles import get_vehicle
 from baseline import runner
 from utils.gif import save_gif
+from baseline.mpc.config import load_mpc_cfg, reward_config as mpc_reward_config
 from baseline.mpc.controller import MPCController
 from utils.scenario_loader import load_scenario_any
 from eval.data_logger import RunLogger, EpisodeData
-
-
-def _load_mpc_cfg() -> dict:
-    p = _ROOT / 'config' / 'baseline' / 'mpc.yaml'
-    with open(p) as fh:
-        return yaml.safe_load(fh)
-
-
-_KMH_FIELDS = ('v_limit', 'v_min', 'v_hard_min', 'v_init_low')
-
-
-def mpc_reward_config(load_reward_config):
-    import dataclasses
-
-    mcfg = _load_mpc_cfg()
-    base = load_reward_config()
-    names = {f.name for f in dataclasses.fields(base)}
-    over = {k: float(v) for k, v in (mcfg.get('weights') or {}).items() if k in names}
-    for k, v in (mcfg.get('velocity') or {}).items():
-        if k in names:
-            over[k] = float(v) / 3.6 if k in _KMH_FIELDS else float(v)
-    return dataclasses.replace(base, **over)
 
 
 def make_env(bits: dict, cfg, render_mode: str = 'none'):
@@ -121,7 +99,7 @@ def main() -> None:
 
     try:
         with redirect_stdout(output):
-            mcfg = _load_mpc_cfg()
+            mcfg = load_mpc_cfg()
 
             ap = argparse.ArgumentParser('MPC baseline (quarter- or half-car)')
             runner.add_common_args(ap, 'MPC')

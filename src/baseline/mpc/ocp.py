@@ -11,6 +11,7 @@ def build_solver_simple(
     dt:                   float = 0.02,
     gen_dir:              str   = '/tmp/acados_qc',
     nlp_solver_max_iter:  int   = 10,
+    weights:              dict  = None,
 ) -> AcadosOcpSolver:
     model      = AcadosModel()
     model.name = 'qc_speed'
@@ -55,8 +56,8 @@ def build_solver_simple(
     )
     r_e = (v - v_ref) / ca.fmax(v_ref, 1e-6)
 
-    W   = np.diag([float(cfg.Q_v), float(cfg.Q_a), float(cfg.w_jerk)])
-    W_e = np.array([[float(cfg.Q_v)]])
+    W   = np.diag([weights['Q_speed'], weights['R_accel'], weights['S_jerk']])
+    W_e = np.array([[weights['Q_terminal']]])
 
     ocp.cost.cost_type          = 'NONLINEAR_LS'
     ocp.cost.cost_type_e        = 'NONLINEAR_LS'

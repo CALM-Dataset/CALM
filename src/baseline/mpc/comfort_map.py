@@ -2,22 +2,13 @@ from __future__ import annotations
 
 import numpy as np
 
-import yaml
-
 from gym_env.common.env_params import DT
 from gym_env.common.reward_params import RewardConfig
+from baseline.mpc.config import load_mpc_cfg
 from baseline.mpc.vehicle import make_vehicle_spec
-from utils.paths import CONFIG
 
 
-def _load_comfort_cfg() -> dict:
-    p = CONFIG / "baseline" / "mpc.yaml"
-    if not p.is_file():
-        return {}
-    return (yaml.safe_load(p.read_text()) or {}).get("comfort_map", {})
-
-
-_CM = _load_comfort_cfg()
+_CM = load_mpc_cfg().get("comfort_map", {})
 _X0 = float(_CM.get("x0", 20.0))
 _PRE_M = float(_CM.get("pre_m", 2.0))
 _SETTLE_S = float(_CM.get("settle_s", 2.0))

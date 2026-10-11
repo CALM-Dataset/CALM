@@ -10,7 +10,6 @@ TOOLS = {
     'tune': ('tune.tune', 'Optuna hyperparameter search', []),
     'mpc': ('baseline.mpc.mpc', 'MPC baseline (needs acados)', []),
     'reactive': ('baseline.reactive_driver.driver_eval', 'rule-based driver baseline', []),
-    'dummy': ('baseline.dummy_agent.train', 'constant-action baseline through the training pipeline', []),
     'gen-scenes': ('utils.generate_train_scenarios', 'procedural training scenarios', []),
     'build-index': ('utils.dataset', 'metadata table over every scenario', []),
 }

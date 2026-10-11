@@ -9,11 +9,9 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.vec_env import VecEnv
 
-from baseline.dummy_agent import DummyAgent
 
 _REGISTRY: dict[str, type[BaseAlgorithm]] = {
     "PPO": PPO,
-    "dummy_agent": DummyAgent,
 }
 
 

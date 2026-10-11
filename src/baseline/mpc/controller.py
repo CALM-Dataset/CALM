@@ -12,6 +12,7 @@ from gym_env.common.env_params import DT
 from gym_env.common.reward_params import RewardConfig, load_reward_config
 from gym_env.vehicles import get_vehicle
 from road.road_generator import RoadGenerator
+from baseline.mpc.config import ocp_weights
 from baseline.mpc.ocp import build_solver_simple
 from baseline.mpc.comfort_map import ComfortMap
 
@@ -45,6 +46,7 @@ class MPCController:
         dt:                   float = DT,
         nlp_solver_max_iter:  int   = 10,
         vehicle:              str   = "half",
+        weights:              Optional[dict] = None,
     ):
         self._cfg     = cfg or load_reward_config()
         veh = get_vehicle(vehicle)
@@ -72,6 +74,7 @@ class MPCController:
                 self._physics, self._cfg,
                 N=self._N, dt=self._dt, gen_dir=gen_dir,
                 nlp_solver_max_iter=self._nlp_solver_max_iter,
+                weights=weights or ocp_weights(),
             )
 
     def reset(self, road: RoadGenerator) -> None:

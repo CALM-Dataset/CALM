@@ -228,12 +228,7 @@ def main() -> None:
 
     full_cfg   = load_algo_config(_CONFIG_PATH)
     train_meta = full_cfg["training"]
-    if args.algo in full_cfg:
-        algo_kwargs = dict(full_cfg[args.algo])
-    else:
-        algo_kwargs = load_algo_config(
-            _ROOT / "config" / "baseline" / f"{args.algo}.yaml"
-        )
+    algo_kwargs = dict(full_cfg[args.algo])
 
     seed      = args.seed      if args.seed      is not None else train_meta["seed"]
     timesteps = args.timesteps if args.timesteps is not None else train_meta["total_timesteps"]

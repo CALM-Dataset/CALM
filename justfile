@@ -89,8 +89,3 @@ mpc *args:
 [group('baselines')]
 reactive-driver *args:
     {{calm}} reactive "$@"
-
-# constant-action baseline (target speed halfway between floor and scenario speed) through the training pipeline
-[group('baselines')]
-dummy *args:
-    {{calm}} dummy "$@"
