@@ -1,7 +1,9 @@
 import numpy as np
 from numba import njit
 
-from gym_env.quarter_car.config.env_params import PHYSICS, DT_SIM, N_SUB
+from gym_env.common.env_params import DT_SIM, N_SUB
+
+from gym_env.quarter_car.config.env_params import PHYSICS
 
 
 _I_MB,  _I_MW  = 0, 1
@@ -122,7 +124,8 @@ class QuarterCarODE:
         road,
         s_pos: float,
         v: float,
-    ) -> tuple[np.ndarray, float, float]:
+        a: float = 0.0,
+    ) -> tuple[np.ndarray, float, float, float, float]:
         dt = DT_SIM
         p  = self._pvec
 
@@ -143,7 +146,23 @@ class QuarterCarODE:
         z_B_ddot = float(dx_end[3])
         z_W_ddot = float(dx_end[1])
 
-        return xi, z_B_ddot, z_W_ddot
+        return xi, z_B_ddot, 0.0, z_W_ddot, z_W_ddot
+
+    v_index = _X_V
+    wheelbase = 0.0
+
+    def observe(self, x, z_W_ddot, z_B_ddot, phi_ddot) -> list:
+        return [float(x[_X_ZW] - x[_X_ZB]), z_W_ddot, z_B_ddot]
+
+    def deflections(self, x, road, s_pos) -> tuple:
+        return float(x[_X_SUSP]), float(x[_X_TYRE])
+
+    def crash_signals(self, x) -> tuple:
+        return abs(float(x[_X_SUSP])), abs(float(x[_X_POS])), abs(float(x[_X_ZW] - x[_X_ZB]))
+
+    def perturb(self, x, rng) -> None:
+        x[0:4] += rng.normal(0.0, 0.005, size=4)
+        x[_X_POS] += rng.normal(0.0, 0.001)
 
     def reset(self, v0: float = 6.0) -> np.ndarray:
 

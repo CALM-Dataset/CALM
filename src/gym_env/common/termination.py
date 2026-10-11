@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import gymnasium as gym
 
-from gym_env.quarter_car.config.env_params import (
-    DT, TRUNC_SUSP_TRAVEL, TRUNC_BODY_DISP, TRUNC_DAMPER_VEL,
-    POST_BUMP_MARGIN, POST_BUMP_MARGIN_MATCH_FLAT_START,
-)
-from gym_env.quarter_car.config.reward_params import RewardConfig, load_reward_config
-from gym_env.quarter_car.reward.reward import compute_terminal_reward
+from gym_env.common.env_params import DT, TRUNC_SUSP_TRAVEL, TRUNC_BODY_DISP, TRUNC_DAMPER_VEL, POST_BUMP_MARGIN, POST_BUMP_MARGIN_MATCH_FLAT_START
+from gym_env.common.reward_params import RewardConfig, load_reward_config
+from gym_env.common.reward import compute_terminal_reward
+
+_REAL_TAIL_MARGIN_M = 3.0
 
 
 class TerminationWrapper(gym.Wrapper):
@@ -37,23 +36,22 @@ class TerminationWrapper(gym.Wrapper):
             return observation, reward, terminated, truncated, info
 
         env = self.env.unwrapped
+        susp_travel, body_disp, damper_vel = env._ode.crash_signals(env._state)
 
-        if abs(float(env._state[2])) > self._susp_travel_lim:
+        if susp_travel > self._susp_travel_lim:
             terminated = True
             reward += self._cfg.terminal_penalty
             env._termination_reason = "crash_susp"
 
-        if not terminated and abs(float(env._state[5])) > self._body_disp_lim:
+        if not terminated and body_disp > self._body_disp_lim:
             terminated = True
             reward += self._cfg.terminal_penalty
             env._termination_reason = "crash_body"
 
-        if not terminated:
-            damper_velocity = float(env._state[1] - env._state[3])
-            if abs(damper_velocity) > self._damper_limit:
-                terminated = True
-                reward += self._cfg.terminal_penalty
-                env._termination_reason = "crash_damper"
+        if not terminated and damper_vel > self._damper_limit:
+            terminated = True
+            reward += self._cfg.terminal_penalty
+            env._termination_reason = "crash_damper"
 
         if not terminated:
             v = float(env._v)
@@ -63,19 +61,26 @@ class TerminationWrapper(gym.Wrapper):
                 env._termination_reason = "crash_speed"
 
         if not terminated:
-            lbe = env._last_bump_end
-            if lbe is not None:
-                if self._match_flat_start and env._road._bumps:
-                    margin = float(env._road._bumps[0][0])
+            road_end = getattr(env, "_road_end", None)
+            if road_end is not None:
+                complete_at = road_end + float(env._ode.wheelbase) + _REAL_TAIL_MARGIN_M
+            else:
+                lbe = env._last_bump_end
+                if lbe is not None:
+                    if self._match_flat_start and env._road._bumps:
+                        margin = float(env._road._bumps[0][0])
+                    else:
+                        margin = self._post_bump_margin
+                    complete_at = lbe + margin
                 else:
-                    margin = self._post_bump_margin
-                if env._s_pos >= lbe + margin:
-                    terminated = True
-                    reward += compute_terminal_reward(
-                        success=True, t=env._t,
-                        t_max=env._max_episode_steps * DT, cfg=self._cfg,
-                    )
-                    env._termination_reason = "completed"
+                    complete_at = None
+            if complete_at is not None and env._s_pos >= complete_at:
+                terminated = True
+                reward += compute_terminal_reward(
+                    success=True, t=env._t,
+                    t_max=env._max_episode_steps * DT, cfg=self._cfg,
+                )
+                env._termination_reason = "completed"
 
         if truncated or terminated:
             info["termination_reason"] = env._termination_reason

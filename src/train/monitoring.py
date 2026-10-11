@@ -360,7 +360,7 @@ class SpeedWeightController(BaseCallback):
         self._ratios: list[float] = []
 
     def _on_training_start(self) -> None:
-        from gym_env.half_car.reward.reward import set_track_scale_override
+        from gym_env.common.reward import set_track_scale_override
         set_track_scale_override(self._w)
 
     def _on_step(self) -> bool:
@@ -371,7 +371,7 @@ class SpeedWeightController(BaseCallback):
         return True
 
     def _on_rollout_end(self) -> None:
-        from gym_env.half_car.reward.reward import set_track_scale_override
+        from gym_env.common.reward import set_track_scale_override
         if self._ratios:
             rho = sum(self._ratios) / len(self._ratios)
             self._w = min(max(self._w + self._gain * (self._target - rho), 0.0), self._w_max)
@@ -381,5 +381,5 @@ class SpeedWeightController(BaseCallback):
         self.logger.record("reward/track_scale", self._w)
 
     def _on_training_end(self) -> None:
-        from gym_env.half_car.reward.reward import set_track_scale_override
+        from gym_env.common.reward import set_track_scale_override
         set_track_scale_override(None)

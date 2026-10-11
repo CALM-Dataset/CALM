@@ -17,11 +17,11 @@ import gymnasium as gym
 from stable_baselines3 import PPO, TD3
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
-__import__("gym_env.quarter_car.envs")
-from gym_env.quarter_car.wrappers import PreviewWrapper, TerminationWrapper
-from gym_env.quarter_car.reward.utils import reward_bounds
-from gym_env.quarter_car.config.reward_params import load_reward_config
-from gym_env.quarter_car.config.env_params import EPISODE_STEPS, DT
+from gym_env.common import PreviewWrapper, TerminationWrapper
+from gym_env.vehicles import get_vehicle
+from gym_env.common.reward_utils import reward_bounds
+from gym_env.common.reward_params import load_reward_config
+from gym_env.common.env_params import EPISODE_STEPS, DT
 from utils.scenario_loader import load_scenario_any, enabled_eval_suites
 
 from eval.data_logger import RunLogger, EpisodeData
@@ -29,35 +29,11 @@ from baseline.dummy_agent import DummyAgent
 
 
 _ALGO_MAP: dict[str, type] = {"PPO": PPO, "TD3": TD3, "DUMMY_AGENT": DummyAgent}
-_ENV_ID = "gym_env/QuarterCar"
-_VEHICLE = "quarter"
 
 
-def _select_vehicle(vehicle: str) -> None:
-    global _ENV_ID, _VEHICLE, TerminationWrapper, PreviewWrapper
-    global load_reward_config, reward_bounds, EPISODE_STEPS
-    _VEHICLE = vehicle
-    if vehicle == "half":
-        __import__("gym_env.half_car.envs")
-        from gym_env.half_car.wrappers import (
-            PreviewWrapper as PW, TerminationWrapper as TW,
-        )
-        from gym_env.half_car.reward.utils import reward_bounds as rb
-        from gym_env.half_car.config.reward_params import load_reward_config as lrc
-        from gym_env.half_car.config.env_params import EPISODE_STEPS as es
-        _ENV_ID = "gym_env/HalfCar"
-        TerminationWrapper, PreviewWrapper = TW, PW
-        load_reward_config, reward_bounds, EPISODE_STEPS = lrc, rb, es
-        if "J_pitch" not in _REWARD_TERM_KEYS:
-            _REWARD_TERM_KEYS.append("J_pitch")
-    elif vehicle != "quarter":
-        raise ValueError(f"unknown vehicle {vehicle!r} (expected 'quarter' or 'half')")
+def _render_nav(vehicle: str):
+    return get_vehicle(vehicle).render().wait_for_episode_nav
 
-
-def _render_nav():
-    mod = "gym_env.half_car" if _VEHICLE == "half" else "gym_env.quarter_car"
-    from importlib import import_module
-    return import_module(f"{mod}.envs.render").wait_for_episode_nav
 
 _REWARD_TERM_KEYS = [
     "J_heave",
@@ -65,6 +41,7 @@ _REWARD_TERM_KEYS = [
     "J_long_acc",
     "J_long_jerk",
     "J_long_vel",
+    "J_pitch",
 ]
 
 
@@ -178,6 +155,7 @@ def run_episode(
     capture_frames: bool = False,
     pause_at_end: bool = False,
     render_label: str | None = None,
+    vehicle: str = "half",
 ) -> tuple[dict, list, str]:
     if render:
         render_mode = "human"
@@ -187,7 +165,7 @@ def run_episode(
         render_mode = "none"
 
     def _env_fn():
-        env = gym.make(_ENV_ID, render_mode=render_mode,
+        env = gym.make(get_vehicle(vehicle).env_id, render_mode=render_mode,
                        random_road_on_reset=False)
         env = TerminationWrapper(env)
         return PreviewWrapper(env)
@@ -252,7 +230,7 @@ def run_episode(
     if nav_override is not None:
         nav = nav_override
     elif pause_at_end and render_mode == 'human':
-        nav = _render_nav()(venv.venv.envs[0])
+        nav = _render_nav(vehicle)(venv.venv.envs[0])
     else:
         nav = 'next'
 
@@ -337,7 +315,7 @@ def print_episode_line(ep_i: int, n: int, m: dict) -> None:
     )
 
 
-def print_summary(agg: dict, bounds: dict, algo: str) -> None:
+def print_summary(agg: dict, bounds: dict, algo: str, vehicle: str = "half") -> None:
     W   = 30
     sep = "─" * 60
 
@@ -353,7 +331,7 @@ def print_summary(agg: dict, bounds: dict, algo: str) -> None:
         ("Mean step reward",      "mean_step_reward",        ""),
         ("RMS body accel",        "rms_accel",               "m/s²"),
         ("Peak body accel",       "peak_accel",              "m/s²"),
-        *( [("RMS pitch accel",   "rms_pitch_accel",         "rad/s²")] if _VEHICLE == "half" else [] ),
+        *( [("RMS pitch accel",   "rms_pitch_accel",         "rad/s²")] if vehicle == "half" else [] ),
         ("Speed tracking RMSE",   "speed_rmse",              "km/h"),
         ("Mean speed",            "mean_speed",              "km/h"),
         ("Comfort score",         "comfort_score",           "[0-1]"),
@@ -612,6 +590,7 @@ def _run_one_scenario(
         capture_frames=args.save_gif,
         pause_at_end=args.render,
         render_label=f'{args.algo} · {sc_name} - {sc_desc}',
+        vehicle=args.vehicle,
     )
     if nav == 'quit':
         return None
@@ -663,9 +642,9 @@ def _run_one_scenario(
 
 
 def _print_suite_table(suite_name: str, rows: list[tuple[str, str, float, dict]],
-                       bounds: dict) -> None:
+                       bounds: dict, vehicle: str = "half") -> None:
     W = 24
-    half = _VEHICLE == "half"
+    half = vehicle == "half"
     sep = "─" * (78 if half else 66)
     pitch_hdr = f"  {'Pitch r/s²':>10}" if half else ""
     print(f"\n  ── {suite_name} ──")
@@ -741,7 +720,7 @@ def _run_suite(args, model, vecnorm_path: Path, deterministic: bool,
             all_rows.append(result)
             ep_index += 1
 
-        _print_suite_table(suite_name, suite_rows, bounds)
+        _print_suite_table(suite_name, suite_rows, bounds, args.vehicle)
         export_suites.append({
             "suite": suite_name,
             "scenarios": [
@@ -779,7 +758,6 @@ def _run_suite(args, model, vecnorm_path: Path, deterministic: bool,
 def main() -> None:
     args = parse_args()
     deterministic = True
-    _select_vehicle(args.vehicle)
 
     rcfg   = load_reward_config()
     bounds = reward_bounds(rcfg, EPISODE_STEPS)
@@ -848,6 +826,7 @@ def main() -> None:
             perception_track=scenario_track,
             capture_frames=args.save_gif,
             pause_at_end=args.render,
+            vehicle=args.vehicle,
         )
         if nav == 'replay':
             continue
@@ -887,7 +866,7 @@ def main() -> None:
             plot_timeseries(ep, ep_i, rcfg, bounds, save_dir)
 
     agg = aggregate_episodes(all_metrics)
-    print_summary(agg, bounds, args.algo)
+    print_summary(agg, bounds, args.algo, args.vehicle)
 
     save_dir.mkdir(parents=True, exist_ok=True)
     save_json(agg, all_metrics, args.algo, args.model_path, save_dir)

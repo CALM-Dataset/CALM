@@ -1,7 +1,9 @@
 import numpy as np
 from numba import njit
 
-from gym_env.half_car.config.env_params import PHYSICS_F, PHYSICS_R, BODY, DT_SIM, N_SUB
+from gym_env.common.env_params import DT_SIM, N_SUB
+
+from gym_env.half_car.config.env_params import PHYSICS_F, PHYSICS_R, BODY
 
 
 _I_MW  = 0
@@ -134,9 +136,27 @@ class HalfCarODE:
         self._hT, self._hB = float(b.get("h_T", 0.0)), float(b.get("h_B", 0.0))
         self._mtot = self._mB + float(self._pf[_I_MW]) + float(self._pr[_I_MW])
 
+    v_index = _X_V
+
     @property
     def wheelbase(self) -> float:
         return self._L
+
+    def observe(self, x, z_W_ddot, z_B_ddot, phi_ddot) -> list:
+        return [float(x[_X_ZW_F] - x[_X_ZB]), z_W_ddot, z_B_ddot, phi_ddot, float(x[_X_PHI])]
+
+    def deflections(self, x, road, s_pos) -> tuple:
+        return float(x[_X_SUSP_F]), float(x[_X_TYRE_F])
+
+    def crash_signals(self, x) -> tuple:
+        susp_travel = max(abs(float(x[_X_SUSP_F])), abs(float(x[_X_SUSP_R])))
+        damper_f = float(x[_X_ZW_F]) - (float(x[_X_ZB]) - self._lf * float(x[_X_PHI]))
+        damper_r = float(x[_X_ZW_R]) - (float(x[_X_ZB]) + self._lr * float(x[_X_PHI]))
+        return susp_travel, abs(float(x[_X_POS])), max(abs(damper_f), abs(damper_r))
+
+    def perturb(self, x, rng) -> None:
+        x[0:4] += rng.normal(0.0, 0.005, size=4)
+        x[_X_POS] += rng.normal(0.0, 0.001)
 
     def step(self, x, road, s_pos, v, a=0.0):
         dt = DT_SIM

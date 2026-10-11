@@ -1,10 +1,10 @@
 import gymnasium as gym
 import numpy as np
 
-from gym_env.half_car.config.reward_params import load_reward_config
+from gym_env.common.reward_params import load_reward_config
 from gym_env.half_car.envs import HalfCarEnv
-from gym_env.half_car.reward.reward import compute_reward
-from gym_env.half_car.wrappers import TerminationWrapper
+from gym_env.common.reward import compute_reward
+from gym_env.common import TerminationWrapper
 
 
 def _run(env, action, steps=6000):

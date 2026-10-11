@@ -8,8 +8,9 @@ from typing import Optional
 
 import numpy as np
 
-from gym_env.quarter_car.config.env_params import PHYSICS, DT
-from gym_env.quarter_car.config.reward_params import RewardConfig, load_reward_config
+from gym_env.common.env_params import DT
+from gym_env.common.reward_params import RewardConfig, load_reward_config
+from gym_env.vehicles import get_vehicle
 from road.road_generator import RoadGenerator
 from baseline.mpc.ocp import build_solver_simple
 from baseline.mpc.comfort_map import ComfortMap
@@ -46,16 +47,13 @@ class MPCController:
         vehicle:              str   = "half",
     ):
         self._cfg     = cfg or load_reward_config()
-        self._physics = dict(physics or PHYSICS)
+        veh = get_vehicle(vehicle)
+        self._physics = dict(physics or veh.physics())
         self._physics['v_limit'] = float(self._cfg.v_limit)
         self._physics['a_max'] = float(self._cfg.a_max)
         self._vehicle = vehicle
-        if vehicle == "half":
-            from gym_env.half_car.core.ode_model import HalfCarODE
-            self._wheelbase = float(HalfCarODE().wheelbase)
-        else:
-            self._wheelbase = 0.0
-        self._v_idx   = 8 if vehicle == "half" else 4
+        self._wheelbase = float(veh.make_ode().wheelbase)
+        self._v_idx   = veh.v_index
 
         self._N                   = N
         self._dt                  = dt

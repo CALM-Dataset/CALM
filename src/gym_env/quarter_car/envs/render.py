@@ -1,17 +1,19 @@
-import os
 import collections
-from typing import Tuple
+import os
 
 import numpy as np
 
-from gym_env.common.jukebox import Jukebox
+from gym_env.common.render import (
+    build_bump_vlines, bump_signature, close_env, damper_xy, ground_symbol_xy,
+    init_music, render_bumps, render_env, spring_xy, wait_for_episode_nav,
+)
+from gym_env.common.render_params import RENDER_MUSIC
 
 from gym_env.quarter_car.config.render_params import (
     RENDER_Y_W_NOM, RENDER_Y_B_NOM,
     RENDER_H_MW, RENDER_W_MW,
     RENDER_H_MB, RENDER_W_MB,
     RENDER_XLIM, RENDER_YLIM,
-    RENDER_MUSIC, RENDER_MUSIC_MUTED, RENDER_MUSIC_TRACK, RENDER_MUSIC_VOLUME, RENDER_MUSIC_JUKEBOX,
     RENDER_ROAD_HALF, RENDER_ROAD_N,
     RENDER_C_MB, RENDER_C_MW, RENDER_C_SPRING, RENDER_C_DAMPER,
     RENDER_C_ROAD, RENDER_C_GROUND,
@@ -20,7 +22,6 @@ from gym_env.quarter_car.config.render_params import (
     RENDER_DA_LOWER_STEM, RENDER_DA_CYL_H_SUSP, RENDER_DA_CYL_H_TIRE,
     RENDER_CONTACT_STEM, RENDER_GROUND_Y,
     Y_LINE_OFFSET,
-    RENDER_BUMP_MARKERS,
     RENDER_ARR_X, RENDER_ARR_Y, RENDER_ARR_LEN,
 )
 
@@ -31,42 +32,13 @@ _ARR_X0      = RENDER_ARR_X
 _ARR_Y_V     = RENDER_ARR_Y
 _ARR_MAX_LEN = RENDER_ARR_LEN
 
-_BUMP_COLOURS = ['#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#d35400']
 
-
-def _spring_xy(x_c: float, y_top: float, y_bot: float,
-               n: int = 8, w: float = 0.18) -> Tuple[np.ndarray, np.ndarray]:
-    n_pts = 2 * n + 2
-    ys = np.linspace(y_top, y_bot, n_pts)
-    xs = np.full(n_pts, x_c)
-    idx = np.arange(1, n_pts - 1)
-    xs[1:-1] = x_c + w * np.where(idx % 2 == 1, 1.0, -1.0)
-    return xs, ys
+__all__ = ["close_env", "init_render", "push_history", "render_env", "update_artists", "wait_for_episode_nav"]
 
 
 def _damper_xy(x_c: float, y_top: float, y_bot: float, cyl_h: float):
-    hw      = RENDER_DA_W / 2
-    gap     = max(y_top - y_bot, 0.05)
-    cyl_bot = y_bot + RENDER_DA_LOWER_STEM
-    cyl_top = cyl_bot + cyl_h
-    pist_h  = RENDER_DA_PIST_H
-    pist_top = float(np.clip(
-        y_bot + gap * RENDER_DA_PIST_FRAC,
-        cyl_bot + pist_h + 0.005,
-        cyl_top - 0.005,
-    ))
-    pist_bot = pist_top - pist_h
-    upper_rod_xy = ([x_c, x_c], [pist_top, y_top])
-    lower_rod_xy = ([x_c, x_c], [y_bot,    cyl_bot])
-    cyl_xy       = ([x_c - hw, x_c - hw, x_c + hw, x_c + hw],
-                    [cyl_top,  cyl_bot,   cyl_bot,   cyl_top])
-    m = 0.01
-    pist_rect = (x_c - hw + m, pist_bot, 2 * hw - 2 * m, pist_h)
-    return upper_rod_xy, lower_rod_xy, cyl_xy, pist_rect
-
-
-def _ground_symbol_xy(x_c: float, y: float, half_w: float = 0.55):
-    return np.array([x_c - half_w, x_c + half_w]), np.array([y, y])
+    return damper_xy(x_c, y_top, y_bot, cyl_h, RENDER_DA_W, RENDER_DA_PIST_H,
+                     RENDER_DA_PIST_FRAC, RENDER_DA_LOWER_STEM)
 
 
 def _build_ts_specs(env):
@@ -81,341 +53,6 @@ def _build_ts_specs(env):
     if flags.get("z_ddot", False):
         specs.append(('z_B_ddot', None, r'$\ddot{z}_B\ \mathrm{[m/s^2]}$', '#222222', None))
     return specs
-
-
-def _render_bumps(road):
-    bumps = getattr(road, '_bumps', None) or []
-    if bumps:
-        return bumps
-    s_bump = getattr(road, '_s_bump', None)
-    if s_bump is not None:
-        return [(float(s_bump), None, None)]
-    return []
-
-
-def _bump_signature(bumps):
-    return tuple((round(x0, 3),
-                  None if A is None else round(A, 4),
-                  None if L is None else round(L, 3)) for x0, A, L in bumps)
-
-
-def _build_bump_vlines(env, ax_r):
-    bump_vlines: list[list] = []
-    road   = getattr(env, '_road', None)
-    bumps  = _render_bumps(road)
-    labels = getattr(road, '_bump_labels', None) or []
-    if not (RENDER_BUMP_MARKERS and ax_r):
-        return bump_vlines, _bump_signature(bumps)
-
-    for i, (x0, A, L) in enumerate(bumps):
-        col  = _BUMP_COLOURS[i % len(_BUMP_COLOURS)]
-        name = labels[i] if i < len(labels) else None
-        if A is None:
-            name  = name or f'Bump {i+1}'
-            label = name
-            ls    = '--'
-        elif A < 0:
-            name  = name or f'Hole {i+1}'
-            label = f'{name}  ($D$ = {abs(A)*100:.1f} cm, $W$ = {L:.2f} m)'
-            ls    = ':'
-        else:
-            name  = name or f'Bump {i+1}'
-            label = f'{name}  ($H$ = {A*100:.1f} cm, $W$ = {L:.2f} m)'
-            ls    = '--'
-        lines = []
-        for j, ax in enumerate(ax_r):
-            vl = ax.axvline(x=0, color=col, lw=0.8, ls=ls, alpha=0.55,
-                            label=(label if j == 0 else None), visible=False)
-            lines.append(vl)
-        bump_vlines.append(lines)
-
-    if bump_vlines:
-        ax_r[0].legend(fontsize=6.5, loc='upper left',
-                       framealpha=0.85, edgecolor='#cccccc', borderpad=0.3)
-    return bump_vlines, _bump_signature(bumps)
-
-
-def _render_env(env):
-    if env.render_mode == 'none':
-        return None
-    if env._ren_hist is None:
-        init_render(env)
-    push_history(env)
-    update_artists(env)
-    jb = getattr(env, '_jukebox', None)
-    if jb is not None:
-        jb.tick()
-    if env.render_mode == 'human':
-        import matplotlib.pyplot as plt
-        _ensure_play_keys(env)
-        hud = getattr(env, '_speed_hud', None)
-        while (getattr(env, '_paused', False) and getattr(env, '_nav_request', None) is None
-               and not _window_gone(env)):
-            if hud is not None:
-                hud.set_text('|| paused')
-            env._fig.canvas.draw_idle()
-            plt.pause(0.05)
-        speed = int(getattr(env, '_render_speed', 1))
-        if hud is not None:
-            hud.set_text(f'>> {speed}x' if speed > 1 else '')
-        env._frame_i = int(getattr(env, '_frame_i', 0)) + 1
-        if speed <= 1 or env._frame_i % speed == 0:
-            env._fig.canvas.draw_idle()
-            plt.pause(max(1e-4, 1e-3 / speed))
-        else:
-            env._fig.canvas.flush_events()
-        if getattr(env, "_freeze_render", False):
-            env._freeze_render = False
-            plt.show(block=True)
-        return None
-    env._fig.canvas.draw()
-    buf = env._fig.canvas.buffer_rgba()
-    w, h = env._fig.canvas.get_width_height()
-    img = np.frombuffer(buf, dtype=np.uint8).reshape(h, w, 4)
-    return img[..., :3].copy()
-
-
-_SPEED_SEQ = (1, 2, 4, 8, 16)
-_CONTROLS_TEXT = ('space   pause / resume\n'
-                  'f  /  d    faster / slower\n'
-                  '→  /  ←    next / prev scenario\n'
-                  'r   replay      q   quit')
-
-
-def _free_matplotlib_keys():
-    import matplotlib as mpl
-    for name in [k for k in mpl.rcParams if k.startswith('keymap.')]:
-        mpl.rcParams[name] = []
-
-
-def _window_gone(env) -> bool:
-    import matplotlib.pyplot as plt
-    fig = getattr(env, '_fig', None)
-    if fig is None:
-        return False
-    return (getattr(env, '_quit_request', False) or getattr(env, '_window_closed', False)
-            or not plt.fignum_exists(fig.number))
-
-
-def _ensure_play_keys(env):
-    if getattr(env, '_play_keys_cid', None) is not None:
-        return
-    fig = getattr(env, '_fig', None)
-    if fig is None:
-        return
-    _free_matplotlib_keys()
-    if not hasattr(env, '_render_speed'):
-        env._render_speed = 1
-    if not hasattr(env, '_nav_request'):
-        env._nav_request = None
-    env._paused = False
-    env._speed_hud = fig.text(0.988, 0.012, '', ha='right', va='bottom',
-                              fontsize=9, color='#c0392b', fontweight='bold')
-    env._info_dot = fig.text(0.985, 0.965, '?', ha='center', va='center',
-                             fontsize=11, color='#2c6fad', fontweight='bold',
-                             bbox=dict(boxstyle='circle,pad=0.3', facecolor='white',
-                                       edgecolor='#2c6fad', lw=1.2))
-    env._info_tip = fig.text(
-        0.985, 0.945, _CONTROLS_TEXT, ha='right', va='top', fontsize=8,
-        family='monospace', visible=False, zorder=20,
-        bbox=dict(facecolor='white', alpha=0.95, edgecolor='#2c6fad',
-                  boxstyle='round,pad=0.5', lw=0.8))
-
-    def _guarded(fn):
-        def wrapper(ev):
-            try:
-                fn(ev)
-            except Exception as exc:
-                import sys
-                print(f'[render] ignored {type(exc).__name__}: {exc}', file=sys.stderr)
-        return wrapper
-
-    def _on_key(ev):
-        k = ev.key
-        if k in ('q', 'escape'):
-            env._quit_request = True
-        elif k == ' ':
-            env._paused = not getattr(env, '_paused', False)
-        elif k == 'f':
-            cur = int(getattr(env, '_render_speed', 1))
-            i = _SPEED_SEQ.index(cur) if cur in _SPEED_SEQ else 0
-            env._render_speed = _SPEED_SEQ[min(i + 1, len(_SPEED_SEQ) - 1)]
-        elif k == 'd':
-            cur = int(getattr(env, '_render_speed', 1))
-            i = _SPEED_SEQ.index(cur) if cur in _SPEED_SEQ else 0
-            env._render_speed = _SPEED_SEQ[max(i - 1, 0)]
-        elif k == 'r':
-            env._nav_request = 'replay'
-        elif k == 'right':
-            env._nav_request = 'next'
-        elif k == 'left':
-            env._nav_request = 'prev'
-
-    def _on_move(ev):
-        tip = getattr(env, '_info_tip', None)
-        dot = getattr(env, '_info_dot', None)
-        if tip is None or dot is None:
-            return
-        try:
-            bb = dot.get_window_extent()
-        except Exception:
-            return
-        over = ev.x is not None and bb.contains(ev.x, ev.y)
-        if over != tip.get_visible():
-            tip.set_visible(over)
-            fig.canvas.draw_idle()
-
-    env._play_keys_cid = fig.canvas.mpl_connect('key_press_event', _guarded(_on_key))
-    fig.canvas.mpl_connect('motion_notify_event', _guarded(_on_move))
-    fig.canvas.mpl_connect('close_event', lambda ev: setattr(env, '_window_closed', True))
-
-
-def render_env(env):
-    if env.render_mode != 'human':
-        return _render_env(env)
-    if _window_gone(env):
-        raise KeyboardInterrupt('render window closed')
-    try:
-        return _render_env(env)
-    except Exception:
-        if _window_gone(env):
-            raise KeyboardInterrupt('render window closed') from None
-        raise
-
-
-def close_env(env):
-    jb = getattr(env, '_jukebox', None)
-    if jb is not None:
-        jb.stop()
-        env._jukebox = None
-    if env._fig is not None:
-        import matplotlib.pyplot as plt
-        plt.close(env._fig)
-        env._fig = None
-
-
-
-
-def _music_label(jb) -> str:
-    state = 'muted' if jb.muted else f'{jb.volume*100:.0f}%'
-    return f'{jb.icon}  {jb.track.replace("_", " ")}  ·  {state}'
-
-
-def _init_music(env, fig):
-    jb = Jukebox(track=RENDER_MUSIC_TRACK,
-                 muted=RENDER_MUSIC_MUTED,
-                 volume=RENDER_MUSIC_VOLUME,
-                 jukebox=RENDER_MUSIC_JUKEBOX)
-    env._jukebox = jb
-    if jb.ok:
-        jb.start()
-    else:
-        import sys
-        print('[render] music is on but no audio backend; install pygame to hear it '
-              '(pip install pygame)', file=sys.stderr)
-
-    if env.render_mode != 'human':
-        env._music_caption = fig.text(
-            0.012, 0.02, _music_label(jb), ha='left', va='bottom',
-            fontsize=9, color='#7b2d8b',
-            bbox=dict(facecolor='white', alpha=0.85, edgecolor='#cccccc',
-                      boxstyle='round,pad=0.3', lw=0.6))
-        return
-
-    if _mount_toolbar_controls(env, fig, jb):
-        return
-
-    from matplotlib.widgets import Button, Slider
-    gs = env._ax_s.get_subplotspec().get_gridspec()
-    gs.update(bottom=0.20)
-    ax_mute = fig.add_axes([0.020, 0.05, 0.040, 0.07])
-    ax_vol  = fig.add_axes([0.105, 0.075, 0.150, 0.030])
-    btn_mute = Button(ax_mute, jb.icon, color='#eef2f7', hovercolor='#dde6f0')
-    btn_mute.label.set_fontsize(14)
-    slider   = Slider(ax_vol, 'vol', 0.0, 1.0, valinit=jb.volume,
-                      color='#7b2d8b', valfmt='%.2f')
-    slider.valtext.set_fontsize(7)
-    slider.label.set_fontsize(7)
-
-    def _toggle(_):
-        jb.toggle_mute()
-        btn_mute.label.set_text(jb.icon)
-        fig.canvas.draw_idle()
-
-    def _vol(val):
-        jb.set_volume(val)
-        btn_mute.label.set_text(jb.icon)
-
-    btn_mute.on_clicked(_toggle)
-    slider.on_changed(_vol)
-    env._music_widgets = (btn_mute, slider)
-
-
-def _mount_toolbar_controls(env, fig, jb) -> bool:
-    toolbar = getattr(getattr(fig.canvas, 'manager', None), 'toolbar', None)
-    if toolbar is None:
-        return False
-    try:
-        import tkinter as tk
-    except Exception:
-        return False
-    if not isinstance(toolbar, tk.Frame):
-        return False
-
-    def _toggle():
-        jb.toggle_mute()
-        mute.config(text=jb.icon)
-
-    def _vol(v):
-        jb.set_volume(int(v) / 100.0)
-        mute.config(text=jb.icon)
-
-    sep = tk.Frame(toolbar, width=2, bg='#bbbbbb')
-    mute = tk.Button(toolbar, text=jb.icon, command=_toggle, relief=tk.FLAT,
-                     borderwidth=0, highlightthickness=0, font=('DejaVu Sans', 15),
-                     takefocus=0)
-    vol = tk.Scale(toolbar, from_=0, to=100, orient=tk.HORIZONTAL, showvalue=False,
-                   length=150, width=14, sliderlength=20, command=_vol,
-                   relief=tk.FLAT, borderwidth=1, highlightthickness=0,
-                   troughcolor='#c9c9c9', activebackground='#7b2d8b')
-    vol.set(int(jb.volume * 100))
-    sep.pack(side=tk.LEFT, fill=tk.Y, padx=(8, 4), pady=4)
-    mute.pack(side=tk.LEFT, padx=2)
-    vol.pack(side=tk.LEFT, padx=(2, 6))
-
-    env._music_widgets = (sep, mute, vol)
-    return True
-
-def wait_for_episode_nav(env, allow_prev: bool = True) -> str:
-    import matplotlib.pyplot as plt
-    raw = getattr(env, 'unwrapped', env)
-    fig = getattr(raw, '_fig', None)
-    if fig is None:
-        return 'next'
-
-    fig.canvas.draw_idle()
-
-    _nav = [None]
-
-    def _on_key(event):
-        if event.key in ('right', ' '):
-            _nav[0] = 'next'
-        elif event.key == 'left':
-            _nav[0] = 'prev' if allow_prev else 'replay'
-        elif event.key == 'r' and allow_prev:
-            _nav[0] = 'replay'
-        elif event.key in ('q', 'escape'):
-            _nav[0] = 'quit'
-
-    cid = fig.canvas.mpl_connect('key_press_event', _on_key)
-    while _nav[0] is None:
-        plt.pause(0.05)
-        if not plt.fignum_exists(fig.number):
-            _nav[0] = 'quit'
-            break
-
-    fig.canvas.mpl_disconnect(cid)
-    return _nav[0]
 
 
 def init_render(env):
@@ -568,7 +205,7 @@ def init_render(env):
         else:
             ax.set_xlabel('$t$ [s]', fontsize=8.5)
 
-    bump_vlines, bump_sig = _build_bump_vlines(env, ax_r)
+    bump_vlines, bump_sig = build_bump_vlines(env, ax_r)
 
     v_line, = ax_s.plot([_ARR_X0, _ARR_X0], [_ARR_Y_V, _ARR_Y_V], '-',
                         color='#7b2d8b', lw=2.2, zorder=8)
@@ -595,7 +232,7 @@ def init_render(env):
     env._ax_s = ax_s
     env._ax_r = ax_r
     if RENDER_MUSIC and env.render_mode != 'none':
-        _init_music(env, fig)
+        init_music(env, fig)
     env._artists = {
         'road_line':           road_line,
         'contact_stem':        contact_stem,
@@ -626,7 +263,6 @@ def init_render(env):
         'vmax_tick':           vmax_tick,
         'vmax_label':          vmax_label,
     }
-
 
 
 def push_history(env):
@@ -671,7 +307,7 @@ def update_artists(env):
     h = env._ren_hist
 
     y_road_0 += Y_LINE_OFFSET
-    gx, gy = _ground_symbol_xy(0.0, y_road_0, half_w=RENDER_W_MB / 2 + 0.15)
+    gx, gy = ground_symbol_xy(0.0, y_road_0, half_w=RENDER_W_MB / 2 + 0.15)
     art['ground_sym'].set_data(gx, gy)
     art['contact_stem'].set_data([0.0, 0.0], [y_road_0 - Y_LINE_OFFSET + RENDER_CONTACT_STEM, y_road_0])
     art['contact_dot'].set_data([0.0], [y_road_0 - Y_LINE_OFFSET])
@@ -680,7 +316,7 @@ def update_artists(env):
 
     y_tire_top = y_W - RENDER_H_MW / 2
     art['tire_spring'].set_data(
-        *_spring_xy(RENDER_SP_X, y_tire_top, y_road_0, RENDER_SP_N, RENDER_SP_W))
+        *spring_xy(RENDER_SP_X, y_tire_top, y_road_0, RENDER_SP_N, RENDER_SP_W))
     u_rod, l_rod, cyl_xy, pr = _damper_xy(RENDER_DA_X, y_tire_top, y_road_0,
                                           RENDER_DA_CYL_H_TIRE)
     art['tire_damp_rod'].set_data(*u_rod)
@@ -697,7 +333,7 @@ def update_artists(env):
     y_susp_top = y_B - RENDER_H_MB / 2
     if y_susp_top > y_susp_bot + 0.05:
         art['susp_spring'].set_data(
-            *_spring_xy(RENDER_SP_X, y_susp_top, y_susp_bot, RENDER_SP_N, RENDER_SP_W))
+            *spring_xy(RENDER_SP_X, y_susp_top, y_susp_bot, RENDER_SP_N, RENDER_SP_W))
         u_rod, l_rod, cyl_xy, pr = _damper_xy(RENDER_DA_X, y_susp_top, y_susp_bot,
                                               RENDER_DA_CYL_H_SUSP)
         art['susp_damp_rod'].set_data(*u_rod)
@@ -758,13 +394,13 @@ def update_artists(env):
             ax.autoscale_view(scalex=False, scaley=True)
 
     bump_vlines = art.get('bump_vlines', [])
-    bumps   = _render_bumps(getattr(env, '_road', None))
-    cur_sig = _bump_signature(bumps)
+    bumps   = render_bumps(getattr(env, '_road', None))
+    cur_sig = bump_signature(bumps)
     if cur_sig != art.get('bump_sig'):
         for lines in bump_vlines:
             for vl in lines:
                 vl.remove()
-        bump_vlines, _ = _build_bump_vlines(env, env._ax_r)
+        bump_vlines, _ = build_bump_vlines(env, env._ax_r)
         art['bump_vlines'] = bump_vlines
         art['bump_sig']    = cur_sig
     if bump_vlines and len(t_arr) > 0:

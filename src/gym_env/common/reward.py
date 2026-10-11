@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from gym_env.half_car.config.reward_params import RewardConfig
+from gym_env.common.reward_params import RewardConfig
 
 
 _track_scale_override: float | None = None

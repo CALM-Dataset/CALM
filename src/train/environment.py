@@ -8,28 +8,11 @@ import numpy as np
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
-__import__("gym_env.quarter_car.envs")
-from gym_env.quarter_car.wrappers import (
-    EpisodeLogger, PreviewWrapper, CurriculumWrapper, TerminationWrapper,
-    TerminalRewardWrapper,
+from gym_env.common import (
+    CurriculumWrapper, EpisodeLogger, PreviewWrapper, TerminalRewardWrapper,
+    TerminationWrapper,
 )
-
-ENV_ID = "gym_env/QuarterCar"
-
-
-def _vehicle_bits(vehicle: str):
-    if vehicle == "half":
-        __import__("gym_env.half_car.envs")
-        from gym_env.half_car.wrappers import (
-            EpisodeLogger as EL, PreviewWrapper as PW,
-            CurriculumWrapper as CW, TerminationWrapper as TW,
-            TerminalRewardWrapper as TRW,
-        )
-        return "gym_env/HalfCar", (EL, PW, CW, TW, TRW)
-    if vehicle not in ("quarter", None):
-        raise ValueError(f"unknown vehicle {vehicle!r} (expected 'quarter' or 'half')")
-    return ENV_ID, (EpisodeLogger, PreviewWrapper, CurriculumWrapper,
-                    TerminationWrapper, TerminalRewardWrapper)
+from gym_env.vehicles import get_vehicle
 
 
 class ActionSaturationPenalty(gym.Wrapper):
@@ -58,8 +41,7 @@ def _make_env(
     action_penalty: float = 0.0,
 ) -> Callable[[], gym.Env]:
 
-    env_id, (EpisodeLogger, PreviewWrapper, CurriculumWrapper,
-             TerminationWrapper, TerminalRewardWrapper) = _vehicle_bits(vehicle)
+    env_id = get_vehicle(vehicle).env_id
 
     def _init() -> gym.Env:
         env = gym.make(env_id, **env_kwargs)
@@ -169,12 +151,12 @@ def load_real_val_scenarios(real_dir: str | Path | None, n: int = 20, seed: int 
 
 
 def make_real_val_env(vehicle: str, seed: int = 0) -> VecNormalize:
-    env_id, (_, PreviewW, _, TerminationW, _) = _vehicle_bits(vehicle)
+    env_id = get_vehicle(vehicle).env_id
 
     def _init() -> gym.Env:
         env = gym.make(env_id, random_road_on_reset=False)
-        env = TerminationW(env)
-        env = PreviewW(env)
+        env = TerminationWrapper(env)
+        env = PreviewWrapper(env)
         env.reset(seed=seed)
         return env
 

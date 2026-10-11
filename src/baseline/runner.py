@@ -9,7 +9,8 @@ from pathlib import Path
 import numpy as np
 
 from eval.data_logger import EpisodeData, RunLogger
-from gym_env.half_car.config.env_params import DT
+from gym_env.common.env_params import DT
+from utils.paths import ROOT
 from utils.scenario_loader import enabled_eval_suites, load_scenario_any
 
 try:
@@ -17,8 +18,35 @@ try:
 except ImportError:
     tqdm = None
 
+DATA_ROOT = ROOT / 'data'
+
 NO_SCENARIOS = ('No scenarios. Enable a suite in config/eval/eval_suites.yaml '
                 '(incl. `real`), or pass --suites <folder|real>.')
+
+
+def add_common_args(ap, method: str) -> None:
+    ap.add_argument('--vehicle', default='half', choices=('quarter', 'half'),
+                    help='vehicle dynamics model')
+    ap.add_argument('--no-perception', dest='perception', action='store_false', default=True,
+                    help='plan on the true road (oracle) instead of the perceived detections')
+    ap.add_argument('--seed', type=int, default=42)
+    ap.add_argument('--scenario', default=None, help='fixed single scenario name or path')
+    ap.add_argument('--suites', nargs='+', metavar='FOLDER', default=None,
+                    help='suite folder names to run (default: enabled in eval_suites.yaml)')
+    ap.add_argument('--render', action='store_true',
+                    help='live window; with no --scenario, step through eval scenarios (←/→)')
+    ap.add_argument('--save-gif', action='store_true',
+                    help='save per-episode GIF (headless-safe offscreen rendering)')
+    ap.add_argument('--save-plots', action='store_true', help='save per-episode time-series PNG')
+    ap.add_argument('--log-data', metavar='DIR', default='data', nargs='?', const='__default__',
+                    help=f'Save run data (.mat/.npz) to DIR/{method}/<road>/<run_N>/. '
+                         'Omit DIR to use <repo>/data/.')
+
+
+def log_root(args) -> Path | None:
+    if args.log_data == '__default__':
+        return DATA_ROOT
+    return Path(args.log_data) if args.log_data else None
 
 
 def obst_str(r: dict) -> str:

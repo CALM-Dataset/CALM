@@ -1,13 +1,12 @@
-from gym_env.half_car.config.env_params import OBS_HIGH
-from gym_env.half_car.config.reward_params import RewardConfig
+from gym_env.common.reward_params import RewardConfig
 
 _ACC_WORST_G    = 1.0
 _VEL_WORST      = 1.0
 _JERK_WORST_G   = 0.1
 _ACT_SMOOTH_WORST = 4.0
-_HEAVE_WORST    = float(OBS_HIGH[2])
-_WHEEL_WORST    = float(OBS_HIGH[1])
-_PITCH_WORST    = float(OBS_HIGH[3])
+_HEAVE_WORST    = 20.0
+_WHEEL_WORST    = 300.0
+_PITCH_WORST    = 50.0
 
 
 def reward_bounds(cfg: RewardConfig, n_steps: int, n_bumps: int = 0) -> dict:

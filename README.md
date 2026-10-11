@@ -111,7 +111,7 @@ every scenario (source, size, bump count, recommended speeds).
 
 ```bash
 just train                      # PPO through the 4-level curriculum (half-car)
-just train --vehicle quarter    # quarter-car plant
+just train --vehicle quarter    # quarter-car plant (same reward and settings)
 
 just eval PPO <run-name> --render     # evaluate a trained model
 just mpc --render                           # MPC baseline
@@ -133,14 +133,17 @@ The vehicle at evaluation time must match the one the model was trained on.
 ## Repository layout
 
 ```
-src/gym_env/half_car/     half-car Gymnasium environment (4-DOF)
-src/gym_env/quarter_car/  quarter-car Gymnasium environment (2-DOF)
+src/gym_env/common/       environment, reward, wrappers and renderer shared by both vehicles
+src/gym_env/half_car/     half-car plant (heave and pitch): ODE, parameters, drawing
+src/gym_env/quarter_car/  quarter-car plant (heave): ODE, parameters, drawing
+src/gym_env/vehicles.py   vehicle registry behind --vehicle half|quarter
 src/train/        PPO training, curriculum, callbacks
-src/eval/         evaluation and plotting
-src/baseline/     MPC and rule-based baselines
+src/eval/         evaluation, ISO 2631 comfort score, plotting
+src/baseline/     MPC and rule-based baselines; runner.py holds the loops they share
 src/road/         road profile generation
-src/utils/        scenario generation and helpers
-config/           reward, curriculum, preview and scenario configuration
+src/utils/        scenario generation, dataset index and helpers
+config/           reward, curriculum, preview, scenario and evaluation configuration
+tests/            fast tests (no data or GPU needed)
 ```
 
 ## Vehicle dynamics

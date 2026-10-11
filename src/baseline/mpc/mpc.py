@@ -28,11 +28,12 @@ _acados_py = str(_ROOT / 'acados' / 'interfaces' / 'acados_template')
 if _acados_py not in sys.path:
     sys.path.insert(0, _acados_py)
 
-__import__("gym_env.quarter_car.envs")
-from gym_env.quarter_car.config.env_params import PHYSICS, DT, EPISODE_STEPS
-from gym_env.quarter_car.config.reward_params import load_reward_config
-from gym_env.quarter_car.wrappers import TerminationWrapper
-from gym_env.quarter_car.reward.utils import reward_bounds
+from gym_env.common import TerminationWrapper
+from gym_env.common.env_params import DT, EPISODE_STEPS
+from gym_env.common.preview_params import load_preview_config
+from gym_env.common.reward_params import load_reward_config
+from gym_env.common.reward_utils import reward_bounds
+from gym_env.vehicles import get_vehicle
 from baseline import runner
 from baseline.mpc.controller import MPCController
 from utils.scenario_loader import load_scenario_any
@@ -67,25 +68,11 @@ def make_env(bits: dict, cfg, render_mode: str = 'none'):
 
 
 def _vehicle_bits(vehicle: str) -> dict:
-    if vehicle == 'half':
-        __import__("gym_env.half_car.envs")
-        from gym_env.half_car.config.env_params import PHYSICS as PH, EPISODE_STEPS as ES
-        from gym_env.half_car.config.reward_params import load_reward_config as lrc
-        from gym_env.half_car.wrappers import TerminationWrapper as TW
-        from gym_env.half_car.reward.utils import reward_bounds as rb
-        from gym_env.half_car.envs.render import wait_for_episode_nav as nav
-        from gym_env.half_car.config.preview_params import load_preview_config as lpc
-        return dict(env_id='gym_env/HalfCar', env_kwargs={'action_mode': 'acceleration'}, PHYSICS=PH, EPISODE_STEPS=ES,
-                    load_reward_config=lambda: mpc_reward_config(lrc), TerminationWrapper=TW,
-                    reward_bounds=rb, wait_for_episode_nav=nav, load_preview_config=lpc)
-    if vehicle not in ('quarter', None):
-        raise ValueError(f"unknown vehicle {vehicle!r} (expected 'quarter' or 'half')")
-    from gym_env.quarter_car.envs.render import wait_for_episode_nav as nav
-    from gym_env.quarter_car.config.preview_params import load_preview_config as lpc
-    return dict(env_id='gym_env/QuarterCar', PHYSICS=PHYSICS,
+    v = get_vehicle(vehicle)
+    return dict(env_id=v.env_id, env_kwargs={'action_mode': 'acceleration'}, PHYSICS=v.physics(),
                 EPISODE_STEPS=EPISODE_STEPS, load_reward_config=lambda: mpc_reward_config(load_reward_config),
                 TerminationWrapper=TerminationWrapper, reward_bounds=reward_bounds,
-                wait_for_episode_nav=nav, load_preview_config=lpc)
+                wait_for_episode_nav=v.render().wait_for_episode_nav, load_preview_config=load_preview_config)
 
 
 def run_episode(env, ctrl: MPCController, seed: int, scenario_road=None,
@@ -109,7 +96,7 @@ def _run_suite_mpc(env, ctrl: MPCController, args, save_dir: Path,
 def _render_scenarios(env, ctrl: MPCController, args, terminal_out=None,
                       nav_fn=None, preview_cfg=None) -> None:
     if nav_fn is None:
-        from gym_env.quarter_car.envs.render import wait_for_episode_nav as nav_fn
+        nav_fn = get_vehicle(args.vehicle).render().wait_for_episode_nav
     report = (lambda line: terminal_out.write(line + '\n')) if terminal_out is not None else (lambda line: None)
     runner.render_scenarios(env, lambda e, seed, **kw: run_episode(e, ctrl, seed, **kw), args,
                             nav_fn, preview_cfg, report=report)
@@ -137,28 +124,8 @@ def main() -> None:
             mcfg = _load_mpc_cfg()
 
             ap = argparse.ArgumentParser('MPC baseline (quarter- or half-car)')
-            ap.add_argument('--no-perception', dest='perception', action='store_false',
-                            default=True,
-                            help='plan on the true road (oracle) instead of the perceived detections')
-            ap.add_argument('--vehicle', default='half', choices=('quarter', 'half'),
-                            help='vehicle dynamics model for the comfort-map plant')
-            ap.add_argument('--horizon', type=int, default=mcfg.get('N', 50),
-                            help='prediction horizon (steps)')
-            ap.add_argument('--seed', type=int, default=42)
-            ap.add_argument('--scenario', default=None,
-                            help='fixed single scenario name or path')
-            ap.add_argument('--suites', nargs='+', metavar='FOLDER', default=None,
-                            help='suite folder names to run (default: enabled in eval_suites.yaml)')
-            ap.add_argument('--render', action='store_true',
-                            help='show live window (render_mode=human, like eval.py)')
-            ap.add_argument('--save-gif', action='store_true',
-                            help='save per-episode GIF (headless-safe offscreen rendering)')
-            ap.add_argument('--save-plots', action='store_true',
-                            help='save per-episode time-series PNG')
-            ap.add_argument('--log-data', metavar='DIR', default='data',
-                            help='Save run data (.mat/.npz) to DIR/MPC/<road>/<run_N>/. '
-                                 'Omit DIR to use <repo>/data/.',
-                            nargs='?', const='__default__')
+            runner.add_common_args(ap, 'MPC')
+            ap.add_argument('--horizon', type=int, default=mcfg.get('N', 50), help='prediction horizon (steps)')
             args = ap.parse_args()
 
             if args.save_gif and not args.render:
@@ -184,12 +151,7 @@ def main() -> None:
             scenario_label = args.scenario or 'eval_scenarios'
             save_dir = _ROOT / 'logs' / 'eval' / 'results' / 'mpc' / scenario_label
 
-            log_root = (
-                _ROOT / 'data'
-                if args.log_data == '__default__'
-                else Path(args.log_data) if args.log_data
-                else None
-            )
+            log_root = runner.log_root(args)
 
             if args.render and not args.scenario:
                 _render_scenarios(env, ctrl, args, terminal_out,

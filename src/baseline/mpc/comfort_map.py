@@ -4,8 +4,8 @@ import numpy as np
 
 import yaml
 
-from gym_env.quarter_car.config.env_params import DT
-from gym_env.quarter_car.config.reward_params import RewardConfig
+from gym_env.common.env_params import DT
+from gym_env.common.reward_params import RewardConfig
 from baseline.mpc.vehicle import make_vehicle_spec
 from utils.paths import CONFIG
 

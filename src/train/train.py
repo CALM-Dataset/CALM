@@ -21,20 +21,10 @@ from train.environment import (
     make_real_val_env, load_real_val_scenarios,
 )
 from train.seed import seed_everything
-from gym_env.quarter_car.config.reward_params import load_reward_config
-from gym_env.quarter_car.config.preview_params import load_preview_config
-from gym_env.quarter_car.config.env_params import EPISODE_STEPS
-from gym_env.quarter_car.reward.utils import reward_bounds
-
-
-def _vehicle_cfg(vehicle: str):
-    if vehicle == "half":
-        from gym_env.half_car.config.reward_params import load_reward_config as lrc
-        from gym_env.half_car.config.preview_params import load_preview_config as lpc
-        from gym_env.half_car.config.env_params import EPISODE_STEPS as es
-        from gym_env.half_car.reward.utils import reward_bounds as rb
-        return lrc, lpc, es, rb
-    return load_reward_config, load_preview_config, EPISODE_STEPS, reward_bounds
+from gym_env.common.reward_params import load_reward_config
+from gym_env.common.preview_params import load_preview_config
+from gym_env.common.env_params import EPISODE_STEPS
+from gym_env.common.reward_utils import reward_bounds
 from gym_env.common.curriculum import load_curriculum_config
 
 
@@ -252,8 +242,7 @@ def main() -> None:
 
     seed_everything(seed)
 
-    _load_rcfg, _load_pcfg, _EPISODE_STEPS, _reward_bounds = _vehicle_cfg(args.vehicle)
-    rcfg           = _load_rcfg()
+    rcfg           = load_reward_config()
     curriculum_cfg = load_curriculum_config(_CURRICULUM_PATH)
     real_dir = curriculum_cfg.get("real_scenarios_dir")
     if curriculum_cfg.get("real_fraction", 0.0) > 0 and not (real_dir and any(Path(real_dir).glob("*.json"))):
@@ -357,7 +346,7 @@ def main() -> None:
         callbacks = CallbackList([callbacks, SpeedWeightController(ctrl["target"], ctrl["init"], ctrl["gain"], ctrl["max"])])
         print(f"  speed weight controller: target speed ratio {ctrl['target']}")
 
-    bounds = _reward_bounds(rcfg, _EPISODE_STEPS, n_bumps=5)
+    bounds = reward_bounds(rcfg, EPISODE_STEPS, n_bumps=5)
 
     print(f"\n{'─'*58}")
     print(f"  algo       : {args.algo}")
@@ -368,7 +357,7 @@ def main() -> None:
     print(f"  normalize  : obs={normalize}, reward={norm_reward}")
     print(f"  v_limit    : {rcfg.v_limit * 3.6:.0f} km/h")
     print(f"  v_min      : {rcfg.v_min * 3.6:.1f} km/h")
-    pcfg = _load_pcfg()
+    pcfg = load_preview_config()
     print(f"  preview    : {pcfg.n_peaks} peaks × 3 = {pcfg.n_peaks * 3} features over {pcfg.preview_distance}m")
     print(f"  curriculum : {len(curriculum_cfg['levels'])} levels, start={start_level}")
     print(f"  sparse     : {args.sparse_reward}")

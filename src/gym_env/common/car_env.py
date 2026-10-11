@@ -4,15 +4,11 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
-from gym_env.half_car.core.ode_model import HalfCarODE
 from road.road_generator import RoadGenerator
-from gym_env.half_car.config.reward_params import RewardConfig, load_reward_config
-from gym_env.half_car.reward.reward import compute_reward, compute_terminal_reward
-from gym_env.half_car.config.env_params import (
-    DT, EPISODE_STEPS, PLANT_PARAMS, ACTION_MODE, SPEED_GAIN,
-    OBS_HIGH, OBS_LOW,
-)
-from gym_env.half_car.config.render_params import (
+from gym_env.common.reward_params import RewardConfig, load_reward_config
+from gym_env.common.reward import compute_reward, compute_terminal_reward
+from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN
+from gym_env.common.render_params import (
     RENDER_Y_SCALE,
     RENDER_SHOW_TS,
     RENDER_TS_Z,
@@ -20,10 +16,12 @@ from gym_env.half_car.config.render_params import (
     RENDER_TS_SPEED,
     RENDER_FREEZE_EPISODE,
 )
-from .render import render_env, close_env
+from gym_env.vehicles import get_vehicle
 
 
-class HalfCarEnv(gym.Env):
+class CarEnv(gym.Env):
+    VEHICLE = None
+
     metadata = {
         'render_modes': ['human', 'rgb_array', 'none'],
         'render_fps': int(round(1.0 / DT)),
@@ -60,6 +58,7 @@ class HalfCarEnv(gym.Env):
 
         self._v_init_fn: Optional[Callable[[float], float]] = (road_params or {}).get('v_init_fn', None)
 
+        self._vehicle = get_vehicle(self.VEHICLE)
         self._rcfg = reward_config or load_reward_config()
         self._action_mode = action_mode or ACTION_MODE
 
@@ -68,10 +67,10 @@ class HalfCarEnv(gym.Env):
             high=np.array([ 1.0], dtype=np.float32),
         )
 
-        obs_high, obs_low = self._build_obs_bounds()
+        obs_low, obs_high = self._vehicle.obs_bounds()
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
 
-        self._ode  = HalfCarODE(physics_params or PLANT_PARAMS)
+        self._ode  = self._vehicle.make_ode(physics_params or self._vehicle.default_plant_params())
         self._road = RoadGenerator(vehicle_speed, road_params)
 
         self._state          = self._ode.reset(self._v0)
@@ -157,8 +156,7 @@ class HalfCarEnv(gym.Env):
         self._road.set_speed(self._v)
         x = self._ode.reset(self._v)
         if not self._start_at_eq:
-            x[0:4] += rng.normal(0.0, 0.005, size=4)
-            x[9]   += rng.normal(0.0, 0.001)
+            self._ode.perturb(x, rng)
         self._state = x
 
         self._t              = 0.0
@@ -177,7 +175,7 @@ class HalfCarEnv(gym.Env):
                     buf.clear()
         else:
             if self._fig is not None:
-                close_env(self)
+                self._vehicle.render().close_env(self)
             self._ren_hist = None
 
         self._v_episode_ref = v_ref
@@ -220,7 +218,7 @@ class HalfCarEnv(gym.Env):
         v_new = float(np.clip(v_old + a_cmd * DT, cfg.v_hard_min, v_top))
         a_actual = (v_new - v_old) / DT
         self._v        = v_new
-        self._state[8] = v_new
+        self._state[self._ode.v_index] = v_new
         self._road.set_speed(v_new)
         s_pos_start    = self._s_pos
         self._s_pos   += v_new * DT
@@ -271,7 +269,7 @@ class HalfCarEnv(gym.Env):
         terminated = False
 
         if self._step_count >= self._max_episode_steps:
-            _wb = float(getattr(self._ode, "_L", 0.0))
+            _wb = float(self._ode.wheelbase)
             if self._road_end is not None:
                 _end_pt = self._road_end + _wb + 3.0
             else:
@@ -297,7 +295,7 @@ class HalfCarEnv(gym.Env):
         return self._obs(), reward, terminated, truncated, info
 
     def render(self):
-        return render_env(self)
+        return self._vehicle.render().render_env(self)
 
     def set_render_label(self, label: str | None) -> None:
         self._render_label = label
@@ -306,29 +304,21 @@ class HalfCarEnv(gym.Env):
             fig.suptitle(label or '', fontsize=9, color='#444444', x=0.5, y=0.98)
 
     def close(self):
-        close_env(self)
+        self._vehicle.render().close_env(self)
 
-
-    def _build_obs_bounds(self):
-        return OBS_HIGH, OBS_LOW
 
     def _obs(self) -> np.ndarray:
-        susp_vel = float(self._state[3] - self._state[5])
-        z_W_ddot = float(self._last_z_W_ddot)
-        z_B_ddot = float(self._last_z_B_ddot)
-        phi_ddot = float(self._last_phi_ddot)
-        phi_rate = float(self._state[7])
+        body = self._ode.observe(self._state, float(self._last_z_W_ddot),
+                                 float(self._last_z_B_ddot), float(self._last_phi_ddot))
         v        = float(self._v)
         a_actual = float(self._prev_a)
         v_err    = float(self._v_init_last - v)
-        return np.array([susp_vel, z_W_ddot, z_B_ddot, phi_ddot, phi_rate,
-                         v, a_actual, v_err], dtype=np.float32)
+        return np.array([*body, v, a_actual, v_err], dtype=np.float32)
 
     def _info(self, z_B_ddot: float) -> dict:
         n   = max(self._step_count, 1)
         rms = np.sqrt(self._accel_sq / n)
-        susp_f = float(self._state[6])
-        tyre_f = float(self._state[2])
+        susp_defl, tire_defl = self._ode.deflections(self._state, self._road, self._s_pos)
         return {
             'episode_reward': float(self._episode_reward),
             'rms_accel':       float(rms),
@@ -339,8 +329,8 @@ class HalfCarEnv(gym.Env):
             'z_B_ddot':        float(z_B_ddot),
             'z_W_ddot':        float(self._last_z_W_ddot),
             'phi_ddot':        float(self._last_phi_ddot),
-            'susp_defl':       susp_f,
-            'tire_defl':       tyre_f,
+            'susp_defl':       susp_defl,
+            'tire_defl':       tire_defl,
             'speed':           float(self._v),
             'speed_kmh':       float(self._v * 3.6),
             'v_init':           float(self._v_init_last),

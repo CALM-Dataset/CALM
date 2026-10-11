@@ -11,11 +11,12 @@ import gymnasium as gym
 
 from utils.paths import ROOT as _ROOT
 
-__import__("gym_env.quarter_car.envs")
-from gym_env.quarter_car.config.reward_params import load_reward_config
-from gym_env.quarter_car.config.env_params import DT, EPISODE_STEPS
-from gym_env.quarter_car.wrappers import TerminationWrapper
-from gym_env.quarter_car.reward.utils import reward_bounds
+from gym_env.common import TerminationWrapper
+from gym_env.common.env_params import DT, EPISODE_STEPS
+from gym_env.common.preview_params import load_preview_config
+from gym_env.common.reward_params import load_reward_config
+from gym_env.common.reward_utils import reward_bounds
+from gym_env.vehicles import get_vehicle
 from baseline import runner
 from baseline.reactive_driver.driver import ReactiveController
 from utils.scenario_loader import load_scenario_any
@@ -23,24 +24,11 @@ from eval.data_logger import RunLogger, EpisodeData
 
 
 def _vehicle_bits(vehicle: str) -> dict:
-    if vehicle == 'half':
-        __import__("gym_env.half_car.envs")
-        from gym_env.half_car.config.env_params import EPISODE_STEPS as ES
-        from gym_env.half_car.wrappers import TerminationWrapper as TW
-        from gym_env.half_car.reward.utils import reward_bounds as rb
-        from gym_env.half_car.envs.render import wait_for_episode_nav as nav
-        from gym_env.half_car.config.preview_params import load_preview_config as lpc
-        from gym_env.half_car.config.reward_params import load_reward_config as lrc
-        return dict(env_id='gym_env/HalfCar', EPISODE_STEPS=ES, v_index=8,
-                    TerminationWrapper=TW, reward_bounds=rb, wait_for_episode_nav=nav,
-                    load_preview_config=lpc, load_reward_config=lrc)
-    if vehicle not in ('quarter', None):
-        raise ValueError(f"unknown vehicle {vehicle!r} (expected 'quarter' or 'half')")
-    from gym_env.quarter_car.envs.render import wait_for_episode_nav as nav
-    from gym_env.quarter_car.config.preview_params import load_preview_config as lpc
-    return dict(env_id='gym_env/QuarterCar', EPISODE_STEPS=EPISODE_STEPS, v_index=4,
+    v = get_vehicle(vehicle)
+    return dict(env_id=v.env_id, EPISODE_STEPS=EPISODE_STEPS, v_index=v.v_index,
                 TerminationWrapper=TerminationWrapper, reward_bounds=reward_bounds,
-                wait_for_episode_nav=nav, load_preview_config=lpc, load_reward_config=load_reward_config)
+                wait_for_episode_nav=v.render().wait_for_episode_nav,
+                load_preview_config=load_preview_config, load_reward_config=load_reward_config)
 
 
 def run_episode(env, ctrl: ReactiveController, seed: int, scenario_road=None,
@@ -85,28 +73,8 @@ def _save_plot(result: dict, ep_i: int, save_dir: Path) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser('Reactive driver baseline (intuition-based)')
-    ap.add_argument('--vehicle',         default='half', choices=('quarter', 'half'),
-                    help='vehicle dynamics model')
-    ap.add_argument('--no-perception',   dest='perception', action='store_false',
-                    default=True,
-                    help='plan on the true road (oracle) instead of perceived detections')
-    ap.add_argument('--seed',            type=int,   default=42)
-    ap.add_argument('--scenario',        default=None,
-                    help='fixed single scenario name or path')
-    ap.add_argument('--suites',          nargs='+',  metavar='FOLDER', default=None,
-                    help='suite folder names to run (default: enabled in eval_suites.yaml)')
-    ap.add_argument('--preview',         type=float,
-                    default=None, help='preview distance in m (default: preview.yaml)')
-    ap.add_argument('--render',           action='store_true',
-                    help='live window; with no --scenario, step through eval scenarios (←/→)')
-    ap.add_argument('--save-gif',        action='store_true',
-                    help='save per-episode GIF (headless-safe offscreen rendering)')
-    ap.add_argument('--save-plots',      action='store_true',
-                    help='save per-episode time-series PNG')
-    ap.add_argument('--log-data',        metavar='DIR', default='data',
-                    help='Save run data (.mat/.npz) to DIR/Reactive/<road>/<run_N>/. '
-                         'Omit DIR to use <repo>/data/.',
-                    nargs='?', const='__default__')
+    runner.add_common_args(ap, 'Reactive')
+    ap.add_argument('--preview', type=float, default=None, help='preview distance in m (default: preview.yaml)')
     args = ap.parse_args()
 
     if args.save_gif and not args.render:
@@ -134,14 +102,10 @@ def main() -> None:
         render_mode = 'rgb_array'
     else:
         render_mode = 'none'
-    env = bits['TerminationWrapper'](gym.make(bits['env_id'], render_mode=render_mode))
+    env = bits['TerminationWrapper'](gym.make(bits['env_id'], render_mode=render_mode,
+                                               action_mode='acceleration'))
 
-    log_root = (
-        _ROOT / 'data'
-        if args.log_data == '__default__'
-        else Path(args.log_data) if args.log_data
-        else None
-    )
+    log_root = runner.log_root(args)
 
     if args.render and not args.scenario:
         _render_scenarios(env, ctrl, args, nav_fn=bits['wait_for_episode_nav'],
