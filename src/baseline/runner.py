@@ -224,6 +224,7 @@ def render_scenarios(env, run_fn, args, nav_fn, preview_cfg=None,
     while True:
         suite_name, sc_name = scenarios[idx]
         road, track, _v, sc_desc = load_scenario_any(sc_name)
+        raw._nav_allowed = {'prev': idx > 0, 'next': idx < n - 1}
         raw.set_render_label(f'{label}{sc_name} - {sc_desc}   [{idx + 1}/{n} · {suite_name}]')
         r = run_fn(env, args.seed, scenario_road=road, collect_frames=False, render_live=True,
                    perception_track=track, preview_cfg=preview_cfg)
@@ -236,10 +237,10 @@ def render_scenarios(env, run_fn, args, nav_fn, preview_cfg=None,
             nav = nav_fn(env, allow_prev=True)
         if nav == 'quit':
             break
-        elif nav == 'next':
-            idx = min(idx + 1, n - 1)
-        elif nav == 'prev':
-            idx = max(idx - 1, 0)
+        elif nav == 'next' and idx < n - 1:
+            idx += 1
+        elif nav == 'prev' and idx > 0:
+            idx -= 1
 
 
 def run_suite(env, run_fn, args, save_dir: Path, log_root, cfg, method: str, slug: str,

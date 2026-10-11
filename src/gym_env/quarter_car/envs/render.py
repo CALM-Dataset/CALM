@@ -170,7 +170,7 @@ def init_render(env):
                           r'$m_B$', ha='left', va='center',
                           fontsize=9, color='#333333', zorder=7)
 
-    hud = Hud(ax_s, [('Time', 't'), ('Position', 's'), ('Speed', 'v'), ('Bumps', 'b'), ('Body heave', 'zb'), ('Reward', 'R')])
+    hud = Hud(ax_s, [('Time', 't'), ('Position', 's'), ('Speed', 'v'), ('Body heave', 'zb'), ('Reward', 'R'), ('Bumps', 'b')])
 
     ax_s.legend(fontsize=7.5, loc='upper right', frameon=False,
                 handlelength=1.5, borderpad=0.4)

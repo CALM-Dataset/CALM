@@ -194,8 +194,8 @@ def _render_env(env):
             else:           hud.set_text('')
         now = time.perf_counter()
         pace = getattr(env, '_pace', None)
-        if pace is None or pace[2] != speed or env._t < pace[1]:
-            pace = env._pace = (now, env._t, speed)
+        if pace is None or pace[2] != speed or pace[3] != env._episode_count or env._t < pace[1]:
+            pace = env._pace = (now, env._t, speed, env._episode_count)
         due = pace[0] + (env._t - pace[1]) / speed
         stale = now - getattr(env, '_last_draw', -1.0)
         if (stale >= _DRAW_PERIOD and now <= due) or stale >= _MAX_STALE or env._t < pace[1] + 1e-9:
@@ -343,10 +343,14 @@ def _ensure_play_keys(env):
             env._render_zoom = 1.0
             _apply_zoom()
         elif k in _NAV_KEYS:
+            action = _NAV_KEYS[k]
+            allowed = getattr(env, '_nav_allowed', None)
+            if allowed is not None and action in allowed and not allowed[action]:
+                return
             now = time.perf_counter()
             if now - getattr(env, '_nav_time', -1.0) >= _NAV_DEBOUNCE:
                 env._nav_time = now
-                env._nav_request = _NAV_KEYS[k]
+                env._nav_request = action
 
     def _on_scroll(ev):
         _zoom_by(_ZOOM_STEP if ev.button == 'up' else 1.0 / _ZOOM_STEP)
@@ -495,25 +499,17 @@ def wait_for_episode_nav(env, allow_prev: bool = True) -> str:
 
     raw._vehicle.render().update_artists(raw)
     fig.canvas.draw_idle()
+    raw._nav_request = None
+    was_paused = getattr(raw, '_paused', False)
 
-    _nav = [None]
-
-    def _on_key(event):
-        if event.key in ('right', ' '):
-            _nav[0] = 'next'
-        elif event.key == 'left':
-            _nav[0] = 'prev' if allow_prev else 'replay'
-        elif event.key == 'r' and allow_prev:
-            _nav[0] = 'replay'
-        elif event.key in ('q', 'escape'):
-            _nav[0] = 'quit'
-
-    cid = fig.canvas.mpl_connect('key_press_event', _on_key)
-    while _nav[0] is None:
+    while True:
         plt.pause(0.05)
-        if not plt.fignum_exists(fig.number):
-            _nav[0] = 'quit'
-            break
-
-    fig.canvas.mpl_disconnect(cid)
-    return _nav[0]
+        if _window_gone(raw):
+            return 'quit'
+        if getattr(raw, '_paused', False) != was_paused:
+            raw._paused = False
+            return 'next'
+        nav = raw._nav_request
+        if nav is not None:
+            raw._nav_request = None
+            return nav if allow_prev or nav == 'next' else 'replay'
