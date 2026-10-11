@@ -1,4 +1,5 @@
 import time
+import warnings
 from typing import Tuple
 
 import numpy as np
@@ -6,11 +7,13 @@ import numpy as np
 from gym_env.common.jukebox import Jukebox
 from gym_env.common.render_params import (
     RENDER_BUMP_MARKERS, RENDER_MUSIC_JUKEBOX, RENDER_MUSIC_MUTED, RENDER_MUSIC_TRACK,
-    RENDER_MUSIC_VOLUME, RENDER_Y_SCALE,
+    RENDER_MUSIC_VOLUME, RENDER_TOOLBAR, RENDER_Y_SCALE,
 )
 
 import matplotlib as mpl
 
+warnings.filterwarnings('ignore', message='Ignoring fixed .* limits')
+mpl.rcParams['toolbar'] = 'toolbar2' if RENDER_TOOLBAR else 'None'
 mpl.rcParams['font.family'] = 'serif'
 mpl.rcParams['font.serif'] = ['Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Times', 'DejaVu Serif']
 mpl.rcParams['mathtext.fontset'] = 'stix'
