@@ -7,11 +7,11 @@ import gymnasium as gym
 
 class EpisodeLogger(gym.Wrapper):
 
-    def __init__(self, env, log_dir: str):
+    def __init__(self, env, log_dir: str, tag: str = ''):
         super().__init__(env)
         os.makedirs(log_dir, exist_ok=True)
         ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-        self._csv_path  = os.path.join(log_dir, f'episodes_{ts}.csv')
+        self._csv_path  = os.path.join(log_dir, f'episodes_{ts}{"_" + tag if tag else ""}.csv')
         self._episode   = 0
         self._ep_return = 0.0
         with open(self._csv_path, 'w', newline='') as f:

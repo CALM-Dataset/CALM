@@ -149,8 +149,13 @@ class HalfCarEnv(gym.Env):
             self._road.set_speed(self._v0)
             self._v = self._v0
 
-        v_init = self._v
-        x = self._ode.reset(v_init)
+        if "road" in opts:
+            v_ref = self._v
+        else:
+            v_ref = float(self.np_random.uniform(cfg.v_init_low, cfg.v_limit))
+        self._v = float(np.clip(self._v, cfg.v_hard_min, max(cfg.v_hard_min, v_ref)))
+        self._road.set_speed(self._v)
+        x = self._ode.reset(self._v)
         if not self._start_at_eq:
             x[0:4] += rng.normal(0.0, 0.005, size=4)
             x[9]   += rng.normal(0.0, 0.001)
@@ -175,11 +180,7 @@ class HalfCarEnv(gym.Env):
                 close_env(self)
             self._ren_hist = None
 
-        cfg = self._rcfg
-        if "road" in opts:
-            self._v_episode_ref = self._v
-        else:
-            self._v_episode_ref = float(self.np_random.uniform(cfg.v_init_low, cfg.v_limit))
+        self._v_episode_ref = v_ref
         self._v_init_last = self._v_episode_ref
         self._speed_err_sq   = 0.0
         self._s_pos          = 0.0
@@ -270,13 +271,14 @@ class HalfCarEnv(gym.Env):
         terminated = False
 
         if self._step_count >= self._max_episode_steps:
-            terminated = True
             _wb = float(getattr(self._ode, "_L", 0.0))
             if self._road_end is not None:
                 _end_pt = self._road_end + _wb + 3.0
             else:
                 _end_pt = (self._last_bump_end + _wb) if self._last_bump_end is not None else None
             reached = _end_pt is not None and self._s_pos >= _end_pt
+            terminated = reached
+            truncated = not reached
             self._termination_reason = "completed" if reached else "timeout"
             reward += compute_terminal_reward(
                 success=reached, t=self._t,

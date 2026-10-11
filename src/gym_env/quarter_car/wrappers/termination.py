@@ -39,30 +39,30 @@ class TerminationWrapper(gym.Wrapper):
         env = self.env.unwrapped
 
         if abs(float(env._state[2])) > self._susp_travel_lim:
-            truncated = True
+            terminated = True
             reward += self._cfg.terminal_penalty
             env._termination_reason = "crash_susp"
 
-        if not truncated and abs(float(env._state[5])) > self._body_disp_lim:
-            truncated = True
+        if not terminated and abs(float(env._state[5])) > self._body_disp_lim:
+            terminated = True
             reward += self._cfg.terminal_penalty
             env._termination_reason = "crash_body"
 
-        if not truncated:
+        if not terminated:
             damper_velocity = float(env._state[1] - env._state[3])
             if abs(damper_velocity) > self._damper_limit:
-                truncated = True
+                terminated = True
                 reward += self._cfg.terminal_penalty
                 env._termination_reason = "crash_damper"
 
-        if not truncated:
+        if not terminated:
             v = float(env._v)
             if v < self._cfg.terminal_v_min or v > self._cfg.terminal_v_max:
-                truncated = True
+                terminated = True
                 reward += self._cfg.terminal_penalty
                 env._termination_reason = "crash_speed"
 
-        if not terminated and not truncated:
+        if not terminated:
             lbe = env._last_bump_end
             if lbe is not None:
                 if self._match_flat_start and env._road._bumps:

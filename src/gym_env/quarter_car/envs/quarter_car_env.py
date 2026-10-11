@@ -254,8 +254,9 @@ class QuarterCarEnv(gym.Env):
         terminated = False
 
         if self._step_count >= self._max_episode_steps:
-            terminated = True
             reached = self._last_bump_end is not None and self._s_pos >= self._last_bump_end
+            terminated = reached
+            truncated = not reached
             self._termination_reason = "completed" if reached else "timeout"
             reward += compute_terminal_reward(
                 success=reached, t=self._t,

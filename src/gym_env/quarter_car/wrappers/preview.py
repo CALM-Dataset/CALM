@@ -133,7 +133,7 @@ class PreviewWrapper(gym.ObservationWrapper):
         peak_dists = [None] * cfg.n_peaks
 
         for i, pk in enumerate(peaks[: cfg.n_peaks]):
-            dist_m      = float(pk * ds)
+            dist_m      = float((pk + 1) * ds)
             peak_dists[i] = dist_m
             peak_h      = float(heights[pk])
             peak_w_m    = float(props["widths"][i] * ds)

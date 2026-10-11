@@ -44,31 +44,31 @@ class TerminationWrapper(gym.Wrapper):
 
         susp_travel = max(abs(float(st[6])), abs(float(st[4])))
         if susp_travel > self._susp_travel_lim:
-            truncated = True
+            terminated = True
             reward += self._cfg.terminal_penalty
             env._termination_reason = "crash_susp"
 
-        if not truncated and abs(float(st[9])) > self._body_disp_lim:
-            truncated = True
+        if not terminated and abs(float(st[9])) > self._body_disp_lim:
+            terminated = True
             reward += self._cfg.terminal_penalty
             env._termination_reason = "crash_body"
 
-        if not truncated:
+        if not terminated:
             damper_f = float(st[3]) - (float(st[5]) - lf * float(st[7]))
             damper_r = float(st[1]) - (float(st[5]) + lr * float(st[7]))
             if max(abs(damper_f), abs(damper_r)) > self._damper_limit:
-                truncated = True
+                terminated = True
                 reward += self._cfg.terminal_penalty
                 env._termination_reason = "crash_damper"
 
-        if not truncated:
+        if not terminated:
             v = float(env._v)
             if v < self._cfg.terminal_v_min or v > self._cfg.terminal_v_max:
-                truncated = True
+                terminated = True
                 reward += self._cfg.terminal_penalty
                 env._termination_reason = "crash_speed"
 
-        if not terminated and not truncated:
+        if not terminated:
             road_end = getattr(env, "_road_end", None)
             if road_end is not None:
                 complete_at = road_end + float(env._ode._L) + _REAL_TAIL_MARGIN_M
