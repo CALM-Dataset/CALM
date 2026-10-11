@@ -29,6 +29,7 @@ _MAX_EP_STEPS = RENDER_MAX_EP_STEPS
 _WHEEL_R = 0.32
 _WHEEL_RY = 0.5
 _C_TIRE_PART = '#56606b'
+_C_TIRE_HIT = '#d62d20'
 _HUB_H = 0.12
 _ARR_X0      = RENDER_ARR_X
 _ARR_Y_V     = RENDER_ARR_Y
@@ -125,6 +126,10 @@ def _update_axle(a, x_c: float, y_W: float, y_B_corner: float,
 
     if RENDER_REALISTIC_WHEELS:
         a['contact_dot'].set_data([x_c] if on_obstacle else [], [y_road] if on_obstacle else [])
+        tire_c = _C_TIRE_HIT if on_obstacle else _C_TIRE_PART
+        for k in ('tire_spring', 'tire_damp_rod', 'tire_damp_lower_rod', 'tire_damp_cyl'):
+            a[k].set_color(tire_c)
+        a['tire_damp_pist'].set_facecolor(tire_c)
 
         y_tire_top = y_W - _HUB_H / 2
         if y_tire_top > y_road + 0.05:
