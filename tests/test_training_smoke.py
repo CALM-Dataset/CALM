@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from gym_env.half_car.wrappers.curriculum import load_curriculum_config
+from gym_env.common.curriculum import load_curriculum_config
 from train.agent import build_model
 from train.environment import make_vec_env
 

@@ -71,7 +71,7 @@ def test_body_acceleration_lowers_the_reward():
 def test_the_same_seed_gives_the_same_training_episodes():
     from pathlib import Path
 
-    from gym_env.half_car.wrappers.curriculum import load_curriculum_config
+    from gym_env.common.curriculum import load_curriculum_config
     from train.environment import _make_env
 
     cfg = load_curriculum_config(Path(__file__).resolve().parents[1] / "config" / "curriculum" / "curriculum.yaml")

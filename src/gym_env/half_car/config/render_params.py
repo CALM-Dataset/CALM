@@ -1,4 +1,4 @@
-from gym_env.half_car.config.config_manager import _load_yaml
+from gym_env.common.config_manager import _load_yaml
 
 
 _cfg = _load_yaml("render.yaml")

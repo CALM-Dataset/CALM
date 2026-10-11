@@ -4,7 +4,7 @@ from typing import Tuple
 
 import numpy as np
 
-from .jukebox import Jukebox
+from gym_env.common.jukebox import Jukebox
 
 from gym_env.quarter_car.config.render_params import (
     RENDER_Y_W_NOM, RENDER_Y_B_NOM,

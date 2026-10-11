@@ -1,6 +1,6 @@
 import numpy as np
 
-from gym_env.quarter_car.config.config_manager import _load_yaml
+from gym_env.common.config_manager import _load_yaml
 
 _cfg = _load_yaml("env.yaml")
 

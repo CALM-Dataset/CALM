@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from gym_env.half_car.config.config_manager import _load_yaml
+from gym_env.common.config_manager import _load_yaml
 
 
 @dataclass(frozen=True)

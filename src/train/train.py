@@ -35,7 +35,7 @@ def _vehicle_cfg(vehicle: str):
         from gym_env.half_car.reward.utils import reward_bounds as rb
         return lrc, lpc, es, rb
     return load_reward_config, load_preview_config, EPISODE_STEPS, reward_bounds
-from gym_env.quarter_car.wrappers.curriculum import load_curriculum_config
+from gym_env.common.curriculum import load_curriculum_config
 
 
 _CONFIG_PATH      = _ROOT / "config" / "agent" / "algo_configs.yaml"
