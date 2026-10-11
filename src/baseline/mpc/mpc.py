@@ -456,7 +456,7 @@ def main() -> None:
             env  = make_env(bits, cfg, render_mode)
 
             scenario_label = args.scenario or 'eval_scenarios'
-            save_dir = _ROOT / 'eval' / 'results' / 'mpc' / scenario_label
+            save_dir = _ROOT / 'logs' / 'eval' / 'results' / 'mpc' / scenario_label
 
             log_root = (
                 _ROOT / 'data'

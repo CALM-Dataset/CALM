@@ -16,7 +16,6 @@ _ROOT = Path(__file__).resolve().parents[3]
 
 __import__("gym_env.quarter_car.envs")
 from gym_env.quarter_car.config.reward_params import load_reward_config
-from gym_env.quarter_car.config.preview_params import load_preview_config
 from gym_env.quarter_car.config.env_params import DT, EPISODE_STEPS
 from gym_env.quarter_car.wrappers import TerminationWrapper
 from gym_env.quarter_car.reward.utils import reward_bounds
@@ -33,16 +32,17 @@ def _vehicle_bits(vehicle: str) -> dict:
         from gym_env.half_car.reward.utils import reward_bounds as rb
         from gym_env.half_car.envs.render import wait_for_episode_nav as nav
         from gym_env.half_car.config.preview_params import load_preview_config as lpc
+        from gym_env.half_car.config.reward_params import load_reward_config as lrc
         return dict(env_id='gym_env/HalfCar', EPISODE_STEPS=ES, v_index=8,
                     TerminationWrapper=TW, reward_bounds=rb, wait_for_episode_nav=nav,
-                    load_preview_config=lpc)
+                    load_preview_config=lpc, load_reward_config=lrc)
     if vehicle not in ('quarter', None):
         raise ValueError(f"unknown vehicle {vehicle!r} (expected 'quarter' or 'half')")
     from gym_env.quarter_car.envs.render import wait_for_episode_nav as nav
     from gym_env.quarter_car.config.preview_params import load_preview_config as lpc
     return dict(env_id='gym_env/QuarterCar', EPISODE_STEPS=EPISODE_STEPS, v_index=4,
                 TerminationWrapper=TerminationWrapper, reward_bounds=reward_bounds,
-                wait_for_episode_nav=nav, load_preview_config=lpc)
+                wait_for_episode_nav=nav, load_preview_config=lpc, load_reward_config=load_reward_config)
 
 
 def _steps_for_road(road, dt: float = 0.02, margin: float = 1.5) -> int:
@@ -129,7 +129,7 @@ def run_episode(env, ctrl: ReactiveController, seed: int,
 
     rms_accel = float(np.sqrt(accel_sq / max(n_steps, 1)))
     rms_pitch = float(np.sqrt(pitch_sq / max(n_steps, 1)))
-    cfg       = load_reward_config()
+    cfg       = raw._rcfg
     return {
         'episode_return': round(float(ep_return),   2),
         'rms_accel':      round(rms_accel,           4),
@@ -253,7 +253,7 @@ def _run_suite_reactive(env, ctrl: ReactiveController, args,
             all_returns.append(r['episode_return'])
 
             if log_root is not None:
-                cfg_r = load_reward_config()
+                cfg_r = cfg
                 logger = RunLogger(
                     method='Reactive', road=sc_name, out_root=log_root,
                     dt=DT, v_max_kmh=cfg_r.v_limit * 3.6,
@@ -332,9 +332,6 @@ def _render_scenarios(env, ctrl: ReactiveController, args, nav_fn=None,
 
 
 def main() -> None:
-    cfg   = load_reward_config()
-    pcfg  = load_preview_config()
-
     ap = argparse.ArgumentParser('Reactive driver baseline (intuition-based)')
     ap.add_argument('--vehicle',         default='half', choices=('quarter', 'half'),
                     help='vehicle dynamics model')
@@ -347,7 +344,7 @@ def main() -> None:
     ap.add_argument('--suites',          nargs='+',  metavar='FOLDER', default=None,
                     help='suite folder names to run (default: enabled in eval_suites.yaml)')
     ap.add_argument('--preview',         type=float,
-                    default=pcfg.preview_distance)
+                    default=None, help='preview distance in m (default: preview.yaml)')
     ap.add_argument('--render',           action='store_true',
                     help='live window; with no --scenario, step through eval scenarios (←/→)')
     ap.add_argument('--save-gif',        action='store_true',
@@ -364,7 +361,11 @@ def main() -> None:
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
     bits = _vehicle_bits(args.vehicle)
-    preview_cfg = bits['load_preview_config']() if args.perception else None
+    cfg = bits['load_reward_config']()
+    pcfg = bits['load_preview_config']()
+    if args.preview is None:
+        args.preview = pcfg.preview_distance
+    preview_cfg = pcfg if args.perception else None
     ctrl = ReactiveController(
         v_max          = float(cfg.v_limit),
         v_min          = float(cfg.v_min),

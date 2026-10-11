@@ -244,7 +244,7 @@ def main() -> None:
     out_json = (
         Path(args.out).expanduser()
         if args.out
-        else _ROOT / 'eval' / 'results' / 'replay' /
+        else _ROOT / 'logs' / 'eval' / 'results' / 'replay' /
              f'replay_{seq_root.name}_{args.scenario}.json'
     )
     out_json.parent.mkdir(parents=True, exist_ok=True)

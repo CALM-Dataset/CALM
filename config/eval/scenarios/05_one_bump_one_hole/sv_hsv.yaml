@@ -1,0 +1,13 @@
+name: sv_hsv
+description: severe_bump bump then severe_bump hole
+source: "Azab Abdelazim, M. (2026): Comfort-Aware Speed Planning over Road Anomalies: A Reinforcement-Learning Approach, BSc thesis, TU Berlin, Tab. 3.3"
+vehicle_speed_kmh: 30.0
+road_obstacles:
+- x_start_m: 40.0
+  height_m: 0.1
+  width_m: 1.0
+  type: bump
+- x_start_m: 71.0
+  height_m: -0.1
+  width_m: 1.0
+  type: hole

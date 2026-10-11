@@ -1,0 +1,22 @@
+name: m_c_hm_hc
+description: medium_bump+raised_crosswalk bumps then medium_bump+raised_crosswalk
+  holes
+source: "Azab Abdelazim, M. (2026): Comfort-Aware Speed Planning over Road Anomalies: A Reinforcement-Learning Approach, BSc thesis, TU Berlin, Tab. 3.3"
+vehicle_speed_kmh: 30.0
+road_obstacles:
+- x_start_m: 40.0
+  height_m: 0.0625
+  width_m: 2.22
+  type: bump
+- x_start_m: 72.22
+  height_m: 0.1
+  width_m: 5.0
+  type: bump
+- x_start_m: 107.22
+  height_m: -0.0625
+  width_m: 2.22
+  type: hole
+- x_start_m: 139.44
+  height_m: -0.1
+  width_m: 5.0
+  type: hole

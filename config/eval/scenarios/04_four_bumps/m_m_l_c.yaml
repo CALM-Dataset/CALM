@@ -1,0 +1,21 @@
+name: m_m_l_c
+description: medium_bump + medium_bump + long_bump + raised_crosswalk
+source: "Azab Abdelazim, M. (2026): Comfort-Aware Speed Planning over Road Anomalies: A Reinforcement-Learning Approach, BSc thesis, TU Berlin, Tab. 3.3"
+vehicle_speed_kmh: 30.0
+road_obstacles:
+- x_start_m: 40.0
+  height_m: 0.0625
+  width_m: 2.22
+  type: bump
+- x_start_m: 72.22
+  height_m: 0.0625
+  width_m: 2.22
+  type: bump
+- x_start_m: 104.44
+  height_m: 0.125
+  width_m: 9.5
+  type: bump
+- x_start_m: 143.94
+  height_m: 0.1
+  width_m: 5.0
+  type: bump

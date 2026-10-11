@@ -88,7 +88,8 @@ assets/music/*.wav
 
 # ---- Generated or fetched project data ----
 config/train/scenarios/
-config/eval/scenarios/
+config/eval/scenarios/real/
+config/eval/scenarios/real_train/
 config/dataset/
 config/perception/
 
@@ -97,6 +98,3 @@ tmp/
 scratch/
 *.bak
 *.orig
-
-# MPC evaluation output
-/eval/

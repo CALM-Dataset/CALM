@@ -22,10 +22,7 @@ from gym_env.quarter_car.wrappers import PreviewWrapper, TerminationWrapper
 from gym_env.quarter_car.reward.utils import reward_bounds
 from gym_env.quarter_car.config.reward_params import load_reward_config
 from gym_env.quarter_car.config.env_params import EPISODE_STEPS, DT
-from utils.scenario_loader import (
-    load_scenario, make_road_generator,
-    load_scenario_any, enabled_eval_suites,
-)
+from utils.scenario_loader import load_scenario_any, enabled_eval_suites
 
 from eval.data_logger import RunLogger, EpisodeData
 from baseline.dummy_agent import DummyAgent
@@ -797,13 +794,14 @@ def main() -> None:
         return
 
     scenario_road  = None
+    scenario_track = None
     scenario_label = 'speed_bump'
     if args.scenario:
-        _, _, sc_name, sc_desc = load_scenario(args.scenario)
-        scenario_road  = make_road_generator(args.scenario)
-        scenario_label = args.scenario
+        scenario_road, scenario_track, _, sc_desc = load_scenario_any(args.scenario)
+        sc_name        = args.scenario
+        scenario_label = Path(args.scenario).stem
 
-    save_dir = _ROOT / "eval" / "results" / f"eval_{args.algo}_{scenario_label}_{exp_tag or 'run'}"
+    save_dir = _ROOT / "logs" / "eval" / "results" / f"eval_{args.algo}_{scenario_label}_{exp_tag or 'run'}"
 
     print(f"\n{'═'*60}")
     print("  CALM EVAL")
@@ -847,6 +845,7 @@ def main() -> None:
             render=args.render,
             deterministic=deterministic,
             scenario_road=scenario_road,
+            perception_track=scenario_track,
             capture_frames=args.save_gif,
             pause_at_end=args.render,
         )

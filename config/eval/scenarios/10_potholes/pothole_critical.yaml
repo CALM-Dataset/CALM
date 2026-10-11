@@ -1,0 +1,9 @@
+name: pothole_critical
+description: Critical pothole, 100 mm deep, 1.20 m wide
+source: "Extrapolated above the RAC Foundation high-severity boundary (config/catalog/potholes.json)"
+vehicle_speed_kmh: 30.0
+road_obstacles:
+- x_start_m: 40.0
+  height_m: -0.10
+  width_m: 1.20
+  type: hole
