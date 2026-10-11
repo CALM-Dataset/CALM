@@ -3,6 +3,7 @@ set positional-arguments := true
 
 venv := ".venv/bin/python3"
 pip  := ".venv/bin/pip3"
+calm := ".venv/bin/python3 -m calm"
 
 export PYTHONPATH := "src"
 export ACADOS_SOURCE_DIR := justfile_directory() + "/acados"
@@ -10,6 +11,11 @@ export LD_LIBRARY_PATH := justfile_directory() + "/acados/lib:" + env("LD_LIBRAR
 
 default:
     @just --list
+
+# check Python, packages, acados, data and login, with hints
+[group('setup')]
+doctor:
+    {{calm}} doctor
 
 # create .venv, then install CPU PyTorch, the dependencies and the package
 [group('setup')]
@@ -41,55 +47,49 @@ build-acados:
 # download the real scenarios from Hugging Face (gated: needs access and `hf auth login`)
 [group('data')]
 fetch-scenarios:
-    {{venv}} -c "from utils.dataset import ensure_local; ensure_local()"
+    {{calm}} fetch
 
 # metadata table over every scenario (config/dataset/index.json)
 [group('data')]
 build-index:
-    {{venv}} -m utils.dataset
+    {{calm}} build-index
 
 # procedural training scenarios
 [group('data')]
 gen-scene *args:
-    {{venv}} -m utils.generate_train_scenarios "$@"
+    {{calm}} gen-scenes "$@"
 
 # PPO training through the curriculum; logs/models/PPO/<run-name>/
 [group('rl')]
 train *args:
-    {{venv}} -m train.train --algo PPO "$@"
+    {{calm}} train "$@"
 
-# evaluate logs/models/<algo>/<run>/<algo>_final.zip, e.g. just eval PPO exp_3
+# evaluate logs/models/PPO/<run>/PPO_final.zip, e.g. just eval exp_3
 [group('rl')]
-eval algo run *args:
-    shift 2; {{venv}} -m eval.eval --algo {{algo}} --model_path logs/models/{{algo}}/{{run}}/{{algo}}_final.zip "$@"
+eval *args:
+    {{calm}} eval "$@"
 
 # Optuna hyperparameter search
 [group('rl')]
 tune *args:
-    {{venv}} -m tune.tune --storage sqlite:///tune.db --study-name ppo_study "$@"
+    {{calm}} tune --storage sqlite:///tune.db --study-name ppo_study "$@"
 
 # TensorBoard on logs/tensorboard
 [group('rl')]
 tb:
-    {{venv}} -m tensorboard.main --logdir logs/tensorboard
-
-# ISO 2631 comfort of PPO, MPC and the recorded drive; set CALM_SEQUENCES for the human
-[group('comfort')]
-compare run ckpt="PPO_final.zip" *args:
-    @case "{{ckpt}}" in -*) echo "usage: just compare <run> [checkpoint.zip] [options]" >&2; exit 2;; esac
-    shift 2; {{venv}} -m eval.comfort_score --ppo-model logs/models/PPO/{{run}}/{{ckpt}} --mpc --profiles-dir logs/comfort/profiles "$@"
+    {{calm}} tb
 
 # MPC baseline (needs acados); pass --scenario <name> or --render
 [group('baselines')]
 mpc *args:
-    {{venv}} -m baseline.mpc.mpc "$@"
+    {{calm}} mpc "$@"
 
 # rule-based driver baseline; pass --scenario <name> or --render
 [group('baselines')]
 reactive-driver *args:
-    {{venv}} -m baseline.reactive_driver.driver_eval "$@"
+    {{calm}} reactive "$@"
 
 # zero-action baseline run through the training pipeline (smoke test)
 [group('baselines')]
 dummy *args:
-    {{venv}} -m baseline.dummy_agent.train "$@"
+    {{calm}} dummy "$@"

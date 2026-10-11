@@ -109,20 +109,26 @@ every scenario (source, size, bump count, recommended speeds).
 
 ## Usage
 
-```bash
-just train                      # PPO through the 4-level curriculum (half-car)
-just train --vehicle quarter    # quarter-car plant (same reward and settings)
+Every `just` recipe is a thin wrapper over the `calm` command (`.venv/bin/calm --help` lists them), so use either.
 
-just eval PPO <run-name> --render     # evaluate a trained model
-just mpc --render                           # MPC baseline
-just reactive-driver --render               # rule-based driver baseline
-just dummy                                  # zero-action baseline through the training pipeline
+```bash
+just doctor                     # check Python, packages, acados, data and login, with hints
+just train --run-name demo      # PPO through the 4-level curriculum (half-car)
+just train --vehicle quarter    # quarter-car plant (same reward and settings)
+just eval demo --render         # evaluate logs/models/PPO/demo/PPO_final.zip
+just mpc --render               # MPC baseline
+just reactive-driver --render   # rule-based driver baseline
+just dummy                      # zero-action baseline through the training pipeline
 
 just tb                         # TensorBoard
 just tune --trials 50           # Optuna hyperparameter search
+just test                       # fast tests, no data needed
 ```
 
-The vehicle at evaluation time must match the one the model was trained on.
+A first run without any data: `just install`, `just doctor`, `just gen-scene`, then
+`just train --timesteps 200000 --run-name demo` (a few minutes) and `just eval demo --scenario c`.
+
+The vehicle at evaluation time must match the one the model was trained on (`--vehicle`).
 
 ### Render controls
 
