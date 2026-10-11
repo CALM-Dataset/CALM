@@ -2,12 +2,11 @@ import os
 
 import numpy as np
 
+from utils.paths import ROOT
+
 _SR = 44100
 
-_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                          *[os.pardir] * 4))
-_MUSIC_DIR = os.environ.get('QC_MUSIC_DIR',
-                            os.path.join(_REPO_ROOT, 'assets', 'music'))
+_MUSIC_DIR = os.environ.get('QC_MUSIC_DIR', str(ROOT / 'assets' / 'music'))
 _EXTS = ('.ogg', '.wav', '.mp3')
 
 _A4 = 440.0
@@ -108,15 +107,20 @@ class Jukebox:
 
         if os.environ.get('QC_NO_AUDIO'):
             return
+        self._pygame = None
         try:
             import pygame
-            if not pygame.mixer.get_init():
-                pygame.mixer.init(frequency=_SR, size=-16, channels=2)
-            self._pygame = pygame
-            self.ok = True
-        except Exception:
-            self._pygame = None
-            self.ok = False
+        except ImportError:
+            return
+        for attempt in range(2):
+            try:
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init(frequency=_SR, size=-16, channels=2)
+                self._pygame = pygame
+                self.ok = True
+                return
+            except Exception:
+                os.environ.pop('SDL_AUDIODRIVER', None)
 
     @_safe
     def _load(self):
