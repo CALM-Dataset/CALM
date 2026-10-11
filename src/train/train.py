@@ -339,7 +339,7 @@ def main() -> None:
             eval_freq  = max(2 * train_meta["eval_freq"] // n_envs, 1),
         )
         callbacks = CallbackList([callbacks, real_val_cb])
-        print(f"  real-val   : {len(real_val_scenarios)} scenarios → best_real/best_model")
+        print(f"  real-sample: {len(real_val_scenarios)} training scenarios (not the held-out ones) → best_real/best_model")
 
     ctrl = train_meta.get("speed_controller")
     if ctrl:

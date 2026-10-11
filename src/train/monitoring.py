@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -12,6 +13,18 @@ from stable_baselines3.common.callbacks import (
     EvalCallback,
 )
 from stable_baselines3.common.vec_env import VecNormalize
+
+
+@contextmanager
+def base_speed_weight():
+    from gym_env.common.reward import get_track_scale_override, set_track_scale_override
+
+    saved = get_track_scale_override()
+    set_track_scale_override(None)
+    try:
+        yield
+    finally:
+        set_track_scale_override(saved)
 
 
 class MetricsCallback(BaseCallback):
@@ -134,7 +147,8 @@ class PerformanceCurriculumCallback(EvalCallback):
 
     def _on_step(self) -> bool:
         eval_ran = self.eval_freq > 0 and (self.n_calls % self.eval_freq) == 0
-        result   = super()._on_step()
+        with base_speed_weight():
+            result = super()._on_step()
         if eval_ran and self.last_mean_reward > -np.inf:
             self._on_eval_result(float(self.last_mean_reward))
 
@@ -288,7 +302,8 @@ class RealValidationCallback(BaseCallback):
         if self._eval_freq <= 0 or self.n_calls % self._eval_freq != 0 or not self._scenarios:
             return True
         self._venv.obs_rms = self._train_venv.obs_rms
-        returns = [self._rollout(road, track) for _, road, track in self._scenarios]
+        with base_speed_weight():
+            returns = [self._rollout(road, track) for _, road, track in self._scenarios]
         mean_ret = float(np.mean(returns))
         self.logger.record("real_val/mean_return", mean_ret)
         self.logger.record("real_val/n_scenarios", len(returns))
@@ -297,7 +312,7 @@ class RealValidationCallback(BaseCallback):
             self.model.save(str(self._save_path / "best_model"))
             self._venv.save(str(self._save_path / "best_model_vec_normalize.pkl"))
             if self.verbose:
-                print(f"\n  [RealVal]  new best real return {mean_ret:+.1f} "
+                print(f"\n  [RealSample]  new best return {mean_ret:+.1f} "
                       f"over {len(returns)} scenarios → {self._save_path}/best_model\n")
         return True
 

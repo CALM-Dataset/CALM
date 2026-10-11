@@ -13,6 +13,10 @@ def set_track_scale_override(value: float | None) -> None:
     _track_scale_override = value
 
 
+def get_track_scale_override() -> float | None:
+    return _track_scale_override
+
+
 def j_heave(z_B_ddot: float, g: float, clip: float) -> float:
     return -(np.clip(z_B_ddot, -clip, clip) / g) ** 2
 
