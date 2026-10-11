@@ -2,28 +2,22 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+
+from utils.paths import ROOT
 from typing import Optional
 
 import yaml
 
 
-def _find_root() -> Path:
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        if (parent / 'pyproject.toml').is_file() and (parent / 'config').is_dir():
-            return parent
-    raise FileNotFoundError("repo root with pyproject.toml and config/ not found")
-
-
 def _load_catalog() -> dict[int, dict]:
-    root = _find_root()
+    root = ROOT
     p = root / 'config' / 'catalog' / 'speed_bumps.json'
     data = json.loads(p.read_text())
     return {b['id']: b for b in data['bumps']}
 
 
 def list_scenarios() -> list[str]:
-    root = _find_root()
+    root = ROOT
     seen: set[str] = set()
     for p in (root / 'config' / 'eval' / 'scenarios').rglob('*.yaml'):
         if p.name != 'manifest.yaml':
@@ -36,7 +30,7 @@ def list_scenarios() -> list[str]:
 
 
 def _load_eval_suites_cfg() -> dict:
-    root = _find_root()
+    root = ROOT
     p = root / 'config' / 'eval' / 'eval_suites.yaml'
     return yaml.safe_load(p.read_text()) if p.exists() else {}
 
@@ -45,7 +39,7 @@ def _find_scenario_path(name_or_path: str) -> Path:
     path = Path(name_or_path)
     if path.exists():
         return path
-    root = _find_root()
+    root = ROOT
     scenarios_dir = root / 'config' / 'eval' / 'scenarios'
     candidate = scenarios_dir / f'{name_or_path}.yaml'
     if candidate.exists():
@@ -110,7 +104,7 @@ def _prettify_scenario_name(name: str) -> str:
 
 
 def _real_scenarios_dir() -> Path:
-    return _find_root() / 'config' / 'eval' / 'scenarios' / 'real'
+    return ROOT / 'config' / 'eval' / 'scenarios' / 'real'
 
 
 REAL_SUITES = ('real', 'real_train')
@@ -154,7 +148,7 @@ def enabled_eval_suites(selected: Optional[list] = None) -> list[tuple[str, list
     cfg = _load_eval_suites_cfg().get("suites", {})
     names = selected if selected else [k for k, v in cfg.items()
                                        if isinstance(v, dict) and v.get("enabled")]
-    scen_root = _find_root() / 'config' / 'eval' / 'scenarios'
+    scen_root = ROOT / 'config' / 'eval' / 'scenarios'
     out: list[tuple[str, list[str]]] = []
     for name in names:
         if name in REAL_SUITES:

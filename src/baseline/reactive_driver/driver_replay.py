@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import numpy as np
 from scipy.signal import savgol_filter
 
-_ROOT = Path(__file__).resolve().parents[3]
+from utils.paths import ROOT as _ROOT
 
 from baseline.reactive_driver.driver import ReactiveController
 from utils.scenario_loader import load_scenario, get_sequence_path

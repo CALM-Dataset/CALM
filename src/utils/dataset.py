@@ -6,24 +6,18 @@ from pathlib import Path
 
 import yaml
 
+from utils.paths import ROOT
+
 SCENARIOS_REPO = 'CALM-Dataset/CALM-Scenarios'
 REGIONS = ['italy', 'germany']
 
 
-def _root() -> Path:
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        if (parent / 'pyproject.toml').is_file() and (parent / 'config').is_dir():
-            return parent
-    raise FileNotFoundError("repo root with pyproject.toml and config/ not found")
-
-
 def _real_dir() -> Path:
-    return _root() / 'config' / 'train' / 'scenarios' / 'real'
+    return ROOT / 'config' / 'train' / 'scenarios' / 'real'
 
 
 def _eval_dir() -> Path:
-    return _root() / 'config' / 'eval' / 'scenarios'
+    return ROOT / 'config' / 'eval' / 'scenarios'
 
 
 def real_files() -> list[tuple[Path, str]]:
@@ -40,7 +34,7 @@ def region_of(name: str) -> str:
 
 
 def index_path() -> Path:
-    return _root() / 'config' / 'dataset' / 'index.json'
+    return ROOT / 'config' / 'dataset' / 'index.json'
 
 
 def _source_of(name: str) -> str:
@@ -115,7 +109,7 @@ def ensure_local() -> None:
 
     for d in (_real_dir(), _eval_dir() / 'real', seen_dir):
         d.mkdir(parents=True, exist_ok=True)
-    perception_dir = _root() / 'config' / 'perception'
+    perception_dir = ROOT / 'config' / 'perception'
     perception_dir.mkdir(parents=True, exist_ok=True)
 
     skipped = 0

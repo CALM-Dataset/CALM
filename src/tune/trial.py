@@ -6,7 +6,7 @@ import optuna
 import yaml
 from stable_baselines3.common.evaluation import evaluate_policy
 
-_ROOT = Path(__file__).resolve().parents[2]
+from utils.paths import ROOT as _ROOT
 
 from train.agent import build_model, load_algo_config
 from train.environment import make_eval_vec_env, make_vec_env

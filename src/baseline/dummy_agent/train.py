@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[3]
 
 from train.train import main as _train_main
 

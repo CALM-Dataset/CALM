@@ -5,6 +5,7 @@ import gymnasium as gym
 from gymnasium import spaces
 from scipy.signal import find_peaks
 
+from utils.paths import ROOT
 from gym_env.quarter_car.config.preview_params import PreviewConfig, load_preview_config
 from gym_env.quarter_car.config.env_params import DT
 
@@ -14,7 +15,7 @@ def load_perception_model(path):
     from pathlib import Path
     p = Path(path)
     if not p.is_absolute():
-        p = Path(__file__).resolve().parents[4] / p
+        p = ROOT / p
     return yaml.safe_load(p.read_text())
 
 

@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
-_ROOT = Path(__file__).resolve().parents[2]
+from utils.paths import ROOT as _ROOT
 
 from train.agent import build_model, load_algo_config, supported_algos
 from stable_baselines3.common.callbacks import CallbackList

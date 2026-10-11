@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Optional
 
 from road.road_generator import RoadGenerator
+from utils.paths import ROOT
+
 
 
 def _choose_real(rng, real_fraction: float) -> bool:
@@ -163,10 +165,10 @@ def load_curriculum_config(path: str | Path) -> dict:
     if "scenarios_dir" in raw:
         sd = raw["scenarios_dir"]
         if not Path(sd).is_absolute():
-            raw["scenarios_dir"] = str(path.parents[2] / sd)
+            raw["scenarios_dir"] = str(ROOT / sd)
     if raw.get("real_scenarios_dir"):
         rsd = raw["real_scenarios_dir"]
         if not Path(rsd).is_absolute():
-            raw["real_scenarios_dir"] = str(path.parents[2] / rsd)
+            raw["real_scenarios_dir"] = str(ROOT / rsd)
     raw.setdefault("real_fraction", 0.0)
     return raw

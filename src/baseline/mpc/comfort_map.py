@@ -2,17 +2,16 @@ from __future__ import annotations
 
 import numpy as np
 
-from pathlib import Path
-
 import yaml
 
 from gym_env.quarter_car.config.env_params import DT
 from gym_env.quarter_car.config.reward_params import RewardConfig
 from baseline.mpc.vehicle import make_vehicle_spec
+from utils.paths import CONFIG
 
 
 def _load_comfort_cfg() -> dict:
-    p = Path(__file__).resolve().parents[3] / "config" / "baseline" / "mpc.yaml"
+    p = CONFIG / "baseline" / "mpc.yaml"
     if not p.is_file():
         return {}
     return (yaml.safe_load(p.read_text()) or {}).get("comfort_map", {})

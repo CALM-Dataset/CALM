@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-_ROOT          = Path(__file__).resolve().parents[2]
+from utils.paths import ROOT as _ROOT
 _CATALOG_PATH  = _ROOT / "config" / "catalog" / "speed_bumps.json"
 _POTHOLE_PATH  = _ROOT / "config" / "catalog" / "potholes.json"
 _GEN_CFG_PATH  = _ROOT / "config" / "train" / "scenario_gen.yaml"
