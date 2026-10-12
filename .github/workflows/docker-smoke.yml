@@ -1,0 +1,52 @@
+name: Docker smoke test
+
+on:
+  workflow_call:
+    inputs:
+      timesteps:
+        type: string
+        default: "50000"
+  workflow_dispatch:
+    inputs:
+      timesteps:
+        type: string
+        default: "50000"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      TIMESTEPS: ${{ inputs.timesteps || '50000' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: calm:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Tests inside the image
+        run: docker run --rm calm:ci pytest -q
+
+      - name: Train
+        run: |
+          docker run --name smoke calm:ci \
+            calm train --algo PPO --run-name ci --timesteps "$TIMESTEPS" --n-envs 2
+
+      - name: Evaluate the trained model on one scenario
+        run: |
+          docker commit smoke calm:trained
+          docker run --rm calm:trained calm eval ci --scenario c
+
+      - name: Evaluate a scenario suite
+        run: docker run --rm calm:trained calm eval ci --suites 01_single_bump --n-episodes 2
