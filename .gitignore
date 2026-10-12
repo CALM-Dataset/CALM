@@ -84,3 +84,5 @@ tmp/
 scratch/
 *.bak
 *.orig
+*.txt
+!requirements.txt

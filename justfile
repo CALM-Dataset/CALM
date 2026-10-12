@@ -31,7 +31,7 @@ install:
 lint:
     {{venv}} -m pyflakes src tests
 
-# fast tests, as in CI (no data or GPU needed)
+# fast tests
 [group('setup')]
 test *args:
     MPLBACKEND=Agg SDL_AUDIODRIVER=dummy {{venv}} -m pytest -q "$@"
