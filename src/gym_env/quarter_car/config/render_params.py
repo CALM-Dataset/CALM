@@ -45,3 +45,6 @@ Y_LINE_OFFSET = float(_cfg["Y_LINE_OFFSET"])
 RENDER_ARR_X   = float(_cfg.get("RENDER_ARR_X",    -2.5))
 RENDER_ARR_Y   = float(_cfg.get("RENDER_ARR_Y",     5.5))
 RENDER_ARR_LEN = float(_cfg.get("RENDER_ARR_LEN",   8.0))
+
+RENDER_REALISTIC_WHEELS = bool(_cfg.get("RENDER_REALISTIC_WHEELS", True))
+RENDER_SUSP_SCALE = float(_cfg.get("RENDER_SUSP_SCALE", 0.65))

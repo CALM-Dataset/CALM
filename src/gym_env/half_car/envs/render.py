@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 from gym_env.common.render import (
-    Hud, build_bump_vlines, bump_signature, close_env, damper_xy, grab_key_focus, ground_symbol_xy,
+    Hud, Road, Wheel, build_bump_vlines, draw_sky, wheel_radius_x, bump_signature, close_env, damper_xy, grab_key_focus, ground_symbol_xy,
     init_music, render_bumps, render_env, spring_xy, wait_for_episode_nav,
 )
 from gym_env.common.render_params import RENDER_MUSIC
@@ -29,9 +29,13 @@ _MAX_EP_STEPS = RENDER_MAX_EP_STEPS
 _WHEEL_R = 0.32
 _WHEEL_RY = 0.5
 _SK = RENDER_SUSP_SCALE
-_C_TIRE_PART = '#56606b'
-_C_TIRE_HIT = '#d62d20'
 _HUB_H = 0.12
+_WHEEL_GEOMETRY = dict(
+    ry=_WHEEL_RY, hub_h=_HUB_H, w_hub=RENDER_W_MW, c_hub=RENDER_C_MW,
+    sp_x=RENDER_SP_X, sp_w=RENDER_SP_W, sp_n=RENDER_SP_N,
+    da_x=RENDER_DA_X, da_w=RENDER_DA_W, pist_h=RENDER_DA_PIST_H, pist_frac=RENDER_DA_PIST_FRAC,
+    lower_stem=RENDER_DA_LOWER_STEM, cyl_h=RENDER_DA_CYL_H_TIRE,
+)
 _ARR_X0      = RENDER_ARR_X
 _ARR_Y_V     = RENDER_ARR_Y
 _ARR_MAX_LEN = RENDER_ARR_LEN
@@ -59,31 +63,7 @@ def _make_axle(ax, x_c: float, label: str):
     _hw = RENDER_DA_W / 2
     a = {}
     if RENDER_REALISTIC_WHEELS:
-        a['tire_spring'],         = ax.plot([], [], '-', color=_C_TIRE_PART, lw=1.6, zorder=4)
-        a['tire_damp_rod'],       = ax.plot([], [], '-', color=_C_TIRE_PART, lw=1.3, zorder=4)
-        a['tire_damp_lower_rod'], = ax.plot([], [], '-', color=_C_TIRE_PART, lw=1.3, zorder=4)
-        a['tire_damp_cyl'],       = ax.plot([], [], '-', color=_C_TIRE_PART, lw=1.8, zorder=4)
-        a['tire_damp_pist'] = Rectangle((x_c + RENDER_DA_X - _hw + 0.01, 0),
-                                        RENDER_DA_W - 0.02, RENDER_DA_PIST_H,
-                                        fc=_C_TIRE_PART, ec='none', zorder=4)
-        ax.add_patch(a['tire_damp_pist'])
-        from matplotlib.patches import Ellipse
-        a['tire'] = Ellipse((x_c, RENDER_Y_W_NOM), 1.0, 2 * _WHEEL_RY,
-                            fc='#2b2f36', ec='#15181c', lw=1.2, zorder=3)
-        ax.add_patch(a['tire'])
-        a['rim'] = Ellipse((x_c, RENDER_Y_W_NOM), 0.6, 1.2 * _WHEEL_RY,
-                           fc='#c9d1da', ec='#7b8794', lw=1.0, zorder=3.1)
-        ax.add_patch(a['rim'])
-        a['spokes'], = ax.plot([], [], '-', color='#7b8794', lw=1.3, zorder=3.2)
-        a['mw_patch'] = Rectangle((x_c - RENDER_W_MW / 2, RENDER_Y_W_NOM - _HUB_H / 2),
-                                  RENDER_W_MW, _HUB_H,
-                                  fc=RENDER_C_MW, ec='#333333', lw=1.2, zorder=5)
-        ax.add_patch(a['mw_patch'])
-        a['mw_dot']   = ax.plot(x_c, RENDER_Y_W_NOM, 'o', color='white', ms=3, zorder=7)[0]
-        a['mw_label'] = ax.text(x_c - RENDER_W_MW / 2 - 0.12, RENDER_Y_W_NOM, label,
-                                ha='right', va='center', fontsize=10, color='#1b1f24',
-                                zorder=7)
-
+        a['wheel'] = Wheel(ax, x_c, RENDER_Y_W_NOM, label, _WHEEL_GEOMETRY)
     else:
         a['tire_spring'],         = ax.plot([], [], '-', color=RENDER_C_SPRING, lw=2.0, zorder=4)
         a['tire_damp_rod'],       = ax.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5, zorder=4)
@@ -126,35 +106,7 @@ def _update_axle(a, x_c: float, y_W: float, y_B_corner: float,
     da_x = x_c + RENDER_DA_X
 
     if RENDER_REALISTIC_WHEELS:
-        a['contact_dot'].set_data([x_c] if on_obstacle else [], [y_road] if on_obstacle else [])
-        tire_c = _C_TIRE_HIT if on_obstacle else _C_TIRE_PART
-        for k in ('tire_spring', 'tire_damp_rod', 'tire_damp_lower_rod', 'tire_damp_cyl'):
-            a[k].set_color(tire_c)
-        a['tire_damp_pist'].set_facecolor(tire_c)
-
-        y_tire_top = y_W - _HUB_H / 2
-        if y_tire_top > y_road + 0.05:
-            a['tire_spring'].set_data(*spring_xy(sp_x, y_tire_top, y_road, RENDER_SP_N, RENDER_SP_W))
-            u_rod, l_rod, cyl_xy, pr = _damper_xy(da_x, y_tire_top, y_road, RENDER_DA_CYL_H_TIRE)
-            a['tire_damp_rod'].set_data(*u_rod)
-            a['tire_damp_lower_rod'].set_data(*l_rod)
-            a['tire_damp_cyl'].set_data(*cyl_xy)
-            a['tire_damp_pist'].set_xy((pr[0], pr[1]))
-            a['tire_damp_pist'].set_height(pr[3])
-
-        a['mw_patch'].set_xy((x_c - RENDER_W_MW / 2, y_W - _HUB_H / 2))
-        a['tire'].set_center((x_c, y_W)); a['tire'].width = 2 * wheel_rx
-        a['rim'].set_center((x_c, y_W)); a['rim'].width = 1.2 * wheel_rx
-        ang = rot + np.arange(5) * (2 * np.pi / 5)
-        rx, ry = 0.6 * wheel_rx, 0.6 * _WHEEL_RY
-        sx = np.empty(15); sy = np.empty(15)
-        sx[0::3], sy[0::3] = x_c, y_W
-        sx[1::3], sy[1::3] = x_c + rx * np.cos(ang), y_W + ry * np.sin(ang)
-        sx[2::3], sy[2::3] = np.nan, np.nan
-        a['spokes'].set_data(sx, sy)
-        a['mw_dot'].set_data([x_c], [y_W])
-        a['mw_label'].set_position((x_c - RENDER_W_MW / 2 - 0.12, y_W))
-
+        a['wheel'].update(y_W, y_road, on_obstacle, rot, wheel_rx)
     else:
         y_line = y_road + Y_LINE_OFFSET
         gx, gy = ground_symbol_xy(x_c, y_line, half_w=RENDER_W_MW / 2 + 0.15)
@@ -270,10 +222,7 @@ def init_render(env):
 
     import matplotlib.ticker as ticker
     ax_s.set_facecolor('#f4f8fc')
-    sky = np.linspace(0, 1, 64)[:, None]
-    ax_s.imshow(sky, extent=(-1e3, 1e3, RENDER_YLIM[0], RENDER_YLIM[1]), origin='lower', aspect='auto',
-                cmap=matplotlib.colors.LinearSegmentedColormap.from_list('sky', ['#f3f7fb', '#bcd8f0']),
-                zorder=0, interpolation='bilinear')
+    draw_sky(ax_s, RENDER_YLIM)
     ax_s.set_xlim(RENDER_XLIM)
     ax_s.set_ylim(RENDER_YLIM)
     ax_s.set_xlabel('Longitudinal position [cm]', fontsize=11, color='#1b1f24')
@@ -288,7 +237,7 @@ def init_render(env):
         ticker.FuncFormatter(lambda y, _: f'{y * 100:.0f}')
     )
 
-    ground_ticks, = ax_s.plot([], [], '-', color='#8d939c', lw=1.6, zorder=2, solid_capstyle='butt')
+    road = Road(ax_s)
     road_line, = ax_s.plot([], [], '-', color='#e9edf1', lw=1.8, zorder=2,
                            label=r'Road profile $\zeta(x)$')
 
@@ -367,7 +316,7 @@ def init_render(env):
         'axle_f':              axle_f,
         'axle_r':              axle_r,
         'mb_poly':             mb_poly,
-        'ground_ticks':        ground_ticks,
+        'road':                road,
         'mb_dot':              mb_dot,
         'mb_label':            mb_label,
         'hud':                 hud,
@@ -435,7 +384,6 @@ def update_artists(env):
 
     ax_s   = env._ax_s
     x0, x1 = ax_s.get_xlim()
-    y0_, y1_ = ax_s.get_ylim()
     pad    = 0.03 * (x1 - x0)
     base_w = RENDER_XLIM[1] - RENDER_XLIM[0]
     n_pts  = int(np.clip(RENDER_ROAD_N * (x1 - x0) / base_w, RENDER_ROAD_N, 6 * RENDER_ROAD_N))
@@ -444,32 +392,11 @@ def update_artists(env):
     road_h = env._road.get_height_array_pos(s_q) * ys + RENDER_GROUND_Y
     art['road_line'].set_data(road_x, road_h)
 
-    if art.get('road_fill') is not None:
-        art['road_fill'].remove()
-    art['road_fill'] = ax_s.fill_between(
-        road_x, road_h, ax_s.get_ylim()[0],
-        color='#5b6068', edgecolor='none', zorder=1,
-    )
-    layer = 0.10 * (ax_s.get_ylim()[1] - ax_s.get_ylim()[0]) / 6
-    if art.get('road_top') is not None:
-        art['road_top'].remove()
-    art['road_top'] = ax_s.fill_between(
-        road_x, road_h, road_h - layer, color='#3f434a', edgecolor='none', zorder=1.5,
-    )
-    spacing = 0.9
-    k0 = np.floor((env._s_pos + x0) / spacing)
-    xs_ = (k0 + np.arange(int((x1 - x0) / spacing) + 3)) * spacing - env._s_pos
-    xs_ = xs_[(xs_ >= x0) & (xs_ <= x1)]
-    yt = np.interp(xs_, road_x, road_h) - layer * 2.2
-    tx = np.empty(3 * len(xs_)); ty = np.empty(3 * len(xs_))
-    tx[0::3], tx[1::3], tx[2::3] = xs_, xs_ + 0.35, np.nan
-    ty[0::3], ty[1::3], ty[2::3] = yt, yt, np.nan
-    art['ground_ticks'].set_data(tx, ty)
+    art['road'].update(road_x, road_h, env._s_pos)
 
     h = env._ren_hist
 
-    bb = ax_s.get_window_extent()
-    wheel_rx = _WHEEL_RY * (x1 - x0) / (y1_ - y0_) * bb.height / max(bb.width, 1.0)
+    wheel_rx = wheel_radius_x(ax_s, _WHEEL_RY)
 
     road = env._road
     _update_axle(art['axle_f'], RENDER_X_FRONT, y_Wf, y_Bf, y_road_f,

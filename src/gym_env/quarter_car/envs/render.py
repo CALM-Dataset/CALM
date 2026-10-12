@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 from gym_env.common.render import (
-    Hud, build_bump_vlines, bump_signature, close_env, damper_xy, ground_symbol_xy,
+    Hud, Road, Wheel, build_bump_vlines, draw_sky, wheel_radius_x, bump_signature, close_env, damper_xy, ground_symbol_xy,
     init_music, render_bumps, render_env, spring_xy, wait_for_episode_nav,
 )
 from gym_env.common.render_params import RENDER_MUSIC
@@ -21,12 +21,23 @@ from gym_env.quarter_car.config.render_params import (
     RENDER_DA_X, RENDER_DA_W, RENDER_DA_PIST_H, RENDER_DA_PIST_FRAC,
     RENDER_DA_LOWER_STEM, RENDER_DA_CYL_H_SUSP, RENDER_DA_CYL_H_TIRE,
     RENDER_CONTACT_STEM, RENDER_GROUND_Y,
-    Y_LINE_OFFSET,
+    Y_LINE_OFFSET, RENDER_REALISTIC_WHEELS, RENDER_SUSP_SCALE,
     RENDER_ARR_X, RENDER_ARR_Y, RENDER_ARR_LEN,
 )
 
 _ROAD_X = np.linspace(-RENDER_ROAD_HALF, RENDER_ROAD_HALF, RENDER_ROAD_N)
 _MAX_EP_STEPS = 4000
+
+_WHEEL_RY = 0.5
+_HUB_H = 0.12
+_WHEEL_R = 0.32
+_SK = RENDER_SUSP_SCALE
+_WHEEL_GEOMETRY = dict(
+    ry=_WHEEL_RY, hub_h=_HUB_H, w_hub=RENDER_W_MW, c_hub=RENDER_C_MW,
+    sp_x=RENDER_SP_X, sp_w=RENDER_SP_W, sp_n=RENDER_SP_N,
+    da_x=RENDER_DA_X, da_w=RENDER_DA_W, pist_h=RENDER_DA_PIST_H, pist_frac=RENDER_DA_PIST_FRAC,
+    lower_stem=RENDER_DA_LOWER_STEM, cyl_h=RENDER_DA_CYL_H_TIRE,
+)
 
 _ARR_X0      = RENDER_ARR_X
 _ARR_Y_V     = RENDER_ARR_Y
@@ -36,8 +47,8 @@ _ARR_MAX_LEN = RENDER_ARR_LEN
 __all__ = ["close_env", "init_render", "push_history", "render_env", "update_artists", "wait_for_episode_nav"]
 
 
-def _damper_xy(x_c: float, y_top: float, y_bot: float, cyl_h: float):
-    return damper_xy(x_c, y_top, y_bot, cyl_h, RENDER_DA_W, RENDER_DA_PIST_H,
+def _damper_xy(x_c: float, y_top: float, y_bot: float, cyl_h: float, k: float = 1.0):
+    return damper_xy(x_c, y_top, y_bot, cyl_h, RENDER_DA_W * k, RENDER_DA_PIST_H * k,
                      RENDER_DA_PIST_FRAC, RENDER_DA_LOWER_STEM)
 
 
@@ -108,6 +119,7 @@ def init_render(env):
 
     import matplotlib.ticker as ticker
     ax_s.set_facecolor('#f4f8fc')
+    draw_sky(ax_s, RENDER_YLIM)
     ax_s.set_xlim(RENDER_XLIM)
     ax_s.set_ylim(RENDER_YLIM)
     ax_s.set_xlabel('Longitudinal position [cm]', fontsize=11, color='#1b1f24')
@@ -122,40 +134,51 @@ def init_render(env):
         ticker.FuncFormatter(lambda y, _: f'{y * 100:.0f}')
     )
 
-    road_line, = ax_s.plot([], [], '-', color=RENDER_C_ROAD, lw=1.5, zorder=2,
+    road_line, = ax_s.plot([], [], '-', color='#e9edf1', lw=1.8, zorder=2,
                            label=r'Road profile $\zeta(x)$')
 
-    ground_sym,   = ax_s.plot([], [], '-', color=RENDER_C_GROUND, lw=1.5, zorder=2)
-    contact_stem, = ax_s.plot([], [], '-', color=RENDER_C_GROUND, lw=1.8, zorder=6)
-    contact_dot,  = ax_s.plot([], [], 'o', color=RENDER_C_GROUND, ms=10,  zorder=7)
-
+    road = Road(ax_s)
     _hw = RENDER_DA_W / 2
-    tire_spring,          = ax_s.plot([], [], '-', color=RENDER_C_SPRING, lw=2.0, zorder=4)
-    tire_damp_rod,        = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5, zorder=4)
-    tire_damp_lower_rod,  = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5, zorder=4)
-    tire_damp_cyl,        = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=2.0, zorder=4)
-    tire_damp_pist = Rectangle(
-        (RENDER_DA_X - _hw + 0.01, 0), RENDER_DA_W - 0.02, RENDER_DA_PIST_H,
-        fc=RENDER_C_DAMPER, ec='none', zorder=4)
-    ax_s.add_patch(tire_damp_pist)
+    if RENDER_REALISTIC_WHEELS:
+        tire_arts = {'wheel': Wheel(ax_s, 0.0, RENDER_Y_W_NOM, r'$m_W$', _WHEEL_GEOMETRY)}
+    else:
+        ground_sym,   = ax_s.plot([], [], '-', color=RENDER_C_GROUND, lw=1.5, zorder=2)
+        contact_stem, = ax_s.plot([], [], '-', color=RENDER_C_GROUND, lw=1.8, zorder=6)
+        contact_dot,  = ax_s.plot([], [], 'o', color=RENDER_C_GROUND, ms=10,  zorder=7)
 
-    mw_patch = Rectangle(
-        (-RENDER_W_MW / 2, RENDER_Y_W_NOM - RENDER_H_MW / 2),
-        RENDER_W_MW, RENDER_H_MW,
-        fc=RENDER_C_MW, ec='#333333', lw=1.2, zorder=5,
-    )
-    ax_s.add_patch(mw_patch)
-    mw_dot   = ax_s.plot(0, RENDER_Y_W_NOM, 'o', color='#333333', ms=4, zorder=7)[0]
-    mw_label = ax_s.text(-RENDER_W_MW / 2 + 0.05, RENDER_Y_W_NOM,
-                          r'$m_W$', ha='left', va='center',
-                          fontsize=9, color='white', zorder=7)
+        _hw = RENDER_DA_W / 2
+        tire_spring,          = ax_s.plot([], [], '-', color=RENDER_C_SPRING, lw=2.0, zorder=4)
+        tire_damp_rod,        = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5, zorder=4)
+        tire_damp_lower_rod,  = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5, zorder=4)
+        tire_damp_cyl,        = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=2.0, zorder=4)
+        tire_damp_pist = Rectangle(
+            (RENDER_DA_X - _hw + 0.01, 0), RENDER_DA_W - 0.02, RENDER_DA_PIST_H,
+            fc=RENDER_C_DAMPER, ec='none', zorder=4)
+        ax_s.add_patch(tire_damp_pist)
 
-    susp_spring,          = ax_s.plot([], [], '-', color=RENDER_C_SPRING, lw=2.0, zorder=4)
-    susp_damp_rod,        = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5, zorder=4)
-    susp_damp_lower_rod,  = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5, zorder=4)
-    susp_damp_cyl,        = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=2.0, zorder=4)
+        mw_patch = Rectangle(
+            (-RENDER_W_MW / 2, RENDER_Y_W_NOM - RENDER_H_MW / 2),
+            RENDER_W_MW, RENDER_H_MW,
+            fc=RENDER_C_MW, ec='#333333', lw=1.2, zorder=5,
+        )
+        ax_s.add_patch(mw_patch)
+        mw_dot   = ax_s.plot(0, RENDER_Y_W_NOM, 'o', color='#333333', ms=4, zorder=7)[0]
+        mw_label = ax_s.text(-RENDER_W_MW / 2 + 0.05, RENDER_Y_W_NOM,
+                              r'$m_W$', ha='left', va='center',
+                              fontsize=11, color='white', zorder=7)
+        tire_arts = dict(
+            contact_stem=contact_stem, contact_dot=contact_dot, ground_sym=ground_sym,
+            tire_spring=tire_spring, tire_damp_rod=tire_damp_rod,
+            tire_damp_lower_rod=tire_damp_lower_rod, tire_damp_cyl=tire_damp_cyl,
+            tire_damp_pist=tire_damp_pist, mw_patch=mw_patch, mw_dot=mw_dot, mw_label=mw_label,
+        )
+
+    susp_spring,          = ax_s.plot([], [], '-', color=RENDER_C_SPRING, lw=2.0 * _SK, zorder=4)
+    susp_damp_rod,        = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5 * _SK, zorder=4)
+    susp_damp_lower_rod,  = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5 * _SK, zorder=4)
+    susp_damp_cyl,        = ax_s.plot([], [], '-', color=RENDER_C_DAMPER, lw=2.0 * _SK, zorder=4)
     susp_damp_pist = Rectangle(
-        (RENDER_DA_X - _hw + 0.01, 0), RENDER_DA_W - 0.02, RENDER_DA_PIST_H,
+        (RENDER_DA_X - _hw * _SK + 0.01 * _SK, 0), (RENDER_DA_W - 0.02) * _SK, RENDER_DA_PIST_H * _SK,
         fc=RENDER_C_DAMPER, ec='none', zorder=4)
     ax_s.add_patch(susp_damp_pist)
 
@@ -229,17 +252,8 @@ def init_render(env):
         init_music(env, fig)
     env._artists = {
         'road_line':           road_line,
-        'contact_stem':        contact_stem,
-        'contact_dot':         contact_dot,
-        'ground_sym':          ground_sym,
-        'tire_spring':         tire_spring,
-        'tire_damp_rod':       tire_damp_rod,
-        'tire_damp_lower_rod': tire_damp_lower_rod,
-        'tire_damp_cyl':       tire_damp_cyl,
-        'tire_damp_pist':      tire_damp_pist,
-        'mw_patch':            mw_patch,
-        'mw_dot':              mw_dot,
-        'mw_label':            mw_label,
+        'road':                road,
+        **tire_arts,
         'susp_spring':         susp_spring,
         'susp_damp_rod':       susp_damp_rod,
         'susp_damp_lower_rod': susp_damp_lower_rod,
@@ -282,54 +296,59 @@ def update_artists(env):
     z_W    = z_B + float(x[2])
     zeta_0 = float(env._road.get_height_at(env._s_pos))
 
-    y_W      = RENDER_Y_W_NOM + RENDER_GROUND_Y + z_W * ys
-    y_B      = RENDER_Y_B_NOM + RENDER_GROUND_Y + z_B * ys
     y_road_0 = RENDER_GROUND_Y + zeta_0 * ys
+    if RENDER_REALISTIC_WHEELS:
+        y_W = y_road_0 + _WHEEL_RY + min(z_W - zeta_0, 0.0) * ys
+        y_B = y_W + (RENDER_Y_B_NOM - RENDER_Y_W_NOM) + (z_B - z_W) * ys
+    else:
+        y_W = RENDER_Y_W_NOM + RENDER_GROUND_Y + z_W * ys
+        y_B = RENDER_Y_B_NOM + RENDER_GROUND_Y + z_B * ys
 
     s_q    = env._s_pos + _ROAD_X
     road_h = env._road.get_height_array_pos(s_q) * ys + RENDER_GROUND_Y
     art['road_line'].set_data(_ROAD_X, road_h)
 
     ax_s = env._ax_s
-    if art.get('road_fill') is not None:
-        art['road_fill'].remove()
-    art['road_fill'] = ax_s.fill_between(
-        _ROAD_X, road_h, RENDER_YLIM[0],
-        color='#cfc8bb', edgecolor='none', zorder=1,
-    )
+    art['road'].update(_ROAD_X, road_h, env._s_pos)
 
     h = env._ren_hist
 
-    y_road_0 += Y_LINE_OFFSET
-    gx, gy = ground_symbol_xy(0.0, y_road_0, half_w=RENDER_W_MB / 2 + 0.15)
-    art['ground_sym'].set_data(gx, gy)
-    art['contact_stem'].set_data([0.0, 0.0], [y_road_0 - Y_LINE_OFFSET + RENDER_CONTACT_STEM, y_road_0])
-    art['contact_dot'].set_data([0.0], [y_road_0 - Y_LINE_OFFSET])
-    on_obstacle = abs(zeta_0) > 1e-6
-    art['contact_dot'].set_color('#e74c3c' if on_obstacle else RENDER_C_GROUND)
+    if RENDER_REALISTIC_WHEELS:
+        art['wheel'].update(y_W, y_road_0, abs(zeta_0) > 1e-6, env._s_pos / _WHEEL_R,
+                            wheel_radius_x(ax_s, _WHEEL_RY))
+        hub_h = _HUB_H
+    else:
+        y_road_0 += Y_LINE_OFFSET
+        gx, gy = ground_symbol_xy(0.0, y_road_0, half_w=RENDER_W_MB / 2 + 0.15)
+        art['ground_sym'].set_data(gx, gy)
+        art['contact_stem'].set_data([0.0, 0.0], [y_road_0 - Y_LINE_OFFSET + RENDER_CONTACT_STEM, y_road_0])
+        art['contact_dot'].set_data([0.0], [y_road_0 - Y_LINE_OFFSET])
+        on_obstacle = abs(zeta_0) > 1e-6
+        art['contact_dot'].set_color('#e74c3c' if on_obstacle else RENDER_C_GROUND)
 
-    y_tire_top = y_W - RENDER_H_MW / 2
-    art['tire_spring'].set_data(
-        *spring_xy(RENDER_SP_X, y_tire_top, y_road_0, RENDER_SP_N, RENDER_SP_W))
-    u_rod, l_rod, cyl_xy, pr = _damper_xy(RENDER_DA_X, y_tire_top, y_road_0,
-                                          RENDER_DA_CYL_H_TIRE)
-    art['tire_damp_rod'].set_data(*u_rod)
-    art['tire_damp_lower_rod'].set_data(*l_rod)
-    art['tire_damp_cyl'].set_data(*cyl_xy)
-    art['tire_damp_pist'].set_xy((pr[0], pr[1]))
-    art['tire_damp_pist'].set_height(pr[3])
+        y_tire_top = y_W - RENDER_H_MW / 2
+        art['tire_spring'].set_data(
+            *spring_xy(RENDER_SP_X, y_tire_top, y_road_0, RENDER_SP_N, RENDER_SP_W))
+        u_rod, l_rod, cyl_xy, pr = _damper_xy(RENDER_DA_X, y_tire_top, y_road_0,
+                                              RENDER_DA_CYL_H_TIRE)
+        art['tire_damp_rod'].set_data(*u_rod)
+        art['tire_damp_lower_rod'].set_data(*l_rod)
+        art['tire_damp_cyl'].set_data(*cyl_xy)
+        art['tire_damp_pist'].set_xy((pr[0], pr[1]))
+        art['tire_damp_pist'].set_height(pr[3])
 
-    art['mw_patch'].set_xy((-RENDER_W_MW / 2, y_W - RENDER_H_MW / 2))
-    art['mw_dot'].set_data([0], [y_W])
-    art['mw_label'].set_position((-RENDER_W_MW / 2 + 0.05, y_W))
+        art['mw_patch'].set_xy((-RENDER_W_MW / 2, y_W - RENDER_H_MW / 2))
+        art['mw_dot'].set_data([0], [y_W])
+        art['mw_label'].set_position((-RENDER_W_MW / 2 + 0.05, y_W))
+        hub_h = RENDER_H_MW
 
-    y_susp_bot = y_W + RENDER_H_MW / 2
+    y_susp_bot = y_W + hub_h / 2
     y_susp_top = y_B - RENDER_H_MB / 2
     if y_susp_top > y_susp_bot + 0.05:
         art['susp_spring'].set_data(
-            *spring_xy(RENDER_SP_X, y_susp_top, y_susp_bot, RENDER_SP_N, RENDER_SP_W))
+            *spring_xy(RENDER_SP_X, y_susp_top, y_susp_bot, RENDER_SP_N, RENDER_SP_W * _SK))
         u_rod, l_rod, cyl_xy, pr = _damper_xy(RENDER_DA_X, y_susp_top, y_susp_bot,
-                                              RENDER_DA_CYL_H_SUSP)
+                                              RENDER_DA_CYL_H_SUSP, _SK)
         art['susp_damp_rod'].set_data(*u_rod)
         art['susp_damp_lower_rod'].set_data(*l_rod)
         art['susp_damp_cyl'].set_data(*cyl_xy)

@@ -35,6 +35,116 @@ _NAV_KEYS = {'right': 'next', 'left': 'prev', 'r': 'replay'}
 _NAV_DEBOUNCE = 0.6
 
 
+_C_TIRE_PART = '#56606b'
+_C_TIRE_HIT = '#d62d20'
+
+
+def draw_sky(ax, ylim):
+    import matplotlib.colors as mcolors
+    sky = np.linspace(0, 1, 64)[:, None]
+    ax.imshow(sky, extent=(-1e3, 1e3, ylim[0], ylim[1]), origin='lower', aspect='auto',
+              cmap=mcolors.LinearSegmentedColormap.from_list('sky', ['#f3f7fb', '#bcd8f0']),
+              zorder=0, interpolation='bilinear')
+
+
+class Road:
+    def __init__(self, ax):
+        self._ax = ax
+        self._fill = None
+        self._top = None
+        self._ticks, = ax.plot([], [], '-', color='#8d939c', lw=1.6, zorder=2, solid_capstyle='butt')
+
+    def update(self, road_x, road_h, s_pos):
+        ax = self._ax
+        y0, y1 = ax.get_ylim()
+        x0, x1 = ax.get_xlim()
+        for art in (self._fill, self._top):
+            if art is not None:
+                art.remove()
+        self._fill = ax.fill_between(road_x, road_h, y0, color='#5b6068', edgecolor='none', zorder=1)
+        layer = 0.10 * (y1 - y0) / 6
+        self._top = ax.fill_between(road_x, road_h, road_h - layer, color='#3f434a',
+                                    edgecolor='none', zorder=1.5)
+        spacing = 0.9
+        k0 = np.floor((s_pos + x0) / spacing)
+        xs = (k0 + np.arange(int((x1 - x0) / spacing) + 3)) * spacing - s_pos
+        xs = xs[(xs >= x0) & (xs <= x1)]
+        yt = np.interp(xs, road_x, road_h) - layer * 2.2
+        tx = np.empty(3 * len(xs)); ty = np.empty(3 * len(xs))
+        tx[0::3], tx[1::3], tx[2::3] = xs, xs + 0.35, np.nan
+        ty[0::3], ty[1::3], ty[2::3] = yt, yt, np.nan
+        self._ticks.set_data(tx, ty)
+
+
+def wheel_radius_x(ax, ry: float) -> float:
+    x0, x1 = ax.get_xlim()
+    y0, y1 = ax.get_ylim()
+    bb = ax.get_window_extent()
+    return ry * (x1 - x0) / (y1 - y0) * bb.height / max(bb.width, 1.0)
+
+
+class Wheel:
+    def __init__(self, ax, x_c, y_nom, label, g, label_color='#1b1f24'):
+        from matplotlib.patches import Ellipse, Rectangle
+        self._x = x_c
+        self._g = g
+        hw = g['da_w'] / 2
+        self._tire_lines = [
+            ax.plot([], [], '-', color=_C_TIRE_PART, lw=lw, zorder=4)[0]
+            for lw in (1.6, 1.3, 1.3, 1.8)
+        ]
+        self._pist = Rectangle((x_c + g['da_x'] - hw + 0.01, 0), g['da_w'] - 0.02, g['pist_h'],
+                               fc=_C_TIRE_PART, ec='none', zorder=4)
+        ax.add_patch(self._pist)
+        self._tire = Ellipse((x_c, y_nom), 1.0, 2 * g['ry'], fc='#2b2f36', ec='#15181c',
+                             lw=1.2, zorder=3)
+        ax.add_patch(self._tire)
+        self._rim = Ellipse((x_c, y_nom), 0.6, 1.2 * g['ry'], fc='#c9d1da', ec='#7b8794',
+                            lw=1.0, zorder=3.1)
+        ax.add_patch(self._rim)
+        self._spokes, = ax.plot([], [], '-', color='#7b8794', lw=1.3, zorder=3.2)
+        self.hub = Rectangle((x_c - g['w_hub'] / 2, y_nom - g['hub_h'] / 2), g['w_hub'], g['hub_h'],
+                             fc=g['c_hub'], ec='#333333', lw=1.2, zorder=5)
+        ax.add_patch(self.hub)
+        self._dot = ax.plot(x_c, y_nom, 'o', color='white', ms=3, zorder=7)[0]
+        self.label = ax.text(x_c - g['w_hub'] / 2 - 0.12, y_nom, label, ha='right', va='center',
+                             fontsize=10, color=label_color, zorder=7)
+        self._contact, = ax.plot([], [], 'o', color='#e74c3c', ms=6, zorder=7)
+
+    def update(self, y_W, y_road, on_obstacle, rot, rx):
+        g, x_c = self._g, self._x
+        self._contact.set_data([x_c] if on_obstacle else [], [y_road] if on_obstacle else [])
+        colour = _C_TIRE_HIT if on_obstacle else _C_TIRE_PART
+        for ln in self._tire_lines:
+            ln.set_color(colour)
+        self._pist.set_facecolor(colour)
+
+        y_top = y_W - g['hub_h'] / 2
+        if y_top > y_road + 0.05:
+            spring, rod, rod_low, cyl = self._tire_lines
+            spring.set_data(*spring_xy(x_c + g['sp_x'], y_top, y_road, g['sp_n'], g['sp_w']))
+            u_rod, l_rod, cyl_xy, pr = damper_xy(x_c + g['da_x'], y_top, y_road, g['cyl_h'],
+                                                 g['da_w'], g['pist_h'], g['pist_frac'],
+                                                 g['lower_stem'])
+            rod.set_data(*u_rod)
+            rod_low.set_data(*l_rod)
+            cyl.set_data(*cyl_xy)
+            self._pist.set_xy((pr[0], pr[1]))
+            self._pist.set_height(pr[3])
+
+        self.hub.set_xy((x_c - g['w_hub'] / 2, y_W - g['hub_h'] / 2))
+        self._tire.set_center((x_c, y_W)); self._tire.width = 2 * rx
+        self._rim.set_center((x_c, y_W)); self._rim.width = 1.2 * rx
+        ang = rot + np.arange(5) * (2 * np.pi / 5)
+        sx = np.empty(15); sy = np.empty(15)
+        sx[0::3], sy[0::3] = x_c, y_W
+        sx[1::3], sy[1::3] = x_c + 0.6 * rx * np.cos(ang), y_W + 0.6 * g['ry'] * np.sin(ang)
+        sx[2::3], sy[2::3] = np.nan, np.nan
+        self._spokes.set_data(sx, sy)
+        self._dot.set_data([x_c], [y_W])
+        self.label.set_position((x_c - g['w_hub'] / 2 - 0.12, y_W))
+
+
 def spring_xy(x_c: float, y_top: float, y_bot: float,
                n: int = 8, w: float = 0.18) -> Tuple[np.ndarray, np.ndarray]:
     n_pts = 2 * n + 2
