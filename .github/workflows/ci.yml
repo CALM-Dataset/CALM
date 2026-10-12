@@ -17,16 +17,17 @@ permissions:
   contents: read
 
 jobs:
-  fresh-env:
+  install:
+    name: Install and test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -49,4 +50,4 @@ jobs:
         run: calm doctor
 
   docker:
-    uses: ./.github/workflows/docker-smoke.yml
+    uses: ./.github/workflows/docker-image.yml
