@@ -65,6 +65,13 @@ At equal time every seed is about 1 % more comfortable than a constant drive and
 Against the human, every seed is more comfortable on the median road (-5 to -16 %), and about as many
 roads improve as with the MPC.
 
+## Distance to the MPC frontier
+
+The MPC run at several comfort weights and cruise speeds gives a comfort-against-time frontier per road.
+a_w above that frontier at equal travel time, median over the roads inside the frontier's time range
+(0 is on the frontier, positive is worse): human +15.4 % (interquartile range +2.6 to +29.3 %), MPC +0.0 %,
+PPO seed 69 -0.3 % (-0.9 to +0.2 %), constant +0.0 %. The PPO profile sits on the frontier, like the MPC.
+
 ## Replay against the IMU
 
 The recorded human drive replayed in the model gives an a_w that is 17 % away from the
