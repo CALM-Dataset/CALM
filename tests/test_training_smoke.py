@@ -7,7 +7,7 @@ from train.agent import build_model
 from train.environment import make_vec_env
 
 
-def test_a_short_training_run_produces_a_bounded_policy():
+def test_short_training_run():
     root = Path(__file__).resolve().parents[1]
     venv = make_vec_env(1, 0, load_curriculum_config(root / "config" / "curriculum" / "curriculum.yaml"),
                         action_penalty=0.1)
@@ -20,7 +20,7 @@ def test_a_short_training_run_produces_a_bounded_policy():
     venv.close()
 
 
-def test_evaluation_does_not_see_the_controller_weight():
+def test_eval_ignores_the_controller_weight():
     from gym_env.common.reward import get_track_scale_override, set_track_scale_override
     from train.monitoring import base_speed_weight
 

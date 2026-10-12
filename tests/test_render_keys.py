@@ -25,7 +25,7 @@ def _press(raw, key):
     KeyEvent("key_press_event", raw._fig.canvas, key)._process()
 
 
-def test_a_repeated_navigation_key_counts_once(raw_env):
+def test_key_repeat_counts_once(raw_env):
     _press(raw_env, "left")
     assert raw_env._nav_request == "prev"
     raw_env._nav_request = None
@@ -33,7 +33,7 @@ def test_a_repeated_navigation_key_counts_once(raw_env):
     assert raw_env._nav_request is None
 
 
-def test_s_slows_down_and_f_speeds_up(raw_env):
+def test_speed_keys(raw_env):
     start = raw_env._render_speed
     _press(raw_env, "f")
     faster = raw_env._render_speed
@@ -42,7 +42,7 @@ def test_s_slows_down_and_f_speeds_up(raw_env):
     assert faster > start > raw_env._render_speed
 
 
-def test_navigation_beyond_the_ends_is_ignored(raw_env):
+def test_no_navigation_past_the_ends(raw_env):
     raw_env._nav_allowed = {"prev": False, "next": True}
     _press(raw_env, "left")
     assert raw_env._nav_request is None
@@ -56,7 +56,7 @@ def test_replay_is_always_allowed(raw_env):
     assert raw_env._nav_request == "replay"
 
 
-def test_a_new_episode_restarts_the_playback_clock(raw_env):
+def test_new_episode_restarts_the_clock(raw_env):
     first_anchor = raw_env._pace[0]
     raw_env.reset(seed=1)
     raw_env.step(np.zeros(1, dtype=np.float32))

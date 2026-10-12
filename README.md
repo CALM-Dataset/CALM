@@ -17,7 +17,7 @@ Gymnasium environment. Two plant models are available:
   front.
 - **Quarter-car**: 2 degrees of freedom, single-axle heave only. It shares the reward,
   action mode and scenarios with the half-car (select with `--vehicle quarter`); the
-  original thesis implementation is kept at the git tag `v1.0.2`.
+  original thesis implementation is kept at the git tag `thesis-quarter-car` (also `v1.0.2`).
 
 The vehicle dynamics use a nonlinear suspension (progressive spring with
 bumpstops, asymmetric compression/rebound damping) integrated with RK4. The

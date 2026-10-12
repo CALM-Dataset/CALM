@@ -11,7 +11,7 @@ def _controller():
     return ReactiveController(v_max=8.0, v_min=2.5, a_max=5.0, v_index=get_vehicle("half").v_index)
 
 
-def test_an_episode_interrupted_before_its_first_step_still_reports():
+def test_interrupted_episode_still_reports():
     env = TerminationWrapper(gym.make(get_vehicle("half").env_id, render_mode="human", action_mode="acceleration"))
     road = RoadGenerator.from_scenario(vehicle_speed=8.0, flat_start=15.0, obstacles=[(0.05, 2.0)])
     for request in ("next", "prev", "replay"):

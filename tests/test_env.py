@@ -37,7 +37,7 @@ def test_a_crash_terminates():
     assert info["termination_reason"] == "crash_susp"
 
 
-def test_observations_stay_inside_the_space():
+def test_observations_stay_in_the_space():
     env = TerminationWrapper(gym.make("gym_env/HalfCar"))
     rng = np.random.default_rng(0)
     low, high = env.observation_space.low, env.observation_space.high
@@ -50,7 +50,7 @@ def test_observations_stay_inside_the_space():
                 break
 
 
-def test_target_speed_never_exceeds_the_scenario_speed():
+def test_target_speed_stays_below_scenario_speed():
     env = gym.make("gym_env/HalfCar", action_mode="target_speed")
     env.reset(seed=3)
     top = env.unwrapped._v_episode_ref
@@ -61,14 +61,14 @@ def test_target_speed_never_exceeds_the_scenario_speed():
             break
 
 
-def test_body_acceleration_lowers_the_reward():
+def test_body_acceleration_costs_reward():
     cfg = load_reward_config()
     calm, _ = compute_reward(5.0, 0.0, 0.0, 0.0, 0.0, cfg, v_ref=5.0)
     rough, _ = compute_reward(5.0, 5.0, 5.0, 0.0, 0.0, cfg, v_ref=5.0)
     assert rough < calm
 
 
-def test_the_same_seed_gives_the_same_training_episodes():
+def test_same_seed_same_training_episodes():
     from pathlib import Path
 
     from gym_env.common.curriculum import load_curriculum_config

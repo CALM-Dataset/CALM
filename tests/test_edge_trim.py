@@ -18,25 +18,25 @@ def _profile(lead, tail):
     return z, [{"s_start_m": s0, "s_end_m": s1}]
 
 
-def test_edges_that_do_not_sit_at_road_level_are_trimmed():
+def test_off_level_edges_are_trimmed():
     z, bumps = _profile(lead=30, tail=60)
     start, end = edge_trim_indices(z, DS, bumps, CFG)
     assert start > 0 and end < len(z)
     assert abs(z[start]) <= CFG["edge_tol_m"] and abs(z[end - 1]) <= CFG["edge_tol_m"]
 
 
-def test_the_bump_is_never_trimmed():
+def test_bump_is_never_trimmed():
     z, bumps = _profile(lead=30, tail=60)
     start, end = edge_trim_indices(z, DS, bumps, CFG)
     assert start * DS < bumps[0]["s_start_m"] and end * DS > bumps[0]["s_end_m"]
 
 
-def test_a_profile_that_already_starts_and_ends_level_is_untouched():
+def test_level_profile_is_untouched():
     z, bumps = _profile(lead=0, tail=0)
     z[:40] = 0.0
     assert edge_trim_indices(z, DS, bumps, CFG) == (0, len(z))
 
 
-def test_trimming_can_be_disabled():
+def test_trim_can_be_disabled():
     z, bumps = _profile(lead=30, tail=60)
     assert edge_trim_indices(z, DS, bumps, {**CFG, "trim_edges": False}) == (0, len(z))
