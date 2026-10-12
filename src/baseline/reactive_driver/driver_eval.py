@@ -21,7 +21,7 @@ from gym_env.vehicles import get_vehicle
 from baseline import runner
 from utils.gif import save_gif
 from baseline.reactive_driver.driver import ReactiveController
-from utils.scenario_loader import load_scenario_any
+from utils.scenario_loader import load_scenario_any, scenario_title
 from eval.data_logger import RunLogger, EpisodeData
 
 
@@ -160,7 +160,7 @@ def main() -> None:
 
     if args.render:
         wait_for_episode_nav = bits['wait_for_episode_nav']
-        env.unwrapped.set_render_label(f'Reactive · {sc_name} - {sc_desc}')
+        env.unwrapped.set_render_label(scenario_title(sc_name, 'Reactive'))
 
     while True:
         r = run_episode(env, ctrl, seed=args.seed,

@@ -38,7 +38,7 @@ from gym_env.common.render import RenderQuit
 from utils.gif import save_gif
 from baseline.mpc.config import load_mpc_cfg, reward_config as mpc_reward_config
 from baseline.mpc.controller import MPCController
-from utils.scenario_loader import load_scenario_any
+from utils.scenario_loader import load_scenario_any, scenario_title
 from eval.data_logger import RunLogger, EpisodeData
 
 
@@ -79,7 +79,7 @@ def _render_scenarios(env, ctrl: MPCController, args, terminal_out=None,
         nav_fn = get_vehicle(args.vehicle).render().wait_for_episode_nav
     report = (lambda line: terminal_out.write(line + '\n')) if terminal_out is not None else (lambda line: None)
     runner.render_scenarios(env, lambda e, seed, **kw: run_episode(e, ctrl, seed, **kw), args,
-                            nav_fn, preview_cfg, report=report)
+                            nav_fn, preview_cfg, label='MPC', report=report)
 
 
 _obst_str = runner.obst_str
@@ -181,7 +181,7 @@ def main() -> None:
 
             if args.render:
                 wait_for_episode_nav = bits['wait_for_episode_nav']
-                env.unwrapped.set_render_label(f'{sc_name} - {sc_desc}')
+                env.unwrapped.set_render_label(scenario_title(sc_name, 'MPC'))
 
             while True:
                 r = run_episode(env, ctrl, seed=args.seed,

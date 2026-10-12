@@ -12,7 +12,7 @@ from eval.data_logger import EpisodeData, RunLogger
 from gym_env.common.env_params import DT
 from utils.gif import keep, shrink
 from utils.paths import DATA
-from utils.scenario_loader import enabled_eval_suites, load_scenario_any
+from utils.scenario_loader import enabled_eval_suites, load_scenario_any, scenario_title
 
 try:
     from tqdm import tqdm
@@ -225,7 +225,7 @@ def render_scenarios(env, run_fn, args, nav_fn, preview_cfg=None,
         suite_name, sc_name = scenarios[idx]
         road, track, _v, sc_desc = load_scenario_any(sc_name)
         raw._nav_allowed = {'prev': idx > 0, 'next': idx < n - 1}
-        raw.set_render_label(f'{label}{sc_name} - {sc_desc}   [{idx + 1}/{n} · {suite_name}]')
+        raw.set_render_label(scenario_title(sc_name, label.strip(' ·:'), idx + 1, n))
         r = run_fn(env, args.seed, scenario_road=road, collect_frames=False, render_live=True,
                    perception_track=track, preview_cfg=preview_cfg)
         raw = env.unwrapped

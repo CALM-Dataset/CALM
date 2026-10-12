@@ -23,7 +23,7 @@ from gym_env.vehicles import get_vehicle
 from gym_env.common.reward_utils import reward_bounds
 from gym_env.common.reward_params import load_reward_config
 from gym_env.common.env_params import EPISODE_STEPS, DT
-from utils.scenario_loader import load_scenario_any, enabled_eval_suites
+from utils.scenario_loader import load_scenario_any, enabled_eval_suites, scenario_title
 
 from utils.gif import keep, save_gif, shrink
 from eval.data_logger import RunLogger, EpisodeData
@@ -571,7 +571,7 @@ def _run_one_scenario(
             perception_track=perception_track,
             capture_frames=args.save_gif,
             pause_at_end=args.render,
-            render_label=f'{args.algo} · {sc_name} - {sc_desc}',
+            render_label=scenario_title(sc_name, str(args.algo).upper()),
             vehicle=args.vehicle,
         )
         if nav != 'replay':

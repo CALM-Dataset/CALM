@@ -94,7 +94,7 @@ def init_render(env):
     }
 
     ep_title = (getattr(env, '_render_label', None)
-                or f'Quarter-Car Env  ·  Episode {getattr(env, "_episode_count", "?")}')
+                or f'Quarter-car   (episode {getattr(env, "_episode_count", "?")})')
 
     gym_env_title = 'Quarter-Car gym env'
 

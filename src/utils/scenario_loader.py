@@ -103,6 +103,14 @@ def _real_label(name: str) -> str:
     return f'{m.group(1).replace("_", " ").title()} SB {m.group(2)}'
 
 
+def scenario_title(name: str, method: str = '', index: int | None = None, total: int | None = None) -> str:
+    base = _real_label(name) if re.fullmatch(r'.+_sb0*\d+', str(name)) else str(name).replace('_', ' ')
+    title = f'{method}: {base}' if method else base
+    if index is not None and total:
+        title += f'   ({index} of {total})'
+    return title
+
+
 def _real_scenarios_dir() -> Path:
     return ROOT / 'config' / 'eval' / 'scenarios' / 'real'
 
