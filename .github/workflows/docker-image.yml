@@ -37,11 +37,13 @@ jobs:
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin || true
           if docker pull "$IMAGE"; then
             echo "reusing $IMAGE"
+            echo "Image reused: \`$IMAGE\`" >> "$GITHUB_STEP_SUMMARY"
           else
             docker build --target deps --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" -t "$IMAGE" .
             if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
               docker push "$IMAGE" || echo "image not pushed (no package access)"
             fi
+            echo "Image built: \`$IMAGE\`" >> "$GITHUB_STEP_SUMMARY"
           fi
           docker tag "$IMAGE" calm:ci
 
