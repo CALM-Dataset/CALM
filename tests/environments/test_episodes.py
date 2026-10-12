@@ -5,6 +5,7 @@ from gym_env.common.reward_params import load_reward_config
 from gym_env.half_car.envs import HalfCarEnv
 from gym_env.common.reward import compute_reward
 from gym_env.common import TerminationWrapper
+from utils.paths import ROOT
 
 
 def _run(env, action, steps=6000):
@@ -69,12 +70,11 @@ def test_body_acceleration_costs_reward():
 
 
 def test_same_seed_same_training_episodes():
-    from pathlib import Path
 
     from gym_env.common.curriculum import load_curriculum_config
     from train.environment import _make_env
 
-    cfg = load_curriculum_config(Path(__file__).resolve().parents[1] / "config" / "curriculum" / "curriculum.yaml")
+    cfg = load_curriculum_config(ROOT / "config" / "curriculum" / "curriculum.yaml")
 
     def rollout(seed):
         env = _make_env(seed, None, {"render_mode": "none"}, cfg)()

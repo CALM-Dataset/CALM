@@ -1,15 +1,13 @@
-from pathlib import Path
-
 import numpy as np
 
 from gym_env.common.curriculum import load_curriculum_config
 from train.agent import build_model
 from train.environment import make_vec_env
+from utils.paths import ROOT
 
 
 def test_short_training_run():
-    root = Path(__file__).resolve().parents[1]
-    venv = make_vec_env(1, 0, load_curriculum_config(root / "config" / "curriculum" / "curriculum.yaml"),
+    venv = make_vec_env(1, 0, load_curriculum_config(ROOT / "config" / "curriculum" / "curriculum.yaml"),
                         action_penalty=0.1)
     kwargs = {"policy": "TanhMeanPolicy", "n_steps": 256, "batch_size": 128, "n_epochs": 1,
               "policy_kwargs": {"net_arch": {"pi": [16], "vf": [16]}}}
