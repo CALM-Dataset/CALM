@@ -49,6 +49,18 @@ jobs:
       - name: Doctor
         run: calm doctor
 
+  workflows:
+    name: Lint the workflow files
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - run: |
+          pip install actionlint-py
+          actionlint
+
   docker:
     permissions:
       contents: read

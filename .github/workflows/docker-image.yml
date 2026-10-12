@@ -23,7 +23,6 @@ jobs:
     timeout-minutes: 40
     env:
       TIMESTEPS: ${{ inputs.timesteps || '50000' }}
-      DEPS_KEY: ${{ hashFiles('Dockerfile', 'requirements.txt', 'pyproject.toml') }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -32,6 +31,7 @@ jobs:
       - name: Reuse the image if its dependencies are unchanged, otherwise build it
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPS_KEY: ${{ hashFiles('Dockerfile', 'requirements.txt', 'pyproject.toml') }}
         run: |
           IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/calm-ci:deps-${DEPS_KEY}"
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin || true
