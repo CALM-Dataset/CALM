@@ -69,7 +69,9 @@ roads improve as with the MPC.
 
 The recorded human drive replayed in the model gives an a_w that is 17 % away from the
 IMU value on the median road (81 % of the 105 roads within 30 %, mean bias +3 %).
-The ranking of the controllers is the same with the replay and with the IMU as the human reference
+With the replay or the IMU as the human reference, constant, MPC and PPO (seed 69) are all more comfortable than
+the human, but the order of MPC and PPO flips: median change -12.8 % (MPC) and -9.8 % (PPO) against the replay,
+-12.3 % and -16.1 % against the IMU, constant -5.7 % and -2.4 %. That matches the tie between the two planners
 (`fig_sim2real_gap` in the MATLAB folder).
 
 ## Chosen model
