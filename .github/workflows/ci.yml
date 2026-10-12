@@ -50,4 +50,7 @@ jobs:
         run: calm doctor
 
   docker:
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/docker-image.yml
