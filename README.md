@@ -107,6 +107,16 @@ just gen-scene                  # writes config/train/scenarios/curriculum
 `just build-index` writes `config/dataset/index.json`, a metadata table over
 every scenario (source, size, bump count, recommended speeds).
 
+Each scenario can carry a recommended crossing-speed profile from two planners,
+MPC and the trained PPO agent. Generate the labels with:
+
+```bash
+just build-labels --ppo-model logs/models/PPO/<run>/PPO_final.zip --mpc
+```
+
+This runs both planners over every scenario and writes a per-timestep speed
+profile into the `comfort` block, then refreshes the index. MPC needs acados.
+
 ## Usage
 
 Every `just` recipe is a thin wrapper over the `calm` command (`.venv/bin/calm --help` lists them), so use either.
@@ -116,6 +126,9 @@ just doctor                     # check Python, packages, acados, data and login
 just train --run-name demo      # PPO through the 4-level curriculum (half-car)
 just train --vehicle quarter    # quarter-car plant (same reward and settings)
 just eval demo --render         # evaluate logs/models/PPO/demo/PPO_final.zip
+just compare demo               # ISO 2631 comfort score: PPO vs MPC vs human
+just reproduce                  # train 5 seeds, score them against the MPC and the human drive
+just sync                       # copy comfort scores to the MATLAB figures folder
 just mpc --render               # MPC baseline
 just reactive-driver --render   # rule-based driver baseline
 
@@ -128,12 +141,18 @@ A first run without any data: `just install`, `just doctor`, `just gen-scene`, t
 `just train --timesteps 200000 --run-name demo` (a few minutes) and `just eval demo --scenario c`.
 
 The vehicle at evaluation time must match the one the model was trained on (`--vehicle`).
+The comfort score, its calibration, the PPO training setup and the results are
+described in [docs/comfort-score.md](docs/comfort-score.md); `res.txt` is the short
+summary.
 
 ### Render controls
 
 - `space` pause, `f` / `s` faster / slower playback (starts at 0.5x)
 - `+` / `-` or scroll wheel zoom, `0` reset zoom
 - Left / right arrow: previous / next scenario
+
+The earlier thesis figures read `.mat` data written by `calm run-eval <run>` and
+`calm train-curve <run>`; the comfort study does not need them.
 
 ## Repository layout
 

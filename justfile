@@ -31,7 +31,7 @@ install:
 lint:
     {{venv}} -m pyflakes src tests
 
-# fast tests
+# fast tests, as in CI (no data or GPU needed)
 [group('setup')]
 test *args:
     MPLBACKEND=Agg SDL_AUDIODRIVER=dummy {{venv}} -m pytest -q "$@"
@@ -55,30 +55,60 @@ fetch-scenarios:
 build-index:
     {{calm}} build-index
 
+# MPC and PPO speed profiles for every scenario
+[group('data')]
+build-labels *args:
+    {{calm}} build-labels "$@"
+
 # procedural training scenarios
 [group('data')]
 gen-scene *args:
     {{calm}} gen-scenes "$@"
 
 # PPO training through the curriculum; logs/models/PPO/<run-name>/
-[group('rl')]
+[group('RL')]
 train *args:
     {{calm}} train "$@"
 
 # evaluate logs/models/PPO/<run>/PPO_final.zip, e.g. just eval exp_3
-[group('rl')]
+[group('RL')]
 eval *args:
     {{calm}} eval "$@"
 
 # Optuna hyperparameter search
-[group('rl')]
+[group('RL')]
 tune *args:
     {{calm}} tune --storage sqlite:///tune.db --study-name ppo_study "$@"
 
 # TensorBoard on logs/tensorboard
-[group('rl')]
+[group('RL')]
 tb:
     {{calm}} tb
+
+# ISO 2631 comfort of PPO, MPC and the recorded drive; set CALM_SEQUENCES for the human
+[group('comfort')]
+compare *args:
+    {{calm}} compare "$@"
+
+# train several seeds, score them against the MPC and the human drive, summarise
+[group('comfort')]
+reproduce *args:
+    {{calm}} reproduce "$@"
+
+# MPC comfort-versus-time frontier: `just frontier build` then `just frontier excess`
+[group('comfort')]
+frontier *args:
+    {{calm}} frontier "$@"
+
+# collect the per-run comfort scores listed in config/eval/runs.yaml
+[group('comfort')]
+export-runs *args:
+    {{calm}} export-runs "$@"
+
+# copy the comfort scores to MATLAB_FIGURES from .env
+[group('comfort')]
+sync:
+    ./sync_comfort.sh
 
 # MPC baseline (needs acados); pass --scenario <name> or --render
 [group('baselines')]
@@ -89,3 +119,4 @@ mpc *args:
 [group('baselines')]
 reactive-driver *args:
     {{calm}} reactive "$@"
+

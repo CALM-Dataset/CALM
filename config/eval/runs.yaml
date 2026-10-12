@@ -1,0 +1,12 @@
+runs:
+  s69: {csv: s69, group: seed, seed: 69}
+  s70: {csv: s70, group: seed, seed: 70}
+  s71: {csv: s71, group: seed, seed: 71}
+  s72: {csv: s72, group: seed, seed: 72}
+  s73: {csv: s73, group: seed, seed: 73}
+  target_0.5: {csv: t05, group: target, seed: 69, target: 0.5}
+  target_0.7: {csv: t07, group: target, seed: 69, target: 0.7}
+  camera: {csv: cam, group: camera, seed: 69}
+  fold_A: {csv: cvA, group: fold, seed: 69, heldout: [taufkirchen, salice_salentino]}
+  fold_B: {csv: cvB, group: fold, seed: 69, heldout: [munich, ludwigsburg]}
+  fold_C: {csv: cvC, group: fold, seed: 69, heldout: [ingolstadt, carmiano, monteroni_di_lecce]}
