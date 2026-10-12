@@ -127,11 +127,7 @@ def ensure_local() -> None:
         for region in REGIONS:
             for split, dsts in (('train', (_real_dir(), seen_dir)), ('eval', (_eval_dir() / 'real',))):
                 for f in Path(tmp, region, split).glob('*.json'):
-                    # low_confidence means the road-height sensors found no real,
-                    # trustworthy localized bump near the camera-flagged crossing
-                    # (painted marking, unresolved texture, bad detection range) -
-                    # training/evaluating on it means modeling a bump that may not
-                    # physically exist as labeled (see CALM-Scenarios README)
+                    # low-confidence bumps may not exist on the road, so they are skipped
                     bumps = json.loads(f.read_text()).get('bumps') or []
                     if bumps and bumps[0].get('low_confidence'):
                         skipped += 1

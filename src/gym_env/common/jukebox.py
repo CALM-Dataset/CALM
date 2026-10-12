@@ -112,7 +112,7 @@ class Jukebox:
             import pygame
         except ImportError:
             return
-        for attempt in range(2):
+        for _ in range(2):
             try:
                 if not pygame.mixer.get_init():
                     pygame.mixer.init(frequency=_SR, size=-16, channels=2)

@@ -1,4 +1,3 @@
-# ---- Python ----
 __pycache__/
 *.py[cod]
 *$py.class
@@ -12,29 +11,24 @@ wheels/
 pip-wheel-metadata/
 .python-version
 
-# ---- Virtual environments ----
 .venv/
 venv/
 env/
 ENV/
 
-# ---- Lint and type-check caches ----
 .mypy_cache/
 .ruff_cache/
 .pytype/
 .cache/
 
-# ---- Notebooks ----
 .ipynb_checkpoints/
 
-# ---- Secrets and local environment ----
 .env
 .env.*
 !.env.example
 *.pem
 *.key
 
-# ---- Editors and OS ----
 .vscode/
 .idea/
 *.swp
@@ -45,7 +39,6 @@ Thumbs.db
 desktop.ini
 ._*
 
-# ---- Logs and experiment outputs ----
 logs/
 data/
 models/
@@ -60,7 +53,6 @@ tune.db
 *.sqlite
 *.sqlite3
 
-# ---- Model checkpoints and arrays ----
 *.zip
 *.pkl
 *.pt
@@ -69,31 +61,25 @@ tune.db
 *.npy
 *.npz
 
-# ---- Rendered output ----
 *.gif
 *.mp4
 
-# ---- acados generated code ----
 c_generated_code/
 acados_ocp*.json
 acados_sim*.json
 
-# ---- Docker overrides ----
 docker-compose.override.yml
 
-# ---- Local audio for the renderer ----
 assets/music/*.mp3
 assets/music/*.ogg
 assets/music/*.wav
 
-# ---- Generated or fetched project data ----
 config/train/scenarios/
 config/eval/scenarios/real/
 config/eval/scenarios/real_train/
 config/dataset/
 config/perception/
 
-# ---- Scratch ----
 tmp/
 scratch/
 *.bak

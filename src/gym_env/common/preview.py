@@ -30,9 +30,7 @@ def _range_err(model, d):
         return 0.0, 0.0
     i = int(d // model["bin_width_m"])
     bias, std = model["range_bias"][i], model["range_std"][i]
-    # a bin can be inside max_range_m but still have too few valid ranged detections
-    # to fit (see MIN_BIN_SAMPLES in perception-pipeline's model.py) - None there
-    # means "no data", not zero error; fall back to no bias/noise for that case
+    # None means a bin with too few detections to fit: no bias or noise
     return (bias if bias is not None else 0.0), (std if std is not None else 0.0)
 
 

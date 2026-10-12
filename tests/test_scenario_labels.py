@@ -1,6 +1,6 @@
-from utils.scenario_loader import load_scenario_any
+from utils.scenario_loader import scenario_title
 
 
-def test_real_scenarios_are_labelled_by_place_and_index():
-    road = load_scenario_any("augsburg_sb01")[0]
-    assert road._bump_labels[0] == "Augsburg SB 1"
+def test_real_scenarios_are_titled_by_place_and_index():
+    assert scenario_title("augsburg_sb01") == "Augsburg SB 1"
+    assert scenario_title("monteroni_di_lecce_sb12", "MPC", 3, 20) == "MPC: Monteroni Di Lecce SB 12   (3 of 20)"

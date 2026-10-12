@@ -24,7 +24,6 @@ RENDER_C_MB = str(_cfg["RENDER_C_MB"])
 RENDER_C_MW = str(_cfg["RENDER_C_MW"])
 RENDER_C_SPRING = str(_cfg["RENDER_C_SPRING"])
 RENDER_C_DAMPER = str(_cfg["RENDER_C_DAMPER"])
-RENDER_C_ROAD = str(_cfg["RENDER_C_ROAD"])
 RENDER_C_GROUND = str(_cfg["RENDER_C_GROUND"])
 
 RENDER_SP_X = float(_cfg["RENDER_SP_X"])
