@@ -7,7 +7,7 @@ import numpy as np
 from gym_env.common.jukebox import Jukebox
 from gym_env.common.render_params import (
     RENDER_BUMP_MARKERS, RENDER_MUSIC_JUKEBOX, RENDER_MUSIC_MUTED, RENDER_MUSIC_TRACK,
-    RENDER_MUSIC_VOLUME, RENDER_TOOLBAR, RENDER_Y_SCALE,
+    RENDER_FULLSCREEN, RENDER_MUSIC_VOLUME, RENDER_TOOLBAR, RENDER_Y_SCALE,
 )
 
 import matplotlib as mpl
@@ -260,6 +260,11 @@ def _ensure_play_keys(env):
     if fig is None:
         return
     _free_matplotlib_keys()
+    if RENDER_FULLSCREEN:
+        try:
+            fig.canvas.manager.full_screen_toggle()
+        except Exception:
+            pass
     if not hasattr(env, '_render_speed'):
         env._render_speed = 0.5
     if not hasattr(env, '_nav_request'):

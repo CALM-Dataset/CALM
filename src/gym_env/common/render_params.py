@@ -10,6 +10,7 @@ RENDER_TS_Z_DDOT = bool(_cfg.get("RENDER_TS_Z_DDOT", True))
 RENDER_TS_SPEED = bool(_cfg.get("RENDER_TS_SPEED", True))
 
 RENDER_FREEZE_EPISODE = bool(_cfg.get("RENDER_FREEZE_EPISODE", False))
+RENDER_FULLSCREEN    = bool(_cfg.get("RENDER_FULLSCREEN", True))
 RENDER_TOOLBAR       = bool(_cfg.get("RENDER_TOOLBAR", False))
 RENDER_BUMP_MARKERS  = bool(_cfg.get("RENDER_BUMP_MARKERS",  True))
 

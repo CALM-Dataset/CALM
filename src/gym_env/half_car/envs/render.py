@@ -17,7 +17,7 @@ from gym_env.half_car.config.render_params import (
     RENDER_C_MB, RENDER_C_MW, RENDER_C_SPRING, RENDER_C_DAMPER,
     RENDER_SP_X, RENDER_SP_W, RENDER_SP_N,
     RENDER_DA_X, RENDER_DA_W, RENDER_DA_PIST_H, RENDER_DA_PIST_FRAC,
-    RENDER_DA_LOWER_STEM, RENDER_DA_CYL_H_SUSP, RENDER_DA_CYL_H_TIRE, RENDER_GROUND_Y,
+    RENDER_DA_LOWER_STEM, RENDER_DA_CYL_H_SUSP, RENDER_SUSP_SCALE, RENDER_DA_CYL_H_TIRE, RENDER_GROUND_Y,
     RENDER_ARR_X, RENDER_ARR_Y, RENDER_ARR_LEN,
     RENDER_L, RENDER_LF, RENDER_LR, RENDER_X_FRONT, RENDER_X_REAR,
     RENDER_MB_OVERHANG, RENDER_OBSTACLE_FLAG_M, RENDER_MAX_EP_STEPS,
@@ -28,6 +28,7 @@ _MAX_EP_STEPS = RENDER_MAX_EP_STEPS
 
 _WHEEL_R = 0.32
 _WHEEL_RY = 0.5
+_SK = RENDER_SUSP_SCALE
 _C_TIRE_PART = '#56606b'
 _C_TIRE_HIT = '#d62d20'
 _HUB_H = 0.12
@@ -39,8 +40,8 @@ _ARR_MAX_LEN = RENDER_ARR_LEN
 __all__ = ["close_env", "init_render", "push_history", "render_env", "update_artists", "wait_for_episode_nav"]
 
 
-def _damper_xy(x_c: float, y_top: float, y_bot: float, cyl_h: float):
-    return damper_xy(x_c, y_top, y_bot, cyl_h, RENDER_DA_W, RENDER_DA_PIST_H,
+def _damper_xy(x_c: float, y_top: float, y_bot: float, cyl_h: float, k: float = 1.0):
+    return damper_xy(x_c, y_top, y_bot, cyl_h, RENDER_DA_W * k, RENDER_DA_PIST_H * k,
                      RENDER_DA_PIST_FRAC, RENDER_DA_LOWER_STEM)
 
 
@@ -101,12 +102,12 @@ def _make_axle(ax, x_c: float, label: str):
                                 ha='right', va='center', fontsize=10, color='#1b1f24',
                                 zorder=7)
 
-    a['susp_spring'],         = ax.plot([], [], '-', color=RENDER_C_SPRING, lw=2.0, zorder=4)
-    a['susp_damp_rod'],       = ax.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5, zorder=4)
-    a['susp_damp_lower_rod'], = ax.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5, zorder=4)
-    a['susp_damp_cyl'],       = ax.plot([], [], '-', color=RENDER_C_DAMPER, lw=2.0, zorder=4)
-    a['susp_damp_pist'] = Rectangle((x_c + RENDER_DA_X - _hw + 0.01, 0),
-                                    RENDER_DA_W - 0.02, RENDER_DA_PIST_H,
+    a['susp_spring'],         = ax.plot([], [], '-', color=RENDER_C_SPRING, lw=2.0 * _SK, zorder=4)
+    a['susp_damp_rod'],       = ax.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5 * _SK, zorder=4)
+    a['susp_damp_lower_rod'], = ax.plot([], [], '-', color=RENDER_C_DAMPER, lw=1.5 * _SK, zorder=4)
+    a['susp_damp_cyl'],       = ax.plot([], [], '-', color=RENDER_C_DAMPER, lw=2.0 * _SK, zorder=4)
+    a['susp_damp_pist'] = Rectangle((x_c + RENDER_DA_X - _hw * _SK + 0.01 * _SK, 0),
+                                    (RENDER_DA_W - 0.02) * _SK, RENDER_DA_PIST_H * _SK,
                                     fc=RENDER_C_DAMPER, ec='none', zorder=4)
     ax.add_patch(a['susp_damp_pist'])
 
@@ -179,8 +180,8 @@ def _update_axle(a, x_c: float, y_W: float, y_B_corner: float,
     y_susp_bot = y_W + hub_h / 2
     y_susp_top = y_B_corner - RENDER_H_MB / 2
     if y_susp_top > y_susp_bot + 0.05:
-        a['susp_spring'].set_data(*spring_xy(sp_x, y_susp_top, y_susp_bot, RENDER_SP_N, RENDER_SP_W))
-        u_rod, l_rod, cyl_xy, pr = _damper_xy(da_x, y_susp_top, y_susp_bot, RENDER_DA_CYL_H_SUSP)
+        a['susp_spring'].set_data(*spring_xy(sp_x, y_susp_top, y_susp_bot, RENDER_SP_N, RENDER_SP_W * _SK))
+        u_rod, l_rod, cyl_xy, pr = _damper_xy(da_x, y_susp_top, y_susp_bot, RENDER_DA_CYL_H_SUSP, _SK)
         a['susp_damp_rod'].set_data(*u_rod)
         a['susp_damp_lower_rod'].set_data(*l_rod)
         a['susp_damp_cyl'].set_data(*cyl_xy)

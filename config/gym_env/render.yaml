@@ -10,6 +10,7 @@ RENDER_FREEZE_EPISODE: true
 RENDER_BUMP_MARKERS: true
 
 RENDER_TOOLBAR: false
+RENDER_FULLSCREEN: true
 
 RENDER_REALISTIC_WHEELS: true
 
@@ -65,6 +66,7 @@ half_car:
   H_MB:            0.45
   H_MW:            0.30
   Y_LINE_OFFSET:   0.42
+  SUSP_SCALE:      0.65
   DA_CYL_H_SUSP:   0.53
   DA_CYL_H_TIRE:   0.48
   DA_LOWER_STEM:   0.12
