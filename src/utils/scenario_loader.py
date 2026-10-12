@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import re
+
+import numpy as np
 from pathlib import Path
 
 from utils.paths import ROOT
@@ -126,14 +128,46 @@ def load_scenario_any(name_or_path: str):
     return make_road_generator(name_or_path), None, speed, desc
 
 
+def _load_trim_cfg() -> dict:
+    p = ROOT / 'config' / 'gym_env' / 'scenario_trim.yaml'
+    return yaml.safe_load(p.read_text()) if p.exists() else {}
+
+
+def edge_trim_indices(z, ds: float, bumps: list, cfg: dict) -> tuple[int, int]:
+    z = np.asarray(z, dtype=float)
+    n = len(z)
+    if not cfg.get('trim_edges', True) or not bumps or n == 0:
+        return 0, n
+    tol = float(cfg.get('edge_tol_m', 0.01))
+    margin = float(cfg.get('bump_margin_m', 0.5))
+    lo = min(float(b['s_start_m']) for b in bumps)
+    hi = max(float(b['s_end_m']) for b in bumps)
+    pos = np.arange(n) * ds
+    level = np.abs(z) <= tol
+
+    start = 0
+    if not level[0]:
+        ok = np.flatnonzero(level & (pos <= lo - margin))
+        start = int(ok[0]) if len(ok) else 0
+    end = n
+    if not level[-1]:
+        ok = np.flatnonzero(level & (pos >= hi + margin))
+        end = int(ok[-1]) + 1 if len(ok) else n
+    return start, end
+
+
 def load_scenario_json(path):
     from road.road_generator import RoadGenerator
 
     d = json.loads(Path(path).read_text())
     r = d["road"]
-    s_bump = float(d["bumps"][0]["s_bump_m"]) if d.get("bumps") else d.get("s_bump_m")
-    gen = RoadGenerator.from_profile(r["z"], float(r["ds_m"]), s_bump=s_bump)
-    gen._bumps = [(float(b["s_bump_m"]), float(b.get("peak_z_m", 0.0)),
+    ds = float(r["ds_m"])
+    start, end = edge_trim_indices(r["z"], ds, d.get("bumps") or [], _load_trim_cfg())
+    offset = start * ds
+    z = r["z"][start:end]
+    s_bump = float(d["bumps"][0]["s_bump_m"]) - offset if d.get("bumps") else d.get("s_bump_m")
+    gen = RoadGenerator.from_profile(z, ds, s_bump=s_bump)
+    gen._bumps = [(float(b["s_bump_m"]) - offset, float(b.get("peak_z_m", 0.0)),
                    float(b.get("width_m", 1.0))) for b in (d.get("bumps") or [])]
     label = _real_label(d["name"]) if d.get("name") else _prettify_scenario_name(d.get("source_sequence", ""))
     if label:
