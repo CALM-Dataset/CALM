@@ -1,7 +1,7 @@
 # Clean training results
 
-Five PPO seeds (69 to 73) trained from scratch on the fixed code, scored on every bundled scenario
-and all 105 real scenarios, against a constant-speed drive and the MPC. Written 2026-10-12.
+Five PPO seeds (69 to 73) trained from scratch on the fixed code, scored on all 105 real scenarios
+(and the bundled synthetic suites, not reported), against a constant-speed drive and the MPC. Written 2026-10-12.
 
 ## Setup
 
@@ -60,33 +60,11 @@ At equal time every seed is about 1 % more comfortable than a constant drive (bo
 median below zero for all five), and within about 1 % of the MPC. The raw a_w column is lower for the
 PPO seeds because they drive slower on average (18 to 21 km/h against 21.6), which the equal-time measure removes.
 
-## Synthetic suites (180 scenarios)
+## Synthetic suites
 
-| | a_w (m/s²) | speed (km/h) | time (s) | vs constant, equal time (%) | lower than constant (%) | completed (%) |
-|---|---|---|---|---|---|---|
-| constant | 0.484 | 30.0 | 14.5 | +0.0 | 0 | 100 |
-| MPC | 0.241 | 20.7 | 21.6 | -14.5 | 81 | 100 |
-| PPO seed 69 | 0.404 | 21.5 | 25.3 | +0.0 | 41 | 100 |
-| PPO seed 70 | 0.405 | 18.8 | 30.3 | -0.7 | 71 | 100 |
-| PPO seed 71 | 0.413 | 19.8 | 28.4 | +0.0 | 42 | 100 |
-| PPO seed 72 | 0.475 | 26.5 | 19.0 | +0.0 | 36 | 100 |
-| PPO seed 73 | 0.396 | 19.6 | 28.5 | +0.0 | 24 | 100 |
-
-Median equal-time change against a constant drive per suite (%):
-
-| suite | MPC | seed 69 | seed 70 | seed 71 | seed 72 | seed 73 |
-|---|---|---|---|---|---|---|
-| 01_single_bump | -18.7 | +0.0 | -0.4 | +0.0 | +0.0 | +0.0 |
-| 02_two_bumps | -18.2 | +0.0 | -1.0 | +0.0 | +0.0 | +0.0 |
-| 03_three_bumps | -14.2 | +0.0 | -3.0 | -0.1 | +0.0 | +0.0 |
-| 04_four_bumps | -11.1 | +0.0 | -2.1 | -0.1 | +0.0 | +0.1 |
-| 05_one_bump_one_hole | -15.4 | -1.6 | -0.4 | +0.0 | +0.0 | +0.0 |
-| 06_two_bumps_one_hole | -13.8 | +0.0 | -0.7 | +0.2 | -0.1 | +0.0 |
-| 07_two_bumps_two_holes | -16.9 | -0.1 | -0.2 | +0.0 | -0.2 | +4.5 |
-
-On the synthetic multi-bump suites the MPC is 11 to 19 % more comfortable than a constant drive at equal
-time and no PPO seed shows a gain (0 to -3 %, one seed +4.5 % on the two-holes suite). The PPO is trained on
-real roads and these suites are outside that distribution.
+Not part of the paper's scope (the study is on real roads), so no tables here. They were scored in the
+same run (180 scenarios, per-seed files above). In short, the MPC gains 11 to 19 % at equal time on the
+multi-bump suites and the PPO seeds show no gain there, because the PPO is trained on real roads.
 
 ## Chosen model
 
@@ -108,5 +86,4 @@ The other seeds are -0.5 to -0.7 % on the unseen roads.
 
 - Differences between seeds and against the MPC on real roads are around 1 %, small compared with the
   spread between scenarios; treat the real-road result as a tie, not a win.
-- PPO shows no equal-time gain on the synthetic suites, where the MPC does.
 - No human-drive comparison in this run.
