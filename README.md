@@ -2,8 +2,8 @@
 
 Recommended-speed baselines for passenger comfort over speed bumps. A PPO agent
 and a model-predictive controller each read the road ahead and recommend a speed
-for crossing every bump; the result is scored with ISO 2631-1 against the speed the
-human driver actually drove. The two planners are independent of each other.
+for crossing every bump, and ride comfort is measured with the ISO 2631-1 weighted
+acceleration. The two planners are independent of each other.
 
 ![Vehicle environment](assets/gym_env.png)
 
@@ -89,8 +89,6 @@ The synthetic evaluation suites (`config/eval/scenarios/0*`, `10_potholes`) are 
 The measured (real) roads extend the [CARD dataset](https://huggingface.co/CARD-Data) and are hosted on
 HuggingFace as [CALM-Dataset/CALM-Scenarios](https://huggingface.co/datasets/CALM-Dataset/CALM-Scenarios)
 (German part CC BY 4.0, Italian part CC BY-NC 4.0), not committed to the repository.
-The recorded drives used for the human profile (`CALM_SEQUENCES`) come from the CALM-Germany and
-CALM-Italy sequence datasets.
 
 The scenarios are gated: request access on the dataset page (agreeing to its license
 and usage terms), then authenticate locally before downloading:
@@ -145,7 +143,7 @@ src/gym_env/half_car/     half-car plant (heave and pitch): ODE, parameters, dra
 src/gym_env/quarter_car/  quarter-car plant (heave): ODE, parameters, drawing
 src/gym_env/vehicles.py   vehicle registry behind --vehicle half|quarter
 src/train/        PPO training, curriculum, callbacks
-src/eval/         evaluation, ISO 2631 comfort score, plotting
+src/eval/         evaluation, ISO 2631 weighting, plotting
 src/baseline/     MPC and rule-based baselines; runner.py holds the loops they share
 src/road/         road profile generation
 src/utils/        scenario generation, dataset index and helpers
