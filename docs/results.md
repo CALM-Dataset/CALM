@@ -15,7 +15,7 @@ the recorded human drive, a constant-speed drive and the MPC. Written 2026-10-12
 - Equal-time measure: a_w of a profile relative to a constant drive covering the same trip in the same
   time, so slow driving is not rewarded. Negative is more comfortable than constant. The constant row is not
   exactly zero because its reference is a constant drive of the same duration, which runs at a slightly
-  different speed. The a_w and equal-time columns are medians over scenarios; speed and time are means.
+  different speed. The a_w, equal-time and against-the-MPC columns are medians over scenarios; speed and time are means; the interval is a bootstrap of the median.
 - Against the human: median over scenarios of the relative change of a_w, and the number of scenarios where
   the profile is more comfortable than the human. The human drove slower than the others (about 19 km/h),
   so this column also rewards speed choices; use the equal-time column for the comparison between planners.
@@ -24,44 +24,44 @@ the recorded human drive, a constant-speed drive and the MPC. Written 2026-10-12
 
 Unseen (20):
 
-| | a_w (m/s²) | speed (km/h) | time (s) | against the human (%) | lower than the human | against constant, equal time (%) |
-|---|---|---|---|---|---|---|
-| human | 0.276 | 18.0 | 9.5 |  |  | +2.5 |
-| constant | 0.287 | 21.6 | 8.1 | -1.8 | 10/20 | -0.5 |
-| MPC | 0.300 | 19.7 | 9.1 | -5.2 | 11/20 | -0.7 |
-| PPO seed 69 | 0.261 | 19.8 | 10.1 | -6.6 | 11/20 | -1.0 |
-| PPO seed 70 | 0.242 | 19.2 | 10.4 | -5.9 | 14/20 | -0.5 |
-| PPO seed 71 | 0.245 | 19.1 | 10.7 | -10.5 | 13/20 | -0.6 |
-| PPO seed 72 | 0.286 | 20.9 | 9.0 | -5.2 | 11/20 | -0.6 |
-| PPO seed 73 | 0.239 | 18.4 | 11.7 | -15.3 | 14/20 | -0.7 |
+| | median a_w (m/s²) [quartiles] | speed (km/h) | time (s) | against the human (%) [95 % interval] | lower than the human | against constant, equal time (%) | against the MPC (%) |
+|---|---|---|---|---|---|---|---|
+| human | 0.276 [0.220, 0.332] | 18.0 | 9.5 |  |  | +2.5 |  |
+| constant | 0.287 [0.240, 0.347] | 21.6 | 8.1 | -1.8 [-14.9, +43.7] | 10/20 | -0.5 | +0.0 |
+| MPC | 0.300 [0.223, 0.347] | 19.7 | 9.1 | -5.2 [-14.6, +8.0] | 11/20 | -0.7 |  |
+| PPO seed 69 | 0.261 [0.216, 0.347] | 19.8 | 10.1 | -6.6 [-19.4, +43.2] | 11/20 | -1.0 | -0.2 |
+| PPO seed 70 | 0.242 [0.187, 0.317] | 19.2 | 10.4 | -5.9 [-21.9, +0.7] | 14/20 | -0.5 | +0.1 |
+| PPO seed 71 | 0.245 [0.187, 0.315] | 19.1 | 10.7 | -10.5 [-26.1, +2.1] | 13/20 | -0.6 | +0.0 |
+| PPO seed 72 | 0.286 [0.230, 0.346] | 20.9 | 9.0 | -5.2 [-16.4, +43.7] | 11/20 | -0.6 | +0.0 |
+| PPO seed 73 | 0.239 [0.168, 0.315] | 18.4 | 11.7 | -15.3 [-28.9, -0.7] | 14/20 | -0.7 | +0.0 |
 
 Seen (85):
 
-| | a_w (m/s²) | speed (km/h) | time (s) | against the human (%) | lower than the human | against constant, equal time (%) |
-|---|---|---|---|---|---|---|
-| human | 0.324 | 19.0 | 10.3 |  |  | +1.8 |
-| constant | 0.311 | 21.6 | 8.9 | -5.9 | 53/85 | -0.5 |
-| MPC | 0.269 | 19.4 | 10.1 | -15.2 | 60/85 | -0.9 |
-| PPO seed 69 | 0.268 | 19.4 | 11.0 | -10.3 | 57/85 | -1.0 |
-| PPO seed 70 | 0.261 | 18.5 | 12.3 | -16.3 | 62/85 | -0.6 |
-| PPO seed 71 | 0.267 | 18.7 | 12.2 | -16.4 | 61/85 | -0.7 |
-| PPO seed 72 | 0.271 | 19.6 | 11.1 | -11.9 | 56/85 | -0.7 |
-| PPO seed 73 | 0.267 | 19.2 | 11.4 | -15.2 | 57/85 | -0.7 |
+| | median a_w (m/s²) [quartiles] | speed (km/h) | time (s) | against the human (%) [95 % interval] | lower than the human | against constant, equal time (%) | against the MPC (%) |
+|---|---|---|---|---|---|---|---|
+| human | 0.324 [0.271, 0.384] | 19.0 | 10.3 |  |  | +1.8 |  |
+| constant | 0.311 [0.245, 0.392] | 21.6 | 8.9 | -5.9 [-11.7, -0.6] | 53/85 | -0.5 | +0.0 |
+| MPC | 0.269 [0.200, 0.369] | 19.4 | 10.1 | -15.2 [-17.9, -9.3] | 60/85 | -0.9 |  |
+| PPO seed 69 | 0.268 [0.195, 0.347] | 19.4 | 11.0 | -10.3 [-18.0, -4.7] | 57/85 | -1.0 | -0.4 |
+| PPO seed 70 | 0.261 [0.185, 0.324] | 18.5 | 12.3 | -16.3 [-22.8, -9.3] | 62/85 | -0.6 | +0.0 |
+| PPO seed 71 | 0.267 [0.172, 0.328] | 18.7 | 12.2 | -16.4 [-21.0, -8.0] | 61/85 | -0.7 | +0.0 |
+| PPO seed 72 | 0.271 [0.192, 0.348] | 19.6 | 11.1 | -11.9 [-17.9, -2.7] | 56/85 | -0.7 | +0.0 |
+| PPO seed 73 | 0.267 [0.187, 0.347] | 19.2 | 11.4 | -15.2 [-19.5, -4.1] | 57/85 | -0.7 | +0.0 |
 
 All real roads (105):
 
-| | a_w (m/s²) | speed (km/h) | time (s) | against the human (%) | lower than the human | against constant, equal time (%) |
-|---|---|---|---|---|---|---|
-| human | 0.319 | 18.8 | 10.2 |  |  | +1.8 |
-| constant | 0.303 | 21.6 | 8.8 | -5.7 | 63/105 | -0.5 |
-| MPC | 0.272 | 19.5 | 9.9 | -12.8 | 71/105 | -0.8 |
-| PPO seed 69 | 0.265 | 19.5 | 10.8 | -9.8 | 68/105 | -1.0 |
-| PPO seed 70 | 0.257 | 18.7 | 11.9 | -15.9 | 76/105 | -0.6 |
-| PPO seed 71 | 0.259 | 18.8 | 11.9 | -16.1 | 74/105 | -0.7 |
-| PPO seed 72 | 0.275 | 19.8 | 10.7 | -10.6 | 67/105 | -0.7 |
-| PPO seed 73 | 0.258 | 19.1 | 11.5 | -15.2 | 71/105 | -0.7 |
+| | median a_w (m/s²) [quartiles] | speed (km/h) | time (s) | against the human (%) [95 % interval] | lower than the human | against constant, equal time (%) | against the MPC (%) |
+|---|---|---|---|---|---|---|---|
+| human | 0.319 [0.262, 0.379] | 18.8 | 10.2 |  |  | +1.8 |  |
+| constant | 0.303 [0.244, 0.386] | 21.6 | 8.8 | -5.7 [-10.4, -0.3] | 63/105 | -0.5 | +0.0 |
+| MPC | 0.272 [0.205, 0.359] | 19.5 | 9.9 | -12.8 [-16.4, -5.7] | 71/105 | -0.8 |  |
+| PPO seed 69 | 0.265 [0.195, 0.347] | 19.5 | 10.8 | -9.8 [-17.8, -4.7] | 68/105 | -1.0 | -0.4 |
+| PPO seed 70 | 0.257 [0.185, 0.324] | 18.7 | 11.9 | -15.9 [-20.7, -6.7] | 76/105 | -0.6 | +0.0 |
+| PPO seed 71 | 0.259 [0.179, 0.328] | 18.8 | 11.9 | -16.1 [-20.2, -6.8] | 74/105 | -0.7 | +0.0 |
+| PPO seed 72 | 0.275 [0.195, 0.347] | 19.8 | 10.7 | -10.6 [-16.4, -2.7] | 67/105 | -0.7 | +0.0 |
+| PPO seed 73 | 0.258 [0.182, 0.347] | 19.1 | 11.5 | -15.2 [-19.2, -5.7] | 71/105 | -0.7 | +0.0 |
 
-At equal time every seed is about 1 % more comfortable than a constant drive and within about 1 % of the MPC.
+At equal time every seed is about 1 % more comfortable than a constant drive, and the median road differs from the MPC by at most 0.4 %.
 Against the human, every seed is more comfortable on the median road (-5 to -16 %), and about as many
 roads improve as with the MPC.
 
