@@ -13,8 +13,9 @@ and all 105 real scenarios, against a constant-speed drive and the MPC. Written 
   (`config/eval/comfort.yaml`). MPC at horizon 75, constant drive at the scenario speed.
 - Real roads: 20 unseen scenarios (augsburg, nardo, sindelfingen, stuttgart, held out of training) and 85 seen.
 - Equal-time measure: a_w of a profile relative to a constant drive covering the same trip in the same
-  time, so slow driving is not rewarded. Negative is more comfortable than constant. The columns give the median over
-  scenarios; the other columns are medians or means as labelled.
+  time, so slow driving is not rewarded. Negative is more comfortable than constant. The constant row is not exactly zero because its
+  reference is a constant drive of the same duration, which runs at a slightly different speed. The
+  equal-time and a_w columns are medians over scenarios; speed and time are means.
 - No comparison with the recorded human drive here: the recordings were not available on this machine.
 
 ## Real roads
