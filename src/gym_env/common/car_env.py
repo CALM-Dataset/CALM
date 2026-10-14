@@ -213,6 +213,9 @@ class CarEnv(gym.Env):
         if self._action_mode == "target_speed":
             v_target = cfg.v_hard_min + (v_top - cfg.v_hard_min) * 0.5 * (u + 1.0)
             a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
+        elif self._action_mode == "slowdown":
+            v_target = v_top + (v_top - cfg.v_hard_min) * min(u, 0.0)
+            a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
         else:
             a_cmd = u * cfg.a_max
         v_new = float(np.clip(v_old + a_cmd * DT, cfg.v_hard_min, v_top))

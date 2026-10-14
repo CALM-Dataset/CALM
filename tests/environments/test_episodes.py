@@ -88,3 +88,17 @@ def test_same_seed_same_training_episodes():
 
     assert np.array_equal(rollout(5), rollout(5))
     assert not np.array_equal(rollout(5), rollout(6))
+
+
+def test_slowdown_mode_never_exceeds_scenario_speed_and_can_slow():
+    env = gym.make("gym_env/HalfCar", action_mode="slowdown")
+    env.reset(seed=3)
+    top = env.unwrapped._v_episode_ref
+    speeds = []
+    for u in [1.0] * 20 + [-1.0] * 60:
+        _, _, terminated, truncated, info = env.step(np.full(1, u, dtype=np.float32))
+        speeds.append(info["speed"])
+        if terminated or truncated:
+            break
+    assert max(speeds) <= top + 1e-9
+    assert min(speeds) < top
