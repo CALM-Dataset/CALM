@@ -204,6 +204,15 @@ class CarEnv(gym.Env):
 
         return self._obs(), self._info(0.0)
 
+    def _track_gate(self) -> float:
+        free = self._rcfg.track_free_m
+        if free <= 0.0:
+            return 1.0
+        for x0, _, L in self._road._bumps:
+            if x0 - free <= self._s_pos <= x0 + L:
+                return 0.0
+        return 1.0
+
     def step(self, action):
         cfg = self._rcfg
 
@@ -260,6 +269,7 @@ class CarEnv(gym.Env):
             cfg=cfg,
             v_ref=v_init,
             phi_ddot=self._last_phi_ddot,
+            track_gate=self._track_gate(),
         )
         self._speed_err_sq   += (v_init - v_new) ** 2
 

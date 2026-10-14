@@ -102,3 +102,15 @@ def test_slowdown_mode_never_exceeds_scenario_speed_and_can_slow():
             break
     assert max(speeds) <= top + 1e-9
     assert min(speeds) < top
+
+
+def test_speed_tracking_is_gated_around_the_bump_only():
+    from dataclasses import replace
+    cfg = replace(load_reward_config(), track_free_m=30.0)
+    env = HalfCarEnv(reward_config=cfg)
+    env.reset(seed=1)
+    x0, _, L = env._road._bumps[0]
+    env._s_pos = x0 - 10.0
+    assert env._track_gate() == 0.0
+    env._s_pos = x0 + L + 5.0
+    assert env._track_gate() == 1.0

@@ -68,6 +68,7 @@ def compute_reward(
     cfg: RewardConfig,
     v_ref: float = 0.0,
     phi_ddot: float = 0.0,
+    track_gate: float = 1.0,
 ) -> tuple[float, dict]:
     v_nom = max(v_ref, 1e-8)
 
@@ -87,7 +88,7 @@ def compute_reward(
         + cfg.Q_a      * Ja
         + cfg.w_jerk   * Jj
         + cfg.w_action_smooth * Jas
-        + Qv_eff       * Jv
+        + Qv_eff       * track_gate * Jv
         + cfg.Q_step
     )
     total = float(np.nan_to_num(total, nan=0.0, posinf=0.0, neginf=0.0))
@@ -98,7 +99,7 @@ def compute_reward(
         "J_pitch":     float(cfg.Q_pitch  * Jp),
         "J_long_acc":  float(cfg.Q_a      * Ja),
         "J_long_jerk": float(cfg.w_jerk   * Jj),
-        "J_long_vel":  float(Qv_eff       * Jv),
+        "J_long_vel":  float(Qv_eff       * track_gate * Jv),
         "J_act_smooth": float(cfg.w_action_smooth * Jas),
         "J_total":     total,
     }
