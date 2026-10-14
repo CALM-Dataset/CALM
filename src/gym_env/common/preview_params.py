@@ -18,6 +18,7 @@ class PreviewConfig:
     pt1_tau:             float = 0.05
 
     use_dist_obs:        bool  = True
+    source:              str   = "bumps"
 
     dense_n:             int   = 200
     freq_max:            float = 21.74
@@ -49,6 +50,7 @@ def load_preview_config() -> PreviewConfig:
         noise_width_std     = float(cfg.get("noise_width_std",     0.05)),
         pt1_tau             = float(cfg.get("pt1_tau",             0.05)),
         use_dist_obs        = bool( cfg.get("use_dist_obs",        True)),
+        source              = str(  cfg.get("source",              "bumps")),
         dense_n             = int(  cfg.get("dense_n",             200)),
         freq_max            = float(cfg.get("freq_max",            21.74)),
         v_min_preview       = float(cfg.get("v_min_preview",       0.5)),

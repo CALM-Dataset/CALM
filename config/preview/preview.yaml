@@ -1,4 +1,5 @@
 perception_mode:     none
+source:              bumps
 model_path:          config/perception/perception_model.yaml
 
 preview_distance:    40.0

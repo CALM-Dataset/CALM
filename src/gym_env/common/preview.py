@@ -108,12 +108,19 @@ class PreviewWrapper(gym.ObservationWrapper):
         v_min  = float(getattr(getattr(env, "_rcfg", None), "v_min", cfg.v_min_preview))
         T_MAX  = cfg.preview_distance / max(v_min, cfg.v_min_preview)
 
-        heights = env._road.get_spatial_preview(
-            s_pos=env._s_pos,
-            v_current=v_safe,
-            lookahead_m=cfg.preview_distance,
-            n_points=cfg.dense_n,
-        )
+        if cfg.source == "bumps":
+            heights = env._road.get_bump_preview(
+                s_pos=env._s_pos,
+                lookahead_m=cfg.preview_distance,
+                n_points=cfg.dense_n,
+            )
+        else:
+            heights = env._road.get_spatial_preview(
+                s_pos=env._s_pos,
+                v_current=v_safe,
+                lookahead_m=cfg.preview_distance,
+                n_points=cfg.dense_n,
+            )
 
         ds               = cfg.preview_distance / cfg.dense_n
         min_dist_samples = max(1, int(cfg.peak_distance_min_m / ds))
