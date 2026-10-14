@@ -273,6 +273,9 @@ class CarEnv(gym.Env):
         )
         self._speed_err_sq   += (v_init - v_new) ** 2
 
+        if self._action_mode == "slowdown":
+            reward -= cfg.hold_penalty * max(u, 0.0) ** 2
+
         self._episode_reward += reward
 
         self._prev_a = a_actual

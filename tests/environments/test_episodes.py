@@ -114,3 +114,14 @@ def test_speed_tracking_is_gated_around_the_bump_only():
     assert env._track_gate() == 0.0
     env._s_pos = x0 + L + 5.0
     assert env._track_gate() == 1.0
+
+
+def test_slowdown_hold_penalty_charges_only_positive_actions():
+    from dataclasses import replace
+    cfg = replace(load_reward_config(), hold_penalty=1.0)
+    rewards = {}
+    for u in (-0.0, 1.0):
+        env = HalfCarEnv(reward_config=cfg, action_mode="slowdown")
+        env.reset(seed=2)
+        rewards[u] = env.step(np.full(1, u, dtype=np.float32))[1]
+    assert rewards[1.0] < rewards[-0.0] - 0.5
