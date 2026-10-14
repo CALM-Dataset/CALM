@@ -5,10 +5,10 @@ import gymnasium as gym
 from gymnasium import spaces
 
 from road.road_generator import RoadGenerator
-from gym_env.common.reward_params import RewardConfig, load_reward_config
-from gym_env.common.reward import compute_reward, compute_terminal_reward
+from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
+from gym_env.common.reward.reward import compute_reward, compute_terminal_reward
 from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN
-from gym_env.common.render_params import (
+from gym_env.common.render.render_params import (
     RENDER_Y_SCALE,
     RENDER_SHOW_TS,
     RENDER_TS_Z,

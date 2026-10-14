@@ -3,11 +3,11 @@ import os
 
 import numpy as np
 
-from gym_env.common.render import (
+from gym_env.common.render.render import (
     Hud, Road, Wheel, build_bump_vlines, draw_sky, wheel_radius_x, bump_signature, close_env, damper_xy, grab_key_focus, ground_symbol_xy,
     init_music, render_bumps, render_env, spring_xy, wait_for_episode_nav,
 )
-from gym_env.common.render_params import RENDER_MUSIC
+from gym_env.common.render.render_params import RENDER_MUSIC
 
 from gym_env.half_car.config.render_params import (
     RENDER_Y_W_NOM, RENDER_Y_B_NOM,

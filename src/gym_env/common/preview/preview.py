@@ -6,7 +6,7 @@ from gymnasium import spaces
 from scipy.signal import find_peaks
 
 from utils.paths import ROOT
-from gym_env.common.preview_params import PreviewConfig, load_preview_config
+from gym_env.common.preview.preview_params import PreviewConfig, load_preview_config
 from gym_env.common.env_params import DT
 
 

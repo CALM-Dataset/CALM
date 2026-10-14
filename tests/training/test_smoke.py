@@ -1,6 +1,6 @@
 import numpy as np
 
-from gym_env.common.curriculum import load_curriculum_config
+from gym_env.common.wrappers.curriculum import load_curriculum_config
 from train.agent import build_model
 from train.environment import make_vec_env
 from utils.paths import ROOT
@@ -19,7 +19,7 @@ def test_short_training_run():
 
 
 def test_eval_ignores_the_controller_weight():
-    from gym_env.common.reward import get_track_scale_override, set_track_scale_override
+    from gym_env.common.reward.reward import get_track_scale_override, set_track_scale_override
     from train.monitoring import base_speed_weight
 
     set_track_scale_override(2.5)

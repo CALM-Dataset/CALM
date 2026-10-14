@@ -1,9 +1,9 @@
 import gymnasium as gym
 import numpy as np
 
-from gym_env.common.reward_params import load_reward_config
+from gym_env.common.reward.reward_params import load_reward_config
 from gym_env.half_car.envs import HalfCarEnv
-from gym_env.common.reward import compute_reward
+from gym_env.common.reward.reward import compute_reward
 from gym_env.common import TerminationWrapper
 from utils.paths import ROOT
 
@@ -71,7 +71,7 @@ def test_body_acceleration_costs_reward():
 
 def test_same_seed_same_training_episodes():
 
-    from gym_env.common.curriculum import load_curriculum_config
+    from gym_env.common.wrappers.curriculum import load_curriculum_config
     from train.environment import _make_env
 
     cfg = load_curriculum_config(ROOT / "config" / "curriculum" / "curriculum.yaml")

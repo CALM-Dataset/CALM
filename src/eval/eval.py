@@ -18,10 +18,10 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from gym_env.common import PreviewWrapper, TerminationWrapper
-from gym_env.common.render import RenderQuit
+from gym_env.common.render.render import RenderQuit
 from gym_env.vehicles import get_vehicle
-from gym_env.common.reward_utils import reward_bounds
-from gym_env.common.reward_params import load_reward_config
+from gym_env.common.utils.reward_utils import reward_bounds
+from gym_env.common.reward.reward_params import load_reward_config
 from gym_env.common.env_params import EPISODE_STEPS, DT
 from utils.scenario_loader import load_scenario_any, enabled_eval_suites, scenario_title
 

@@ -45,7 +45,7 @@ class Objective:
         trial_seed = self.seed + trial.number
         meta       = self._base["training"]
 
-        from gym_env.common.curriculum import load_curriculum_config
+        from gym_env.common.wrappers.curriculum import load_curriculum_config
         curriculum_cfg = load_curriculum_config(_CURRICULUM_PATH)
 
         algo_kwargs = {**self._base["PPO"], **params}

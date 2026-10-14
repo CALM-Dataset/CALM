@@ -3,8 +3,8 @@ from __future__ import annotations
 import gymnasium as gym
 
 from gym_env.common.env_params import DT, TRUNC_SUSP_TRAVEL, TRUNC_BODY_DISP, TRUNC_DAMPER_VEL, POST_BUMP_MARGIN, POST_BUMP_MARGIN_MATCH_FLAT_START
-from gym_env.common.reward_params import RewardConfig, load_reward_config
-from gym_env.common.reward import compute_terminal_reward
+from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
+from gym_env.common.reward.reward import compute_terminal_reward
 
 _REAL_TAIL_MARGIN_M = 3.0
 

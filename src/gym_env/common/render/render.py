@@ -4,8 +4,8 @@ from typing import Tuple
 
 import numpy as np
 
-from gym_env.common.jukebox import Jukebox
-from gym_env.common.render_params import (
+from gym_env.common.utils.jukebox import Jukebox
+from gym_env.common.render.render_params import (
     RENDER_BUMP_MARKERS, RENDER_MUSIC_JUKEBOX, RENDER_MUSIC_MUTED, RENDER_MUSIC_TRACK,
     RENDER_FULLSCREEN, RENDER_MUSIC_VOLUME, RENDER_TOOLBAR, RENDER_Y_SCALE,
 )

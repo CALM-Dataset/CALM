@@ -21,11 +21,11 @@ from train.environment import (
     make_real_val_env, load_real_val_scenarios,
 )
 from train.seed import seed_everything
-from gym_env.common.reward_params import load_reward_config
-from gym_env.common.preview_params import load_preview_config
+from gym_env.common.reward.reward_params import load_reward_config
+from gym_env.common.preview.preview_params import load_preview_config
 from gym_env.common.env_params import EPISODE_STEPS
-from gym_env.common.reward_utils import reward_bounds
-from gym_env.common.curriculum import load_curriculum_config
+from gym_env.common.utils.reward_utils import reward_bounds
+from gym_env.common.wrappers.curriculum import load_curriculum_config
 
 
 _CONFIG_PATH      = _ROOT / "config" / "agent" / "algo_configs.yaml"

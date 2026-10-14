@@ -1,4 +1,4 @@
-from gym_env.common.reward_params import RewardConfig
+from gym_env.common.reward.reward_params import RewardConfig
 
 _ACC_WORST_G    = 1.0
 _VEL_WORST      = 1.0
