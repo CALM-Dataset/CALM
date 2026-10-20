@@ -16,11 +16,11 @@ from gym_env.vehicles import get_vehicle
 
 
 class ActionSaturationPenalty(gym.Wrapper):
-    def __init__(self, env: gym.Env, coef: float):
+    def __init__(self, env: gym.Env, coef: float, high: float | None = None):
         super().__init__(env)
         self._coef = float(coef)
         self._low = env.action_space.low
-        self._high = env.action_space.high
+        self._high = env.action_space.high if high is None else np.full_like(env.action_space.high, high)
         self.action_space = gym.spaces.Box(-10.0, 10.0, shape=env.action_space.shape, dtype=np.float32)
 
     def step(self, action):
@@ -51,7 +51,7 @@ def _make_env(
         env = PreviewWrapper(env)
         env = CurriculumWrapper(env, curriculum_cfg, n_envs=n_envs)
         if action_penalty > 0.0:
-            env = ActionSaturationPenalty(env, action_penalty)
+            env = ActionSaturationPenalty(env, action_penalty, high=0.0 if env.unwrapped._action_mode == "slowdown" else None)
         if monitor_dir:
             Path(monitor_dir).mkdir(parents=True, exist_ok=True)
             env = Monitor(env, str(Path(monitor_dir) / f"env{seed}"))

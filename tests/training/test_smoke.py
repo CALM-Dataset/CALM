@@ -16,3 +16,19 @@ def test_short_training_run():
     action, _ = model.predict(venv.reset(), deterministic=True)
     assert np.all(np.abs(action) <= 1.0 + 1e-6)
     venv.close()
+
+
+def test_slowdown_mode_charges_positive_actions_and_clips_them_to_hold():
+    import gymnasium as gym
+    from gym_env.half_car.envs import HalfCarEnv
+    from train.environment import ActionSaturationPenalty
+
+    def one_step(u):
+        env = ActionSaturationPenalty(HalfCarEnv(action_mode="slowdown"), 1.0, high=0.0)
+        env.reset(seed=2)
+        return env.step(np.full(1, u, dtype=np.float32))[1], env.unwrapped._v
+
+    r_hold, v_hold = one_step(0.0)
+    r_pos, v_pos = one_step(0.8)
+    assert r_pos < r_hold - 0.3
+    assert v_pos == v_hold

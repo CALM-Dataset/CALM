@@ -1,6 +1,6 @@
 
 PPO:
-  policy: TanhMeanPolicy
+  policy: MlpPolicy
   learning_rate: lin_3e-4_5e-5
   n_steps: 2048
   batch_size: 2048
@@ -32,4 +32,4 @@ training:
   checkpoint_freq: 500_000
   norm_obs: true
   norm_reward: true
-  action_saturation_penalty: 0.1
+  action_saturation_penalty: 0.3
