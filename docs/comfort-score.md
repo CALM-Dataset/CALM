@@ -176,9 +176,9 @@ A plain PPO on this objective collapsed to one of two extremes, crawling at the
 bumps. The final setup adds six things, each in response to a diagnosed
 failure.
 
-1. The action is a recommended speed between the 8 km/h minimum and the
-   scenario speed, tracked by a follower (gain 2 per second, at most 5 m/s²)
-   (`action_mode: target_speed` in `config/gym_env/env.yaml`). The speed can
+1. The action is a recommended slowdown: 0 holds the scenario speed and -1
+   goes down to the 8 km/h minimum, tracked by a follower (gain 2 per second, at most 5 m/s²)
+   (`action_mode: slowdown` in `config/gym_env/env.yaml`). The speed can
    never exceed the scenario speed.
 2. The mean of the Gaussian policy is bounded by a tanh
    (`src/train/policy.py`), and actions that fall outside the allowed range are
@@ -186,11 +186,10 @@ failure.
    sat beyond the limits at every step (mean action between −2.5 and −4.3),
    where every sample is clipped to the same action and no learning signal
    remains.
-3. The speed weight is set by a feedback controller (`speed_controller` in
-   `config/agent/algo_configs.yaml`) that raises it when the average speed over
-   a rollout is below a target fraction of the scenario speed and lowers it
-   when above. Fixed weights flipped between crawling and cruising; with the
-   controller the policy sits where the target puts it. The final runs use 0.6.
+3. Time is priced directly: every step costs `time_cost * DT` (`time_cost` in
+   `config/reward/reward.yaml`, in reward units per second), so slowing down
+   costs reward in proportion to the delay and speeding up again is rewarded.
+   `time_cost` moves the policy along the comfort/time curve.
 4. `gae_lambda` is 0.995. At a 50 Hz control rate the usual 0.95 gives a credit
    horizon of about 0.4 s, while braking has to start 1–2 s before a bump.
 5. The preview gives time to the bump and its excitation frequency instead of

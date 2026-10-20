@@ -7,6 +7,7 @@ from gymnasium import spaces
 from road.road_generator import RoadGenerator
 from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
 from gym_env.common.reward.reward import compute_reward, compute_terminal_reward
+from eval.iso2631 import WkStream
 from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN
 from gym_env.common.render.render_params import (
     RENDER_Y_SCALE,
@@ -199,19 +200,11 @@ class CarEnv(gym.Env):
         self._termination_reason = ""
 
         self._prev_a           = 0.0
+        self._wk               = WkStream(DT)
 
         self._freeze_render = False
 
         return self._obs(), self._info(0.0)
-
-    def _track_gate(self) -> float:
-        free = self._rcfg.track_free_m
-        if free <= 0.0:
-            return 1.0
-        for x0, _, L in self._road._bumps:
-            if x0 - free <= self._s_pos <= x0 + L:
-                return 0.0
-        return 1.0
 
     def step(self, action):
         cfg = self._rcfg
@@ -219,10 +212,7 @@ class CarEnv(gym.Env):
         u     = float(np.clip(action[0], -1.0, 1.0))
         v_old = self._v
         v_top = max(cfg.v_hard_min, self._v_episode_ref)
-        if self._action_mode == "target_speed":
-            v_target = cfg.v_hard_min + (v_top - cfg.v_hard_min) * 0.5 * (u + 1.0)
-            a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
-        elif self._action_mode == "slowdown":
+        if self._action_mode == "slowdown":
             v_target = v_top + (v_top - cfg.v_hard_min) * min(u, 0.0)
             a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
         else:
@@ -262,19 +252,16 @@ class CarEnv(gym.Env):
         z_W_ddot_both = 0.5 * (z_Wf_ddot + z_Wr_ddot)
         reward, breakdown = compute_reward(
             v=v_new,
-            z_B_ddot=self._last_z_B_ddot,
+            z_B_ddot=self._wk.step(z_B_ddot) if cfg.wk_heave else self._last_z_B_ddot,
             z_W_ddot=z_W_ddot_both,
             a_actual=a_actual,
             a_prev=self._prev_a,
             cfg=cfg,
             v_ref=v_init,
             phi_ddot=self._last_phi_ddot,
-            track_gate=self._track_gate(),
+            dt=DT,
         )
         self._speed_err_sq   += (v_init - v_new) ** 2
-
-        if self._action_mode == "slowdown":
-            reward -= cfg.hold_penalty * max(u, 0.0) ** 2
 
         self._episode_reward += reward
 

@@ -5,18 +5,6 @@ import numpy as np
 from gym_env.common.reward.reward_params import RewardConfig
 
 
-_track_scale_override: float | None = None
-
-
-def set_track_scale_override(value: float | None) -> None:
-    global _track_scale_override
-    _track_scale_override = value
-
-
-def get_track_scale_override() -> float | None:
-    return _track_scale_override
-
-
 def j_heave(z_B_ddot: float, g: float, clip: float) -> float:
     return -(np.clip(z_B_ddot, -clip, clip) / g) ** 2
 
@@ -68,7 +56,7 @@ def compute_reward(
     cfg: RewardConfig,
     v_ref: float = 0.0,
     phi_ddot: float = 0.0,
-    track_gate: float = 1.0,
+    dt: float = 0.0,
 ) -> tuple[float, dict]:
     v_nom = max(v_ref, 1e-8)
 
@@ -78,7 +66,7 @@ def compute_reward(
     Ja = j_long_acc(a_actual, cfg.g)
     Jj = j_long_jerk(a_actual, a_prev, cfg.g)
     Jv = j_speed_track(v, v_nom)
-    Qv_eff = cfg.Q_v * (cfg.track_scale if _track_scale_override is None else _track_scale_override)
+    Qv_eff = cfg.Q_v * cfg.track_scale
     Jas = -((a_actual - a_prev) / max(cfg.a_max, 1e-6)) ** 2
 
     total = (
@@ -88,8 +76,9 @@ def compute_reward(
         + cfg.Q_a      * Ja
         + cfg.w_jerk   * Jj
         + cfg.w_action_smooth * Jas
-        + Qv_eff       * track_gate * Jv
+        + Qv_eff       * Jv
         + cfg.Q_step
+        - cfg.time_cost * dt
     )
     total = float(np.nan_to_num(total, nan=0.0, posinf=0.0, neginf=0.0))
 
@@ -99,7 +88,7 @@ def compute_reward(
         "J_pitch":     float(cfg.Q_pitch  * Jp),
         "J_long_acc":  float(cfg.Q_a      * Ja),
         "J_long_jerk": float(cfg.w_jerk   * Jj),
-        "J_long_vel":  float(Qv_eff       * track_gate * Jv),
+        "J_long_vel":  float(Qv_eff       * Jv),
         "J_act_smooth": float(cfg.w_action_smooth * Jas),
         "J_total":     total,
     }

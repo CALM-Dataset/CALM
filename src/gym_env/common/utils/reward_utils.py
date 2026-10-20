@@ -1,3 +1,4 @@
+from gym_env.common.env_params import DT
 from gym_env.common.reward.reward_params import RewardConfig
 
 _ACC_WORST_G    = 1.0
@@ -25,6 +26,7 @@ def reward_bounds(cfg: RewardConfig, n_steps: int, n_bumps: int = 0) -> dict:
         + cfg.Q_v      * cfg.track_scale * -_VEL_WORST
         + cfg.w_action_smooth * -_ACT_SMOOTH_WORST
         + cfg.Q_step
+        - cfg.time_cost * DT
     )
 
     j_time_max = cfg.Q_t * cfg.terminal_bonus

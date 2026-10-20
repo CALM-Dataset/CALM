@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -13,18 +12,6 @@ from stable_baselines3.common.callbacks import (
     EvalCallback,
 )
 from stable_baselines3.common.vec_env import VecNormalize
-
-
-@contextmanager
-def base_speed_weight():
-    from gym_env.common.reward.reward import get_track_scale_override, set_track_scale_override
-
-    saved = get_track_scale_override()
-    set_track_scale_override(None)
-    try:
-        yield
-    finally:
-        set_track_scale_override(saved)
 
 
 class MetricsCallback(BaseCallback):
@@ -147,8 +134,7 @@ class PerformanceCurriculumCallback(EvalCallback):
 
     def _on_step(self) -> bool:
         eval_ran = self.eval_freq > 0 and (self.n_calls % self.eval_freq) == 0
-        with base_speed_weight():
-            result = super()._on_step()
+        result = super()._on_step()
         if eval_ran and self.last_mean_reward > -np.inf:
             self._on_eval_result(float(self.last_mean_reward))
 
@@ -302,8 +288,7 @@ class RealValidationCallback(BaseCallback):
         if self._eval_freq <= 0 or self.n_calls % self._eval_freq != 0 or not self._scenarios:
             return True
         self._venv.obs_rms = self._train_venv.obs_rms
-        with base_speed_weight():
-            returns = [self._rollout(road, track) for _, road, track in self._scenarios]
+        returns = [self._rollout(road, track) for _, road, track in self._scenarios]
         mean_ret = float(np.mean(returns))
         self.logger.record("real_val/mean_return", mean_ret)
         self.logger.record("real_val/n_scenarios", len(returns))
@@ -367,34 +352,3 @@ def build_callbacks(
 
     return CallbackList([eval_cb, ckpt_cb, metrics_cb, sync_cb]), curriculum_cb
 
-
-class SpeedWeightController(BaseCallback):
-    def __init__(self, target: float, init: float, gain: float, w_max: float):
-        super().__init__()
-        self._target, self._w, self._gain, self._w_max = float(target), float(init), float(gain), float(w_max)
-        self._ratios: list[float] = []
-
-    def _on_training_start(self) -> None:
-        from gym_env.common.reward.reward import set_track_scale_override
-        set_track_scale_override(self._w)
-
-    def _on_step(self) -> bool:
-        for info in self.locals.get("infos", []):
-            v, v_nom = info.get("speed"), info.get("v_init")
-            if v is not None and v_nom:
-                self._ratios.append(float(v) / float(v_nom))
-        return True
-
-    def _on_rollout_end(self) -> None:
-        from gym_env.common.reward.reward import set_track_scale_override
-        if self._ratios:
-            rho = sum(self._ratios) / len(self._ratios)
-            self._w = min(max(self._w + self._gain * (self._target - rho), 0.0), self._w_max)
-            self.logger.record("reward/speed_ratio", rho)
-            self._ratios.clear()
-        set_track_scale_override(self._w)
-        self.logger.record("reward/track_scale", self._w)
-
-    def _on_training_end(self) -> None:
-        from gym_env.common.reward.reward import set_track_scale_override
-        set_track_scale_override(None)

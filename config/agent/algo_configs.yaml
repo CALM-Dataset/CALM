@@ -33,8 +33,3 @@ training:
   norm_obs: true
   norm_reward: true
   action_saturation_penalty: 0.1
-  speed_controller:
-    target: 0.6
-    init: 0.3
-    gain: 1.0
-    max: 3.0

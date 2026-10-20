@@ -16,16 +16,3 @@ def test_short_training_run():
     action, _ = model.predict(venv.reset(), deterministic=True)
     assert np.all(np.abs(action) <= 1.0 + 1e-6)
     venv.close()
-
-
-def test_eval_ignores_the_controller_weight():
-    from gym_env.common.reward.reward import get_track_scale_override, set_track_scale_override
-    from train.monitoring import base_speed_weight
-
-    set_track_scale_override(2.5)
-    try:
-        with base_speed_weight():
-            assert get_track_scale_override() is None
-        assert get_track_scale_override() == 2.5
-    finally:
-        set_track_scale_override(None)

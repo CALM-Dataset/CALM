@@ -15,7 +15,7 @@ from utils.paths import ROOT as _ROOT
 
 from train.agent import build_model, load_algo_config, supported_algos
 from stable_baselines3.common.callbacks import CallbackList
-from train.monitoring import build_callbacks, RealValidationCallback, SpeedWeightController
+from train.monitoring import build_callbacks, RealValidationCallback
 from train.environment import (
     make_eval_vec_env, make_vec_env, restore_vecnormalize,
     make_real_val_env, load_real_val_scenarios,
@@ -335,11 +335,6 @@ def main() -> None:
         )
         callbacks = CallbackList([callbacks, real_val_cb])
         print(f"  real-sample: {len(real_val_scenarios)} training scenarios (not the held-out ones) → best_real/best_model")
-
-    ctrl = train_meta.get("speed_controller")
-    if ctrl:
-        callbacks = CallbackList([callbacks, SpeedWeightController(ctrl["target"], ctrl["init"], ctrl["gain"], ctrl["max"])])
-        print(f"  speed weight controller: target speed ratio {ctrl['target']}")
 
     bounds = reward_bounds(rcfg, EPISODE_STEPS, n_bumps=5)
 

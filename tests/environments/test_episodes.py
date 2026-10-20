@@ -51,17 +51,6 @@ def test_observations_stay_in_the_space():
                 break
 
 
-def test_target_speed_stays_below_scenario_speed():
-    env = gym.make("gym_env/HalfCar", action_mode="target_speed")
-    env.reset(seed=3)
-    top = env.unwrapped._v_episode_ref
-    for _ in range(300):
-        _, _, terminated, truncated, info = env.step(np.ones(1, dtype=np.float32))
-        assert info["speed"] <= top + 1e-9
-        if terminated or truncated:
-            break
-
-
 def test_body_acceleration_costs_reward():
     cfg = load_reward_config()
     calm, _ = compute_reward(5.0, 0.0, 0.0, 0.0, 0.0, cfg, v_ref=5.0)
@@ -104,24 +93,19 @@ def test_slowdown_mode_never_exceeds_scenario_speed_and_can_slow():
     assert min(speeds) < top
 
 
-def test_speed_tracking_is_gated_around_the_bump_only():
+def test_time_cost_makes_slowing_down_cost_reward():
     from dataclasses import replace
-    cfg = replace(load_reward_config(), track_free_m=30.0)
-    env = HalfCarEnv(reward_config=cfg)
-    env.reset(seed=1)
-    x0, _, L = env._road._bumps[0]
-    env._s_pos = x0 - 10.0
-    assert env._track_gate() == 0.0
-    env._s_pos = x0 + L + 5.0
-    assert env._track_gate() == 1.0
+    cfg = replace(load_reward_config(), time_cost=10.0, track_scale=0.0)
+    fast, _ = compute_reward(10.0, 0.0, 0.0, 0.0, 0.0, cfg, v_ref=10.0, dt=0.02)
+    slow, _ = compute_reward(5.0, 0.0, 0.0, 0.0, 0.0, cfg, v_ref=10.0, dt=0.02)
+    assert fast == slow
+    assert fast < 0.0
+    free, _ = compute_reward(10.0, 0.0, 0.0, 0.0, 0.0, replace(cfg, time_cost=0.0), v_ref=10.0, dt=0.02)
+    assert free > fast
 
 
-def test_slowdown_hold_penalty_charges_only_positive_actions():
-    from dataclasses import replace
-    cfg = replace(load_reward_config(), hold_penalty=1.0)
-    rewards = {}
-    for u in (-0.0, 1.0):
-        env = HalfCarEnv(reward_config=cfg, action_mode="slowdown")
-        env.reset(seed=2)
-        rewards[u] = env.step(np.full(1, u, dtype=np.float32))[1]
-    assert rewards[1.0] < rewards[-0.0] - 0.5
+def test_weighted_heave_ignores_a_constant_offset():
+    from eval.iso2631 import WkStream
+    f = WkStream(0.02)
+    out = [f.step(3.0) for _ in range(2000)]
+    assert abs(out[-1]) < 1e-3

@@ -13,10 +13,10 @@ class RewardConfig:
     Q_v:       float =  1.0
     track_scale: float = 1.0
     Q_step:    float =  0.5
+    time_cost: float =  0.0
+    wk_heave:  bool  = False
     w_jerk:          float = 1.0
     w_action_smooth: float = 0.0
-    track_free_m:    float = 0.0
-    hold_penalty:    float = 0.0
     g:          float = 9.81
     heave_clip: float = 1.0e9
     wheel_clip: float = 1.0e9
@@ -58,10 +58,10 @@ def load_reward_config() -> RewardConfig:
         Q_v             = float(w.get("Q_v",              1.0)),
         track_scale     = float(w.get("track_scale",      1.0)),
         Q_step          = float(w.get("Q_step",           0.5)),
+        time_cost       = float(w.get("time_cost",        0.0)),
+        wk_heave        = bool(w.get("wk_heave",          False)),
         w_jerk          = float(w.get("w_jerk",           1.0)),
         w_action_smooth = float(w.get("w_action_smooth",  0.0)),
-        track_free_m    = float(w.get("track_free_m",     0.0)),
-        hold_penalty    = float(w.get("hold_penalty",     0.0)),
 
         g          = float(v.get("g",          9.81)),
         heave_clip = float(v.get("heave_clip", 1.0e9)),
