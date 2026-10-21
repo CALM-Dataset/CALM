@@ -8,7 +8,7 @@ from road.road_generator import RoadGenerator
 from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
 from gym_env.common.reward.reward import compute_reward, compute_terminal_reward
 from eval.iso2631 import WkStream
-from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN
+from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN, SPEED_FLOOR_RATIO
 from gym_env.common.render.render_params import (
     RENDER_Y_SCALE,
     RENDER_SHOW_TS,
@@ -212,12 +212,14 @@ class CarEnv(gym.Env):
         u     = float(np.clip(action[0], -1.0, 1.0))
         v_old = self._v
         v_top = max(cfg.v_hard_min, self._v_episode_ref)
+        v_floor = max(cfg.v_hard_min, SPEED_FLOOR_RATIO * v_top) if self._action_mode == "slowdown" else cfg.v_hard_min
+        v_floor = min(v_floor, v_top)
         if self._action_mode == "slowdown":
-            v_target = v_top + (v_top - cfg.v_hard_min) * min(u, 0.0)
+            v_target = v_top + (v_top - v_floor) * min(u, 0.0)
             a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
         else:
             a_cmd = u * cfg.a_max
-        v_new = float(np.clip(v_old + a_cmd * DT, cfg.v_hard_min, v_top))
+        v_new = float(np.clip(v_old + a_cmd * DT, v_floor, v_top))
         a_actual = (v_new - v_old) / DT
         self._v        = v_new
         self._state[self._ode.v_index] = v_new

@@ -132,3 +132,14 @@ def test_action_repeat_can_expose_every_inner_step():
     _, reward, _, _, info = rep.step(np.zeros(1, dtype=np.float32))
     assert len(info["inner"]) == 4
     assert abs(sum(i["step_reward"] for i in info["inner"]) - reward) < 1e-9
+
+
+def test_speed_floor_ratio_keeps_slowdown_above_the_floor(monkeypatch):
+    import gym_env.common.car_env as ce
+
+    monkeypatch.setattr(ce, "SPEED_FLOOR_RATIO", 0.7)
+    env = HalfCarEnv(action_mode="slowdown")
+    env.reset(seed=3)
+    top = env._v_episode_ref
+    low = min(env.step(np.full(1, -1.0, dtype=np.float32))[4]["speed"] for _ in range(600))
+    assert low >= 0.7 * top - 1e-6

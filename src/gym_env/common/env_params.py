@@ -15,6 +15,7 @@ POST_BUMP_MARGIN_MATCH_FLAT_START = bool(_cfg.get("POST_BUMP_MARGIN_MATCH_FLAT_S
 
 ACTION_MODE = str(_cfg.get("action_mode", "acceleration"))
 SPEED_GAIN = float(_cfg.get("speed_gain", 2.0))
+SPEED_FLOOR_RATIO = float(_cfg.get("speed_floor_ratio", 0.0))
 ACTION_REPEAT = int(_cfg.get("action_repeat", 1))
 
 SUSPENSION = {key: float(_cfg[key]) for key in (
