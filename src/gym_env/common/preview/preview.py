@@ -66,7 +66,7 @@ class PreviewWrapper(gym.ObservationWrapper):
         super().__init__(env)
 
         self._cfg = cfg or load_preview_config()
-        n_prev    = self._cfg.n_peaks * 3
+        n_prev    = self._cfg.n_peaks * 4 + 3 if self._cfg.features == "v2" else self._cfg.n_peaks * 3
 
         orig_high = env.observation_space.high
         orig_low  = env.observation_space.low
@@ -77,14 +77,17 @@ class PreviewWrapper(gym.ObservationWrapper):
             dtype=np.float32,
         )
 
-        self.preview: np.ndarray = np.tile(
-            [1.0, 0.0, 0.0], self._cfg.n_peaks
-        ).astype(np.float32)
+        self.preview: np.ndarray = self._empty_preview()
         self._filtered_preview = self.preview.copy()
         self._track = None
         self._model = None
         if self._cfg.perception_mode == "model":
             self._model = load_perception_model(self._cfg.model_path)
+
+    def _empty_preview(self) -> np.ndarray:
+        if self._cfg.features == "v2":
+            return np.concatenate([np.tile([1.0, 0.0, 0.0, 0.0], self._cfg.n_peaks), [1.0, 1.0, 0.0]]).astype(np.float32)
+        return np.tile([1.0, 0.0, 0.0], self._cfg.n_peaks).astype(np.float32)
 
     def set_perception_track(self, track):
         self._track = track
@@ -94,15 +97,58 @@ class PreviewWrapper(gym.ObservationWrapper):
         return np.concatenate([obs, peak_obs]).astype(np.float32)
 
     def reset(self, **kwargs):
-        self._filtered_preview = np.tile(
-            [1.0, 0.0, 0.0], self._cfg.n_peaks
-        ).astype(np.float32)
+        self._filtered_preview = self._empty_preview()
         self.preview = self._filtered_preview.copy()
         return super().reset(**kwargs)
+
+    def _compute_v2(self) -> np.ndarray:
+        cfg = self._cfg
+        env = self.env.unwrapped
+        D   = cfg.preview_distance
+        s   = float(env._s_pos)
+        v   = float(env._v)
+        v_top = max(float(env._rcfg.v_hard_min), float(env._v_episode_ref))
+        bumps = sorted((b for b in env._road._bumps if b[1] > 0.0), key=lambda b: b[0])
+        ahead = [(x0 - s, A, L) for x0, A, L in bumps if x0 + L > s and x0 - s <= D]
+        out = self._empty_preview()
+        rng = self.np_random
+        for i, (d_start, A, L) in enumerate(ahead[: cfg.n_peaks]):
+            d_start = max(d_start, 0.0)
+            if self._track is not None and cfg.perception_mode in ("replay", "model"):
+                tmp = _apply_perception_replay(np.array([d_start / D, 0.0, 0.0], dtype=np.float32), d_start,
+                                               self._track, cfg.on_bump_m, cfg.sentinel, D)
+                detected = not (tmp[0] == 1.0 and tmp[1] == 0.0)
+                d_seen = float(tmp[0]) * D
+            elif cfg.perception_mode == "model" and self._model is not None and rng is not None:
+                tmp = _apply_perception_model(np.array([d_start / D, 0.0, 0.0], dtype=np.float32), d_start,
+                                              self._model, rng, cfg.on_bump_m, cfg.sentinel, D)
+                detected = not (tmp[0] == 1.0 and tmp[1] == 0.0)
+                d_seen = float(tmp[0]) * D
+            else:
+                detected, d_seen = True, d_start
+                if cfg.noise_active and rng is not None:
+                    d_seen = max(0.0, d_start + float(rng.normal(0.0, cfg.noise_distance_std)))
+                    A = max(0.0, A + float(rng.normal(0.0, cfg.noise_height_std)))
+                    L = max(0.1, L * (1.0 + float(rng.normal(0.0, cfg.noise_width_std))))
+            if not detected:
+                continue
+            out[i * 4]     = np.clip(d_seen / D, 0.0, 1.0)
+            out[i * 4 + 1] = np.clip(L / cfg.length_clip, 0.0, 1.0)
+            out[i * 4 + 2] = np.clip(A / cfg.h_clip, 0.0, 1.0)
+            out[i * 4 + 3] = np.clip((v_top / max(L, 0.1)) / cfg.freq_clip, 0.0, 1.0)
+        base = cfg.n_peaks * 4
+        passed = [s - (x0 + L) for x0, _, L in bumps if x0 + L <= s]
+        out[base]     = np.clip(v / v_top, 0.0, 1.0)
+        out[base + 1] = np.clip(min(passed) / D, 0.0, 1.0) if passed else 1.0
+        out[base + 2] = 1.0 if any(x0 <= s < x0 + L for x0, _, L in bumps) else 0.0
+        self.preview = out.copy()
+        return out
 
     def _compute_peaks(self) -> np.ndarray:
         cfg  = self._cfg
         env  = self.env.unwrapped
+        if cfg.features == "v2":
+            return self._compute_v2()
 
         v_safe = max(float(env._v), cfg.v_min_preview)
         v_min  = float(getattr(getattr(env, "_rcfg", None), "v_min", cfg.v_min_preview))

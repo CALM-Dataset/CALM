@@ -348,7 +348,8 @@ def main() -> None:
     print(f"  v_limit    : {rcfg.v_limit * 3.6:.0f} km/h")
     print(f"  v_min      : {rcfg.v_min * 3.6:.1f} km/h")
     pcfg = load_preview_config()
-    print(f"  preview    : {pcfg.n_peaks} peaks × 3 = {pcfg.n_peaks * 3} features over {pcfg.preview_distance}m")
+    n_feat = pcfg.n_peaks * 4 + 3 if pcfg.features == "v2" else pcfg.n_peaks * 3
+    print(f"  preview    : {pcfg.n_peaks} bumps, {n_feat} features ({pcfg.features}) over {pcfg.preview_distance}m")
     print(f"  curriculum : {len(curriculum_cfg['levels'])} levels, start={start_level}")
     print(f"  sparse     : {args.sparse_reward}")
     print(f"  output     : {model_dir}")

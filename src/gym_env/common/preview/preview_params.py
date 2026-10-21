@@ -19,6 +19,9 @@ class PreviewConfig:
 
     use_dist_obs:        bool  = True
     source:              str   = "bumps"
+    features:            str   = "v1"
+    length_clip:         float = 8.0
+    freq_clip:           float = 10.0
 
     dense_n:             int   = 200
     freq_max:            float = 21.74
@@ -51,6 +54,9 @@ def load_preview_config() -> PreviewConfig:
         pt1_tau             = float(cfg.get("pt1_tau",             0.05)),
         use_dist_obs        = bool( cfg.get("use_dist_obs",        True)),
         source              = str(  cfg.get("source",              "bumps")),
+        features            = str(  cfg.get("features",            "v1")),
+        length_clip         = float(cfg.get("length_clip",         8.0)),
+        freq_clip           = float(cfg.get("freq_clip",           10.0)),
         dense_n             = int(  cfg.get("dense_n",             200)),
         freq_max            = float(cfg.get("freq_max",            21.74)),
         v_min_preview       = float(cfg.get("v_min_preview",       0.5)),
