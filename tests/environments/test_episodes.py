@@ -109,3 +109,26 @@ def test_weighted_heave_ignores_a_constant_offset():
     f = WkStream(0.02)
     out = [f.step(3.0) for _ in range(2000)]
     assert abs(out[-1]) < 1e-3
+
+
+def test_action_repeat_sums_rewards_and_advances_several_steps():
+    from gym_env.common.wrappers.action_repeat import ActionRepeat
+
+    one = HalfCarEnv(action_mode="slowdown")
+    one.reset(seed=4)
+    ref = sum(one.step(np.zeros(1, dtype=np.float32))[1] for _ in range(5))
+    rep = ActionRepeat(HalfCarEnv(action_mode="slowdown"), 5)
+    rep.reset(seed=4)
+    _, reward, _, _, _ = rep.step(np.zeros(1, dtype=np.float32))
+    assert abs(reward - ref) < 1e-9
+    assert rep.unwrapped._step_count == 5
+
+
+def test_action_repeat_can_expose_every_inner_step():
+    from gym_env.common.wrappers.action_repeat import ActionRepeat
+
+    rep = ActionRepeat(HalfCarEnv(action_mode="slowdown"), 4, record_inner=True)
+    rep.reset(seed=4)
+    _, reward, _, _, info = rep.step(np.zeros(1, dtype=np.float32))
+    assert len(info["inner"]) == 4
+    assert abs(sum(i["step_reward"] for i in info["inner"]) - reward) < 1e-9

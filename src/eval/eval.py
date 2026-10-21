@@ -17,6 +17,7 @@ import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
+from gym_env.common.wrappers.action_repeat import with_action_repeat
 from gym_env.common import PreviewWrapper, TerminationWrapper
 from gym_env.common.render.render import RenderQuit
 from gym_env.vehicles import get_vehicle
@@ -149,7 +150,7 @@ def run_episode(
         env = gym.make(get_vehicle(vehicle).env_id, render_mode=render_mode,
                        random_road_on_reset=False)
         env = TerminationWrapper(env)
-        return PreviewWrapper(env)
+        return with_action_repeat(PreviewWrapper(env), record_inner=True)
 
     venv = DummyVecEnv([_env_fn])
     venv = VecNormalize.load(str(vecnorm_path), venv)
@@ -192,7 +193,12 @@ def run_episode(
         else:
             done      = step_result[2]
             info_list = step_result[3]
-        _record(ep, float(action[0, 0]), float(reward[0]), info_list[0])
+        inner = info_list[0].get("inner")
+        if inner:
+            for sub in inner:
+                _record(ep, float(action[0, 0]), sub["step_reward"], sub)
+        else:
+            _record(ep, float(action[0, 0]), float(reward[0]), info_list[0])
 
         if capture_frames:
             frame = venv.venv.envs[0].render()
