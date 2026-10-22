@@ -143,3 +143,32 @@ def test_speed_floor_ratio_keeps_slowdown_above_the_floor(monkeypatch):
     top = env._v_episode_ref
     low = min(env.step(np.full(1, -1.0, dtype=np.float32))[4]["speed"] for _ in range(600))
     assert low >= 0.7 * top - 1e-6
+
+
+def test_depth_mode_holds_at_the_hold_action_and_slows_when_pushed():
+    env = HalfCarEnv(action_mode="depth")
+    env.reset(seed=3)
+    top = env._v_episode_ref
+    held = []
+    for _ in range(600):
+        env.step(env.hold_action)
+        held.append(env._v)
+    assert max(held) <= top + 1e-9
+    assert held[-1] > top - 1e-3
+
+    env.reset(seed=3)
+    pushed = []
+    for _ in range(400):
+        env.step(np.array([env.action_space.high[0]], dtype=np.float32))
+        pushed.append(env._v)
+    assert min(pushed) < top * 0.5
+
+
+def test_depth_mode_slows_more_for_larger_actions():
+    def final_speed(a):
+        env = HalfCarEnv(action_mode="depth")
+        env.reset(seed=3)
+        for _ in range(300):
+            env.step(np.array([a], dtype=np.float32))
+        return env._v
+    assert final_speed(1.0) > final_speed(2.0) > final_speed(4.0)

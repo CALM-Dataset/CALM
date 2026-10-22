@@ -8,7 +8,7 @@ from road.road_generator import RoadGenerator
 from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
 from gym_env.common.reward.reward import compute_reward, compute_terminal_reward
 from eval.iso2631 import WkStream
-from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN, SPEED_FLOOR_RATIO
+from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN, SPEED_FLOOR_RATIO, DEPTH_OFFSET, DEPTH_SLOPE
 from gym_env.common.render.render_params import (
     RENDER_Y_SCALE,
     RENDER_SHOW_TS,
@@ -63,9 +63,10 @@ class CarEnv(gym.Env):
         self._rcfg = reward_config or load_reward_config()
         self._action_mode = action_mode or ACTION_MODE
 
+        bound = 8.0 if self._action_mode == "depth" else 1.0
         self.action_space = spaces.Box(
-            low=np.array([-1.0], dtype=np.float32),
-            high=np.array([ 1.0], dtype=np.float32),
+            low=np.array([-bound], dtype=np.float32),
+            high=np.array([ bound], dtype=np.float32),
         )
 
         obs_low, obs_high = self._vehicle.obs_bounds()
@@ -122,6 +123,11 @@ class CarEnv(gym.Env):
             "z_ddot": bool(show_ts_z_ddot),
         }
 
+
+    @property
+    def hold_action(self) -> np.ndarray:
+        value = -float(self.action_space.high[0]) if self._action_mode == "depth" else 0.0
+        return np.array([value], dtype=np.float32)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -209,13 +215,18 @@ class CarEnv(gym.Env):
     def step(self, action):
         cfg = self._rcfg
 
-        u     = float(np.clip(action[0], -1.0, 1.0))
+        bound = float(self.action_space.high[0])
+        u     = float(np.clip(action[0], -bound, bound))
         v_old = self._v
         v_top = max(cfg.v_hard_min, self._v_episode_ref)
-        v_floor = max(cfg.v_hard_min, SPEED_FLOOR_RATIO * v_top) if self._action_mode == "slowdown" else cfg.v_hard_min
+        v_floor = max(cfg.v_hard_min, SPEED_FLOOR_RATIO * v_top) if self._action_mode in ("slowdown", "depth") else cfg.v_hard_min
         v_floor = min(v_floor, v_top)
         if self._action_mode == "slowdown":
             v_target = v_top + (v_top - v_floor) * min(u, 0.0)
+            a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
+        elif self._action_mode == "depth":
+            depth = 1.0 / (1.0 + float(np.exp(-DEPTH_SLOPE * (u - DEPTH_OFFSET))))
+            v_target = v_top - (v_top - v_floor) * depth
             a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
         else:
             a_cmd = u * cfg.a_max

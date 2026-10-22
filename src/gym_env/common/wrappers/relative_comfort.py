@@ -30,9 +30,9 @@ def hold_reference(make_env: Callable[[], gym.Env], road, speed: float | None = 
         ref_road.set_speed(float(speed))
     env.reset(options={"road": ref_road})
     cost, done = 0.0, False
-    zero = np.zeros(env.action_space.shape, dtype=np.float32)
+    hold = env.unwrapped.hold_action
     while not done:
-        _, _, terminated, truncated, info = env.step(zero)
+        _, _, terminated, truncated, info = env.step(hold)
         cost -= info.get(_HEAVE, 0.0)
         done = terminated or truncated
     t = float(env.unwrapped._t)
