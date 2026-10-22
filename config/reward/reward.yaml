@@ -10,6 +10,9 @@ weights:
   Q_step:           0.0
   time_cost:        10.0
   wk_heave:         false
+  rel_scale:        0.0
+  rel_time_price:   0.0
+  rel_min_cost:     1.0
   w_jerk:           2.0
   w_action_smooth:  1.0
 
@@ -21,7 +24,7 @@ vertical:
 velocity:
   v_limit:     35.0
   v_min:       8.0
-  v_hard_min:  8.0
+  v_hard_min:  5.0
   v_init_low:  8.0
   a_max:       5.0
 

@@ -13,6 +13,7 @@ from gym_env.common import (
     TerminationWrapper,
 )
 from gym_env.common.wrappers.action_repeat import with_action_repeat
+from gym_env.common.wrappers.relative_comfort import RelativeComfort
 from gym_env.vehicles import get_vehicle
 
 
@@ -47,6 +48,7 @@ def _make_env(
     def _init() -> gym.Env:
         env = gym.make(env_id, **env_kwargs)
         env = TerminationWrapper(env)
+        env = RelativeComfort(env, lambda: TerminationWrapper(gym.make(env_id, **env_kwargs)))
         if sparse_reward:
             env = TerminalRewardWrapper(env)
         env = with_action_repeat(PreviewWrapper(env))
