@@ -4,22 +4,22 @@ import numpy as np
 
 from gym_env.common import TerminationWrapper
 from gym_env.common.reward.reward_params import load_reward_config
-from gym_env.common.wrappers.relative_comfort import RelativeComfort, _COMFORT_KEYS
+from gym_env.common.wrappers.relative_comfort import RelativeComfort
 from gym_env.half_car.envs import HalfCarEnv
 from road.road_generator import RoadGenerator
 
 
-def _make():
-    return TerminationWrapper(HalfCarEnv(action_mode="slowdown"))
+def _make(cfg=None):
+    return TerminationWrapper(HalfCarEnv(action_mode="slowdown", reward_config=cfg))
 
 
 def _hold_return(road, cfg):
-    env = RelativeComfort(_make(), _make, reward_config=cfg)
+    env = RelativeComfort(_make(cfg), lambda: _make(cfg), reward_config=cfg)
     env.reset(seed=0, options={"road": road})
     comfort, steps, done = 0.0, 0, False
     while not done:
         _, _, terminated, truncated, info = env.step(np.zeros(1, dtype=np.float32))
-        comfort += sum(info[k] for k in _COMFORT_KEYS) * env._comfort_gain
+        comfort += sum(info[k] for k in ("J_heave",)) * env._comfort_gain
         steps += 1
         done = terminated or truncated
     return comfort, env._time_step_cost * steps
@@ -54,3 +54,37 @@ def test_wrapper_is_inert_when_switched_off():
         a = plain.step(np.zeros(1, dtype=np.float32))[1]
         b = wrapped.step(np.zeros(1, dtype=np.float32))[1]
         assert abs(a - b) < 1e-9
+
+
+def _episode_comfort(road, cfg, speed_action):
+    env = RelativeComfort(_make(cfg), lambda: _make(cfg), reward_config=cfg)
+    env.reset(seed=0, options={"road": road})
+    total, done = 0.0, False
+    base = 0.0
+    while not done:
+        _, r, terminated, truncated, info = env.step(np.array([speed_action], dtype=np.float32))
+        base += r
+        done = terminated or truncated
+    return base
+
+
+def test_holding_speed_matches_the_equal_time_reference():
+    from dataclasses import replace as rep
+    cfg = rep(load_reward_config(), rel_scale=20.0, rel_time_price=0.0, rel_min_cost=1e-6,
+              rel_frontier=True, Q_a=0.0, w_jerk=0.0, w_action_smooth=0.0, time_cost=0.0,
+              Q_pitch=0.0, Q_zWddot=0.0)
+    on = _episode_comfort(_road(0.06), cfg, 0.0)
+    off = _episode_comfort(_road(0.06), rep(cfg, rel_frontier=False), 0.0)
+    assert abs(on - off) < 1.0
+
+
+def test_a_constant_slower_speed_scores_the_same_as_holding():
+    from dataclasses import replace as rep
+    cfg = rep(load_reward_config(), rel_scale=20.0, rel_time_price=0.0, rel_min_cost=1e-6,
+              rel_frontier=True, Q_a=0.0, w_jerk=0.0, w_action_smooth=0.0, time_cost=0.0,
+              Q_pitch=0.0, Q_zWddot=0.0)
+    bonus = cfg.terminal_bonus
+    hold = _episode_comfort(_road(0.06), cfg, 0.0) - bonus
+    slow = _episode_comfort(_road(0.06), cfg, -0.5) - bonus
+    assert abs(hold + 20.0) < 2.0
+    assert abs(slow + 20.0) < 4.0

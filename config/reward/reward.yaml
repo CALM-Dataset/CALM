@@ -13,6 +13,7 @@ weights:
   rel_scale:        0.0
   rel_time_price:   0.0
   rel_min_cost:     1.0
+  rel_frontier:     false
   w_jerk:           2.0
   w_action_smooth:  1.0
 
