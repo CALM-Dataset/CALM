@@ -203,3 +203,50 @@ def test_template_window_is_smooth_and_bounded():
     assert w.min() >= 0.0 and w.max() <= 1.0 + 1e-12
     assert np.max(np.abs(np.diff(w))) < 0.1
     assert w[0] == 0.0 and w[-1] == 0.0 and w.max() == 1.0
+
+
+def _choice_run(first, later=None):
+    from road.road_generator import RoadGenerator
+
+    road = RoadGenerator.from_scenario(vehicle_speed=6.0, flat_start=60.0, obstacles=[(0.06, 2.0)])
+    env = HalfCarEnv(action_mode="choice")
+    env.reset(seed=1, options={"road": road})
+    top = env._v_episode_ref
+    speeds, far = [], []
+    seen = False
+    for step in range(3000):
+        window = env._slowdown_window(env._s_pos)
+        action = first
+        if window > 0.0:
+            action = later if (seen and later is not None) else first
+            seen = True
+        env.step(np.array([action]))
+        (far if env._s_pos < 60.0 - 30.0 else speeds).append(env._v)
+        if env._s_pos > 70.0:
+            break
+    return top, far, speeds
+
+
+def test_choice_mode_menu_depth_sets_how_much_the_car_slows():
+    n = int(HalfCarEnv(action_mode="choice").action_space.n)
+    assert n >= 3
+    top, far, hold = _choice_run(0)
+    _, _, mid = _choice_run(n // 2)
+    _, _, deep = _choice_run(n - 1)
+    assert min(hold) > top - 1e-6
+    assert min(deep) < min(mid) < min(hold)
+
+
+def test_choice_mode_never_slows_away_from_the_bump():
+    n = int(HalfCarEnv(action_mode="choice").action_space.n)
+    top, far, _ = _choice_run(n - 1)
+    assert min(far) > top - 1e-6
+
+
+def test_choice_mode_keeps_the_depth_picked_when_the_bump_came_into_view():
+    n = int(HalfCarEnv(action_mode="choice").action_space.n)
+    _, _, kept = _choice_run(n - 1, later=0)
+    _, _, switched = _choice_run(0, later=n - 1)
+    _, _, deep = _choice_run(n - 1)
+    assert abs(min(kept) - min(deep)) < 1e-9
+    assert min(switched) > min(deep)

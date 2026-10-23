@@ -8,7 +8,7 @@ from road.road_generator import RoadGenerator
 from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
 from gym_env.common.reward.reward import compute_reward, compute_terminal_reward
 from eval.iso2631 import WkStream
-from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN, SPEED_FLOOR_RATIO, DEPTH_OFFSET, DEPTH_SLOPE, WINDOW_LEAD_FAR, WINDOW_LEAD_NEAR, WINDOW_AFTER, WINDOW_RELEASE
+from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN, SPEED_FLOOR_RATIO, DEPTH_OFFSET, DEPTH_SLOPE, WINDOW_LEAD_FAR, WINDOW_LEAD_NEAR, WINDOW_AFTER, WINDOW_RELEASE, CHOICE_DEPTHS
 from gym_env.common.render.render_params import (
     RENDER_Y_SCALE,
     RENDER_SHOW_TS,
@@ -63,11 +63,16 @@ class CarEnv(gym.Env):
         self._rcfg = reward_config or load_reward_config()
         self._action_mode = action_mode or ACTION_MODE
 
-        bound = 8.0 if self._action_mode in ("depth", "template") else 1.0
-        self.action_space = spaces.Box(
-            low=np.array([-bound], dtype=np.float32),
-            high=np.array([ bound], dtype=np.float32),
-        )
+        if self._action_mode == "choice":
+            self.action_space = spaces.Discrete(len(CHOICE_DEPTHS))
+        else:
+            bound = 8.0 if self._action_mode in ("depth", "template") else 1.0
+            self.action_space = spaces.Box(
+                low=np.array([-bound], dtype=np.float32),
+                high=np.array([ bound], dtype=np.float32),
+            )
+        self._choice_latched = False
+        self._choice_depth = 0.0
 
         obs_low, obs_high = self._vehicle.obs_bounds()
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
@@ -138,6 +143,8 @@ class CarEnv(gym.Env):
 
     @property
     def hold_action(self) -> np.ndarray:
+        if self._action_mode == "choice":
+            return np.array([0], dtype=np.int64)
         value = -float(self.action_space.high[0]) if self._action_mode in ("depth", "template") else 0.0
         return np.array([value], dtype=np.float32)
 
@@ -218,6 +225,8 @@ class CarEnv(gym.Env):
         self._termination_reason = ""
 
         self._prev_a           = 0.0
+        self._choice_latched   = False
+        self._choice_depth     = 0.0
         self._wk               = WkStream(DT)
 
         self._freeze_render = False
@@ -227,14 +236,28 @@ class CarEnv(gym.Env):
     def step(self, action):
         cfg = self._rcfg
 
-        bound = float(self.action_space.high[0])
-        u     = float(np.clip(action[0], -bound, bound))
+        if self._action_mode == "choice":
+            u = 0.0
+        else:
+            bound = float(self.action_space.high[0])
+            u     = float(np.clip(np.asarray(action).ravel()[0], -bound, bound))
         v_old = self._v
         v_top = max(cfg.v_hard_min, self._v_episode_ref)
-        v_floor = max(cfg.v_hard_min, SPEED_FLOOR_RATIO * v_top) if self._action_mode in ("slowdown", "depth", "template") else cfg.v_hard_min
+        v_floor = max(cfg.v_hard_min, SPEED_FLOOR_RATIO * v_top) if self._action_mode in ("slowdown", "depth", "template", "choice") else cfg.v_hard_min
         v_floor = min(v_floor, v_top)
         if self._action_mode == "slowdown":
             v_target = v_top + (v_top - v_floor) * min(u, 0.0)
+            a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
+        elif self._action_mode == "choice":
+            index = int(np.clip(np.asarray(action).ravel()[0], 0, len(CHOICE_DEPTHS) - 1))
+            window = self._slowdown_window(self._s_pos)
+            if window <= 0.0:
+                self._choice_latched = False
+                self._choice_depth = 0.0
+            elif not self._choice_latched:
+                self._choice_latched = True
+                self._choice_depth = CHOICE_DEPTHS[index]
+            v_target = v_top - (v_top - v_floor) * self._choice_depth * window
             a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
         elif self._action_mode in ("depth", "template"):
             depth = 1.0 / (1.0 + float(np.exp(-DEPTH_SLOPE * (u - DEPTH_OFFSET))))
