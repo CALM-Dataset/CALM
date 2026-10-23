@@ -172,3 +172,34 @@ def test_depth_mode_slows_more_for_larger_actions():
             env.step(np.array([a], dtype=np.float32))
         return env._v
     assert final_speed(1.0) > final_speed(2.0) > final_speed(4.0)
+
+
+def test_template_mode_only_slows_around_the_bumps():
+    from road.road_generator import RoadGenerator
+
+    road = RoadGenerator.from_scenario(vehicle_speed=6.0, flat_start=60.0, obstacles=[(0.06, 2.0)])
+    env = HalfCarEnv(action_mode="template")
+    env.reset(seed=1, options={"road": road})
+    top = env._v_episode_ref
+    push = np.array([env.action_space.high[0]], dtype=np.float32)
+    far, near = [], []
+    for _ in range(3000):
+        env.step(push)
+        (far if env._s_pos < 60.0 - 30.0 else near).append(env._v)
+        if env._s_pos > 66.0:
+            break
+    assert min(far) > top - 1e-3
+    assert min(near) < top * 0.7
+
+
+def test_template_window_is_smooth_and_bounded():
+    from road.road_generator import RoadGenerator
+
+    road = RoadGenerator.from_scenario(vehicle_speed=6.0, flat_start=60.0, obstacles=[(0.06, 2.0)])
+    env = HalfCarEnv(action_mode="template")
+    env.reset(seed=1, options={"road": road})
+    s = np.linspace(0.0, 90.0, 900)
+    w = np.array([env._slowdown_window(x) for x in s])
+    assert w.min() >= 0.0 and w.max() <= 1.0 + 1e-12
+    assert np.max(np.abs(np.diff(w))) < 0.1
+    assert w[0] == 0.0 and w[-1] == 0.0 and w.max() == 1.0

@@ -8,7 +8,7 @@ from road.road_generator import RoadGenerator
 from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
 from gym_env.common.reward.reward import compute_reward, compute_terminal_reward
 from eval.iso2631 import WkStream
-from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN, SPEED_FLOOR_RATIO, DEPTH_OFFSET, DEPTH_SLOPE
+from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN, SPEED_FLOOR_RATIO, DEPTH_OFFSET, DEPTH_SLOPE, WINDOW_LEAD_FAR, WINDOW_LEAD_NEAR, WINDOW_AFTER, WINDOW_RELEASE
 from gym_env.common.render.render_params import (
     RENDER_Y_SCALE,
     RENDER_SHOW_TS,
@@ -63,7 +63,7 @@ class CarEnv(gym.Env):
         self._rcfg = reward_config or load_reward_config()
         self._action_mode = action_mode or ACTION_MODE
 
-        bound = 8.0 if self._action_mode == "depth" else 1.0
+        bound = 8.0 if self._action_mode in ("depth", "template") else 1.0
         self.action_space = spaces.Box(
             low=np.array([-bound], dtype=np.float32),
             high=np.array([ bound], dtype=np.float32),
@@ -124,9 +124,21 @@ class CarEnv(gym.Env):
         }
 
 
+    def _slowdown_window(self, s: float) -> float:
+        wheelbase = float(self._ode.wheelbase)
+        weight = 0.0
+        for x0, _, length in getattr(self._road, "_bumps", []):
+            if s < x0:
+                ramp = (s - (x0 - WINDOW_LEAD_FAR)) / max(WINDOW_LEAD_FAR - WINDOW_LEAD_NEAR, 1e-6)
+            else:
+                ramp = 1.0 - (s - (x0 + length + wheelbase + WINDOW_AFTER)) / max(WINDOW_RELEASE, 1e-6)
+            ramp = float(np.clip(ramp, 0.0, 1.0))
+            weight = max(weight, ramp * ramp * (3.0 - 2.0 * ramp))
+        return weight
+
     @property
     def hold_action(self) -> np.ndarray:
-        value = -float(self.action_space.high[0]) if self._action_mode == "depth" else 0.0
+        value = -float(self.action_space.high[0]) if self._action_mode in ("depth", "template") else 0.0
         return np.array([value], dtype=np.float32)
 
     def reset(self, seed=None, options=None):
@@ -219,13 +231,15 @@ class CarEnv(gym.Env):
         u     = float(np.clip(action[0], -bound, bound))
         v_old = self._v
         v_top = max(cfg.v_hard_min, self._v_episode_ref)
-        v_floor = max(cfg.v_hard_min, SPEED_FLOOR_RATIO * v_top) if self._action_mode in ("slowdown", "depth") else cfg.v_hard_min
+        v_floor = max(cfg.v_hard_min, SPEED_FLOOR_RATIO * v_top) if self._action_mode in ("slowdown", "depth", "template") else cfg.v_hard_min
         v_floor = min(v_floor, v_top)
         if self._action_mode == "slowdown":
             v_target = v_top + (v_top - v_floor) * min(u, 0.0)
             a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
-        elif self._action_mode == "depth":
+        elif self._action_mode in ("depth", "template"):
             depth = 1.0 / (1.0 + float(np.exp(-DEPTH_SLOPE * (u - DEPTH_OFFSET))))
+            if self._action_mode == "template":
+                depth *= self._slowdown_window(self._s_pos)
             v_target = v_top - (v_top - v_floor) * depth
             a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
         else:
