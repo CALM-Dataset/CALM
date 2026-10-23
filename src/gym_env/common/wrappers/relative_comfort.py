@@ -64,6 +64,7 @@ class RelativeComfort(gym.Wrapper):
         self._time_step_cost = 0.0
         self._j_hold = 1.0
         self._j_ep = 0.0
+        self._t_hold = 1.0
 
     def reset(self, **kwargs):
         road = (kwargs.get("options") or {}).get("road")
@@ -78,6 +79,7 @@ class RelativeComfort(gym.Wrapper):
             pts = self._cache[key]
             t_hold, j_hold = pts[0][0], pts[0][1]
             self._frontier = pts
+            self._t_hold = max(t_hold, DT)
             self._j_hold = max(j_hold, self._cfg.rel_min_cost)
             self._comfort_gain = self._cfg.rel_scale / self._j_hold
             self._time_step_cost = self._cfg.rel_time_price * self._cfg.rel_scale * DT / max(t_hold, DT)
@@ -97,4 +99,6 @@ class RelativeComfort(gym.Wrapper):
                 and self.env.unwrapped._termination_reason == "completed":
             t = float(self.env.unwrapped._t)
             reward -= self._cfg.rel_scale * self._j_ep * (1.0 / self._equal_time_cost(t) - 1.0 / self._j_hold)
+            late = max(t / self._t_hold - 1.0, 0.0)
+            reward -= self._cfg.rel_time_quad * self._cfg.rel_scale * late ** 2
         return obs, reward, terminated, truncated, info

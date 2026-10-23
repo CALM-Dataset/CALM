@@ -88,3 +88,28 @@ def test_a_constant_slower_speed_scores_the_same_as_holding():
     slow = _episode_comfort(_road(0.06), cfg, -0.5) - bonus
     assert abs(hold + 20.0) < 2.0
     assert abs(slow + 20.0) < 4.0
+
+
+def test_quadratic_time_cost_grows_faster_than_the_delay():
+    from dataclasses import replace as rep
+    cfg = rep(load_reward_config(), rel_scale=20.0, rel_time_price=0.0, rel_min_cost=1e-6,
+              rel_frontier=True, Q_a=0.0, w_jerk=0.0, w_action_smooth=0.0, time_cost=0.0,
+              Q_pitch=0.0, Q_zWddot=0.0)
+    quad = rep(cfg, rel_time_quad=2.0)
+
+    def extra(action):
+        return _episode_comfort(_road(0.06), cfg, action) - _episode_comfort(_road(0.06), quad, action)
+
+    def delay(action):
+        env = RelativeComfort(_make(cfg), lambda: _make(cfg), reward_config=cfg)
+        env.reset(seed=0, options={"road": _road(0.06)})
+        done = False
+        while not done:
+            _, _, terminated, truncated, _ = env.step(np.array([action], dtype=np.float32))
+            done = terminated or truncated
+        return env.unwrapped._t / env._t_hold - 1.0
+
+    assert abs(extra(0.0)) < 1e-6
+    mild, deep = extra(-0.3), extra(-0.8)
+    assert 0.0 < mild < deep
+    assert deep / mild > delay(-0.8) / delay(-0.3)

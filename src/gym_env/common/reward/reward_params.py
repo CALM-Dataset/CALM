@@ -19,6 +19,7 @@ class RewardConfig:
     rel_time_price: float = 0.0
     rel_min_cost: float = 1.0
     rel_frontier: bool = False
+    rel_time_quad: float = 0.0
     w_jerk:          float = 1.0
     w_action_smooth: float = 0.0
     g:          float = 9.81
@@ -68,6 +69,7 @@ def load_reward_config() -> RewardConfig:
         rel_time_price  = float(w.get("rel_time_price",   0.0)),
         rel_min_cost    = float(w.get("rel_min_cost",     1.0)),
         rel_frontier    = bool(w.get("rel_frontier",      False)),
+        rel_time_quad   = float(w.get("rel_time_quad",    0.0)),
         w_jerk          = float(w.get("w_jerk",           1.0)),
         w_action_smooth = float(w.get("w_action_smooth",  0.0)),
 
