@@ -95,10 +95,12 @@ class RelativeComfort(gym.Wrapper):
         heave = info.get(_HEAVE, 0.0)
         self._j_ep -= heave
         reward = reward + heave * (self._comfort_gain - 1.0) - self._time_step_cost
+        if self._frontier and self._cfg.rel_time_quad > 0.0:
+            inner = self.env.unwrapped
+            lag = max(float(inner._t) - float(inner._s_pos) / max(float(inner._v_episode_ref), 1e-6), 0.0)
+            reward -= self._cfg.rel_time_quad * self._cfg.rel_scale * (lag / self._t_hold) ** 2 * DT / self._t_hold
         if (terminated or truncated) and self._frontier and self._cfg.rel_frontier \
                 and self.env.unwrapped._termination_reason == "completed":
             t = float(self.env.unwrapped._t)
             reward -= self._cfg.rel_scale * self._j_ep * (1.0 / self._equal_time_cost(t) - 1.0 / self._j_hold)
-            late = max(t / self._t_hold - 1.0, 0.0)
-            reward -= self._cfg.rel_time_quad * self._cfg.rel_scale * late ** 2
         return obs, reward, terminated, truncated, info
