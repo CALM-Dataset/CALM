@@ -209,7 +209,7 @@ Real scenarios make up 75 % of each batch (`real_fraction` in
 `config/curriculum/curriculum.yaml`); the rest are single synthetic bumps whose
 height (30–120 mm) and width (1.5–7 m) are sampled from the real range
 (`real_range` in `config/train/scenario_gen.yaml`) with 10–20 m approaches and
-split into four severity tiers. The real part is the 85 seen scenarios; the 20
+split into four severity tiers. The real part is the 91 seen scenarios; the 14
 held-out ones (see below) are never trained on. The synthetic multi-bump and
 hole suites are not trained on.
 
@@ -220,10 +220,19 @@ the CALM-Scenarios dataset, regenerated with the perception pipeline set to the
 8 m width limit and wheel-only height described above. They are split by
 location: the held-out locations are the German locations with fewer than five
 usable scenarios (sindelfingen, stuttgart) plus one German and one Italian
-location drawn with seed 69 (augsburg, nardo), giving 20 unseen scenarios
-(`real`) against 85 seen in training (`real_train`); `real_all` runs both. The
-rule was fixed before any result and is listed in `split.yaml` of the dataset.
-Seen and unseen are reported separately where it matters.
+location drawn with seed 69 (augsburg, nardo), giving 20 scenarios in held-out
+locations. The rule was fixed before any result and is listed in `split.yaml` of
+the dataset.
+
+The recorded human drive sped up into the bump on one of the 20 (sindelfingen_sb01), and on five more
+(augsburg_sb01, sb04, sb05, sb06 and sindelfingen_sb14) the bump starts within 15 m of the
+recording start, so the approach speed cannot be read. Those six are used for training. The
+evaluation set is the remaining 14 (`real`) against 91 seen in training (`real_train`); `real_all` runs
+both. `paper_split` in `split.yaml` lists the 14, and the dataset puller applies it. Seen and unseen are
+reported separately where it matters.
+
+The results tables below were computed on the earlier 20-scenario held-out set and
+have not been recomputed for the 14.
 
 The IMU calibration was fitted on 13 scenarios; the human replay matches the
 IMU to a median of 16 % over all 105 (86 within 30 %).
@@ -374,7 +383,7 @@ Replaying the MPC and constant-speed profiles under the training reward scored t
   preview, which gives only the distance to a marking (bump height and width
   are hidden until about 0.5 m), selective slowing by bump size is not possible
   and a policy can only slow near markings.
-- The held-out set is 20 scenarios from 4 locations.
+- The held-out set is 14 scenarios from 4 locations (20 before six were moved to training, see Scenarios).
 - The operating point is not controlled by the speed-weight target: targets 0.5
   and 0.7 hold the scenario speed, 0.6 does so in most trainings and settles
   slow in some (2 of 8). Results are reported at equal travel time for that
