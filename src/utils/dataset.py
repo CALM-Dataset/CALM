@@ -26,6 +26,19 @@ def real_files() -> list[tuple[Path, str]]:
     return sorted({**seen, **held}.values(), key=lambda t: t[0].name)
 
 
+def assign_split(stem: str, folder_split: str, eval_names: set[str] | None) -> str:
+    if eval_names is None:
+        return folder_split
+    return 'eval' if stem in eval_names else 'train'
+
+
+def paper_eval_names(split_file: Path) -> set[str] | None:
+    if not split_file.is_file():
+        return None
+    names = (yaml.safe_load(split_file.read_text()) or {}).get('paper_split', {}).get('eval')
+    return set(names) if names else None
+
+
 ITALY_LOCATIONS = ('carmiano', 'salice_salentino', 'nardo', 'monteroni_di_lecce')
 
 
@@ -124,15 +137,17 @@ def ensure_local() -> None:
                     "request access on its Hugging Face page, then run `hf auth login` with a token that can read it."
                 ) from None
             raise
+        eval_names = paper_eval_names(Path(tmp, 'split.yaml'))
+        targets = {'train': (_real_dir(), seen_dir), 'eval': (_eval_dir() / 'real',)}
         for region in REGIONS:
-            for split, dsts in (('train', (_real_dir(), seen_dir)), ('eval', (_eval_dir() / 'real',))):
-                for f in Path(tmp, region, split).glob('*.json'):
+            for folder_split in ('train', 'eval'):
+                for f in Path(tmp, region, folder_split).glob('*.json'):
                     # low-confidence bumps may not exist on the road, so they are skipped
                     bumps = json.loads(f.read_text()).get('bumps') or []
                     if bumps and bumps[0].get('low_confidence'):
                         skipped += 1
                         continue
-                    for dst in dsts:
+                    for dst in targets[assign_split(f.stem, folder_split, eval_names)]:
                         shutil.copy2(f, dst / f.name)
             model = Path(tmp, region, 'perception_model.yaml')
             if model.is_file() and not (perception_dir / 'perception_model.yaml').is_file():
