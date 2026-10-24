@@ -234,6 +234,13 @@ reported separately where it matters.
 The results tables below were computed on the earlier 20-scenario held-out set and
 have not been recomputed for the 14.
 
+The recorded human drive is placed on the trimmed road by the trim offset. The scenario road starts `meta.trim.offset_m`
+metres into the recorded drive (the loader reports the sum of that value and any trimming it does itself as
+`_trim_offset_m`), so the replay starts when the recorded distance reaches the offset, the scored span ends where the
+recording ends, and the measured IMU `a_w` covers the same time interval. On the 37 trimmed roads the IMU peak follows
+the bump crossing, computed from the drive's own distance, by 0.30 s (median) with the offset and by 0.97 s without it. Without
+the offset the scored span also runs past the recording by up to 5 m on 32 of the 105 roads.
+
 The IMU calibration was fitted on 13 scenarios; the human replay matches the
 IMU to a median of 16 % over all 105 (86 within 30 %).
 
