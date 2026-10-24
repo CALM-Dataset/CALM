@@ -6,7 +6,7 @@ from typing import Callable
 import gymnasium as gym
 import numpy as np
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 
 from gym_env.common import (
     CurriculumWrapper, EpisodeLogger, PreviewWrapper, TerminalRewardWrapper,
@@ -81,13 +81,14 @@ def make_vec_env(
     sparse_reward: bool = False,
     vehicle: str = "half",
     action_penalty: float = 0.0,
+    subproc: bool = False,
 ) -> VecNormalize:
     env_kwargs = env_kwargs or {}
     fns = [
         _make_env(base_seed + i, monitor_dir, env_kwargs, curriculum_cfg, n_envs, sparse_reward, vehicle, action_penalty)
         for i in range(n_envs)
     ]
-    venv = DummyVecEnv(fns)
+    venv = SubprocVecEnv(fns, start_method='fork') if subproc and n_envs > 1 else DummyVecEnv(fns)
     venv = VecNormalize(
         venv,
         norm_obs=norm_obs,

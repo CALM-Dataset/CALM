@@ -33,3 +33,4 @@ training:
   norm_obs: true
   norm_reward: true
   action_saturation_penalty: 0.3
+  subproc: false

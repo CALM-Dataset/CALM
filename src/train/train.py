@@ -287,6 +287,7 @@ def main() -> None:
         sparse_reward=args.sparse_reward,
         vehicle=args.vehicle,
         action_penalty=float(train_meta.get("action_saturation_penalty", 0.0)),
+        subproc=bool(train_meta.get("subproc", False)),
     )
     if args.resume and normalize:
         vn_path = Path(args.resume).parent / "vecnormalize.pkl"
