@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from baseline.mpc.config import horizon
-from eval.comfort_score import _metrics, end_point, find_window, human_speeds, replay
+from eval.comfort_score import _metrics, end_point, find_window, human_replay, replay
 from gym_env.common.env_params import DT
 from gym_env.half_car.core.ode_model import HalfCarODE
 from utils.scenario_loader import enabled_eval_suites, load_scenario_any
@@ -23,7 +23,7 @@ def _span(name: str, roots: list[Path], wheelbase: float) -> float:
     win = find_window(name, roots)
     if win is None:
         return end
-    h, n_rec = human_speeds(win, end)
+    h, n_rec, _ = human_replay(win, end, float(getattr(road, '_trim_offset_m', 0.0)))
     return min(end, float(np.sum(h[:n_rec]) * DT))
 
 

@@ -171,10 +171,12 @@ def load_scenario_json(path):
     r = d["road"]
     ds = float(r["ds_m"])
     start, end = edge_trim_indices(r["z"], ds, d.get("bumps") or [], _load_trim_cfg())
+    prior = float((d.get("meta") or {}).get("trim", {}).get("offset_m", 0.0))
     offset = start * ds
     z = r["z"][start:end]
     s_bump = float(d["bumps"][0]["s_bump_m"]) - offset if d.get("bumps") else d.get("s_bump_m")
     gen = RoadGenerator.from_profile(z, ds, s_bump=s_bump)
+    gen._trim_offset_m = prior + offset
     gen._bumps = [(float(b["s_bump_m"]) - offset, float(b.get("peak_z_m", 0.0)),
                    float(b.get("width_m", 1.0))) for b in (d.get("bumps") or [])]
     label = _real_label(d["name"]) if d.get("name") else _prettify_scenario_name(d.get("source_sequence", ""))
