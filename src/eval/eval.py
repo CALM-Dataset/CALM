@@ -196,9 +196,9 @@ def run_episode(
         inner = info_list[0].get("inner")
         if inner:
             for sub in inner:
-                _record(ep, float(action[0, 0]), sub["step_reward"], sub)
+                _record(ep, float(np.asarray(action).ravel()[0]), sub["step_reward"], sub)
         else:
-            _record(ep, float(action[0, 0]), float(reward[0]), info_list[0])
+            _record(ep, float(np.asarray(action).ravel()[0]), float(reward[0]), info_list[0])
 
         if capture_frames:
             frame = venv.venv.envs[0].render()
