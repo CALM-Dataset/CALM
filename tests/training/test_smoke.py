@@ -8,13 +8,13 @@ from utils.paths import ROOT
 
 def test_short_training_run():
     venv = make_vec_env(1, 0, load_curriculum_config(ROOT / "config" / "curriculum" / "curriculum.yaml"),
-                        action_penalty=0.1)
-    kwargs = {"policy": "TanhMeanPolicy", "n_steps": 256, "batch_size": 128, "n_epochs": 1,
+                        action_penalty=0.0)
+    kwargs = {"policy": "MlpPolicy", "n_steps": 256, "batch_size": 128, "n_epochs": 1,
               "policy_kwargs": {"net_arch": {"pi": [16], "vf": [16]}}}
     model = build_model("PPO", venv, kwargs, tensorboard_log=None, seed=0, verbose=0)
     model.learn(total_timesteps=512)
     action, _ = model.predict(venv.reset(), deterministic=True)
-    assert np.all(np.abs(action) <= 1.0 + 1e-6)
+    assert all(venv.action_space.contains(a) for a in action)
     venv.close()
 
 

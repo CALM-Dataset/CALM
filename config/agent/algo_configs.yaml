@@ -2,20 +2,19 @@
 PPO:
   policy: MlpPolicy
   learning_rate: lin_3e-4_5e-5
-  n_steps: 2048
-  batch_size: 2048
-  n_epochs: 5
-  gamma: 0.995
-  gae_lambda: 0.995
-  clip_range: 0.3
-  clip_range_vf: 0.3
-  target_kl: 0.03
+  n_steps: 64
+  batch_size: 128
+  n_epochs: 4
+  gamma: 1.0
+  gae_lambda: 1.0
+  clip_range: 0.2
+  clip_range_vf: 0.2
+  target_kl: 0.02
   normalize_advantage: true
-  ent_coef: 0.01
+  ent_coef: 0.3
   vf_coef: 0.5
   max_grad_norm: 0.5
   policy_kwargs:
-    log_std_init: -0.7
     ortho_init: true
     activation_fn: ReLU
     net_arch:
@@ -24,13 +23,13 @@ PPO:
 
 training:
   seed: 69
-  total_timesteps: 10_000_000
-  n_envs: 5
+  total_timesteps: 20_000
+  n_envs: 4
   n_eval_envs: 1
-  eval_freq: 100_000
+  eval_freq: 2_000
   n_eval_episodes: 30
-  checkpoint_freq: 500_000
+  checkpoint_freq: 4_000
   norm_obs: true
   norm_reward: true
-  action_saturation_penalty: 0.3
-  subproc: false
+  action_saturation_penalty: 0.0
+  subproc: true

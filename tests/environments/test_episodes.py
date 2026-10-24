@@ -67,12 +67,15 @@ def test_same_seed_same_training_episodes():
 
     def rollout(seed):
         env = _make_env(seed, None, {"render_mode": "none"}, cfg)()
-        rng = np.random.default_rng(0)
+        env.action_space.seed(0)
         out = []
         for _ in range(4):
             out.append(env.reset()[0])
             for _ in range(30):
-                out.append(env.step(rng.uniform(-1, 1, 1).astype(np.float32))[0])
+                step = env.step(env.action_space.sample())
+                out.append(step[0])
+                if step[2] or step[3]:
+                    break
         return np.array(out)
 
     assert np.array_equal(rollout(5), rollout(5))
