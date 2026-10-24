@@ -18,6 +18,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from gym_env.common.wrappers.action_repeat import with_action_repeat
+from gym_env.common.wrappers.decision import with_decisions
 from gym_env.common import PreviewWrapper, TerminationWrapper
 from gym_env.common.render.render import RenderQuit
 from gym_env.vehicles import get_vehicle
@@ -150,7 +151,7 @@ def run_episode(
         env = gym.make(get_vehicle(vehicle).env_id, render_mode=render_mode,
                        random_road_on_reset=False)
         env = TerminationWrapper(env)
-        return with_action_repeat(PreviewWrapper(env), record_inner=True)
+        return with_decisions(with_action_repeat(PreviewWrapper(env), record_inner=True), record_inner=True)
 
     venv = DummyVecEnv([_env_fn])
     venv = VecNormalize.load(str(vecnorm_path), venv)
@@ -165,7 +166,7 @@ def run_episode(
 
     reset_opts = {"road": scenario_road} if scenario_road is not None else None
     if reset_opts is not None:
-        raw_obs_single, _ = venv.venv.envs[0].reset(seed=seed, options=reset_opts)
+        raw_obs_single, reset_info = venv.venv.envs[0].reset(seed=seed, options=reset_opts)
         raw_obs = np.expand_dims(raw_obs_single, axis=0)
         venv.ret = np.zeros(venv.num_envs)
         obs: np.ndarray = venv.normalize_obs(raw_obs)
@@ -173,9 +174,12 @@ def run_episode(
         venv.seed(seed)
         reset_out       = venv.reset()
         obs: np.ndarray = reset_out[0] if isinstance(reset_out, tuple) else reset_out
+        reset_info      = venv.venv.reset_infos[0]
 
     done   = np.array([False])
     ep: dict = defaultdict(list)
+    for sub in (reset_info or {}).get("inner", []):
+        _record(ep, 0.0, sub["step_reward"], sub)
     frames: list = []
     nav_override = None
 

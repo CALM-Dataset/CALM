@@ -13,6 +13,7 @@ from gym_env.common import (
     TerminationWrapper,
 )
 from gym_env.common.wrappers.action_repeat import with_action_repeat
+from gym_env.common.wrappers.decision import with_decisions
 from gym_env.common.wrappers.relative_comfort import RelativeComfort
 from gym_env.vehicles import get_vehicle
 
@@ -51,7 +52,7 @@ def _make_env(
         env = RelativeComfort(env, lambda: TerminationWrapper(gym.make(env_id, **env_kwargs)))
         if sparse_reward:
             env = TerminalRewardWrapper(env)
-        env = with_action_repeat(PreviewWrapper(env))
+        env = with_decisions(with_action_repeat(PreviewWrapper(env)))
         env = CurriculumWrapper(env, curriculum_cfg, n_envs=n_envs)
         if action_penalty > 0.0:
             env = ActionSaturationPenalty(env, action_penalty, high=0.0 if env.unwrapped._action_mode == "slowdown" else None)
@@ -159,7 +160,7 @@ def make_real_val_env(vehicle: str, seed: int = 0) -> VecNormalize:
     def _init() -> gym.Env:
         env = gym.make(env_id, random_road_on_reset=False)
         env = TerminationWrapper(env)
-        env = with_action_repeat(PreviewWrapper(env))
+        env = with_decisions(with_action_repeat(PreviewWrapper(env)))
         env.reset(seed=seed)
         return env
 
