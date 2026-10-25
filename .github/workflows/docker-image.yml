@@ -5,12 +5,12 @@ on:
     inputs:
       timesteps:
         type: string
-        default: "50000"
+        default: "512"
   workflow_dispatch:
     inputs:
       timesteps:
         type: string
-        default: "50000"
+        default: "512"
 
 permissions:
   contents: read
