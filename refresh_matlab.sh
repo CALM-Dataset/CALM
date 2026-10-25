@@ -9,7 +9,7 @@ PY=${PYTHON:-.venv/bin/python3}
 RUNS=${RUNS:-"tq26_s68 tq26_s69 tq26_s70 tq26_s71 tq26_s72"}
 REFERENCE=${REFERENCE:-tq26_s69}
 MODELS=${MODELS:-logs/models/PPO}
-SYNTHETIC_SUITES="01_single_bump 02_two_bumps 03_three_bumps 04_four_bumps 05_one_bump_one_hole 06_two_bumps_one_hole 07_two_bumps_two_holes flat"
+SYNTHETIC_SUITES="01_single_bump 05_one_bump_one_hole flat"
 export PYTHONPATH=$PWD/src MPLBACKEND=Agg SDL_AUDIODRIVER=dummy
 
 model() { echo "$MODELS/$1/PPO_final.zip"; }
