@@ -19,3 +19,11 @@ def test_every_bundled_scenario_loads_with_a_usable_road(name):
 def test_a_seed_gives_the_same_random_road():
     roads = [RoadGenerator.from_random(__import__("numpy").random.default_rng(5), vehicle_speed=8.0) for _ in range(2)]
     assert roads[0]._bumps == roads[1]._bumps
+
+
+def test_a_flat_road_has_no_relief_and_the_requested_speed():
+    road, track, speed, _ = load_scenario_any('flat50')
+    z = road._profile[1]
+    assert track is None
+    assert float(abs(z).max()) == 0.0
+    assert abs(speed - 50 / 3.6) < 1e-9

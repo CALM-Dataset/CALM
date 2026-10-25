@@ -110,6 +110,11 @@ export-runs *args:
 sync:
     ./sync_comfort.sh
 
+# rescore the runs, the synthetic suites and the flat road, then sync (all, real, synthetic or sync)
+[group('comfort')]
+refresh-matlab step='all':
+    ./refresh_matlab.sh {{step}}
+
 # MPC baseline (needs acados); pass --scenario <name> or --render
 [group('baselines')]
 mpc *args:

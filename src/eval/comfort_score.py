@@ -269,7 +269,8 @@ def _all_suites() -> list[str]:
 
 
 def _med(v):
-    return float(np.median(v))
+    v = [x for x in v if x != '']
+    return float(np.median(v)) if v else float('nan')
 
 
 def print_summary(rows: list[dict]) -> None:

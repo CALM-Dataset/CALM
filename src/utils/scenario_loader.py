@@ -125,7 +125,22 @@ def list_real_scenarios(kind: str = 'real') -> list[str]:
     return sorted(p.stem for p in d.glob('*.json') if p.name != 'manifest.json')
 
 
+FLAT_SUITE = 'flat'
+FLAT_LENGTH_M = 200.0
+FLAT_SPEEDS_KMH = (30, 50)
+
+
+def flat_road(speed_kmh: float, length_m: float = FLAT_LENGTH_M, ds: float = 0.05):
+    from road.road_generator import RoadGenerator
+
+    return RoadGenerator.from_profile(np.zeros(int(length_m / ds)), ds, vehicle_speed=speed_kmh / 3.6)
+
+
 def load_scenario_any(name_or_path: str):
+    flat = re.fullmatch(r'flat(\d+)', str(name_or_path))
+    if flat:
+        road = flat_road(float(flat.group(1)))
+        return road, None, road.speed, 'flat road'
     real = next((f for f in (_real_scenarios_dir().parent / k / f'{name_or_path}.json'
                              for k in REAL_SUITES) if f.is_file()), _real_scenarios_dir() / f'{name_or_path}.json')
     p = Path(name_or_path)
@@ -197,6 +212,8 @@ def enabled_eval_suites(selected: Optional[list] = None) -> list[tuple[str, list
             reals = list_real_scenarios(name)
             if reals:
                 out.append((name, reals))
+        elif name == FLAT_SUITE:
+            out.append((FLAT_SUITE, [f'flat{v}' for v in FLAT_SPEEDS_KMH]))
         elif name == "real_all":
             reals = sorted(set(list_real_scenarios('real')) | set(list_real_scenarios('real_train')))
             if reals:
