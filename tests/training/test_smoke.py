@@ -19,7 +19,6 @@ def test_short_training_run():
 
 
 def test_slowdown_mode_charges_positive_actions_and_clips_them_to_hold():
-    import gymnasium as gym
     from gym_env.half_car.envs import HalfCarEnv
     from train.environment import ActionSaturationPenalty
 

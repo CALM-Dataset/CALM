@@ -59,7 +59,7 @@ def test_wrapper_is_inert_when_switched_off():
 def _episode_comfort(road, cfg, speed_action):
     env = RelativeComfort(_make(cfg), lambda: _make(cfg), reward_config=cfg)
     env.reset(seed=0, options={"road": road})
-    total, done = 0.0, False
+    done = False
     base = 0.0
     while not done:
         _, r, terminated, truncated, info = env.step(np.array([speed_action], dtype=np.float32))
