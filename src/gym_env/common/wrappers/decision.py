@@ -12,6 +12,7 @@ class DecisionWrapper(gym.Wrapper):
         self._record_inner = record_inner
         self._carry = 0.0
         self._ended = None
+        self._last_obs = None
 
     def _advance(self, action, until_decision: bool):
         total, inner = 0.0, []
@@ -40,6 +41,7 @@ class DecisionWrapper(gym.Wrapper):
             if terminated or truncated:
                 self._ended = (terminated, truncated)
                 break
+        self._last_obs = obs
         if self._record_inner:
             info = {**info, "inner": inner}
         return obs, info
@@ -47,8 +49,7 @@ class DecisionWrapper(gym.Wrapper):
     def step(self, action):
         if self._ended is not None:
             terminated, truncated = self._ended
-            obs = self.env.unwrapped._obs()
-            return obs, self._take_carry(), terminated, truncated, {}
+            return self._last_obs, self._take_carry(), terminated, truncated, {}
         obs, total, terminated, truncated, info, inner = self._advance(action, until_decision=True)
         total += self._take_carry()
         if self._record_inner:

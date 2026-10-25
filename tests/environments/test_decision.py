@@ -73,3 +73,12 @@ def test_the_observation_at_a_decision_shows_the_bump_ahead():
     at_start = PreviewWrapper(TerminationWrapper(HalfCarEnv(action_mode="choice")))
     first, _ = at_start.reset(seed=1, options={"road": _road()})
     assert not np.array_equal(obs, first)
+
+
+def test_a_road_without_bumps_ends_at_the_first_step_with_the_same_observation_shape():
+    road = RoadGenerator.from_scenario(vehicle_speed=6.0, flat_start=60.0, obstacles=[], gaps=[])
+    env = DecisionWrapper(PreviewWrapper(TerminationWrapper(HalfCarEnv(action_mode="choice"))))
+    obs, _ = env.reset(seed=1, options={"road": road})
+    out, _, terminated, truncated, _ = env.step(np.array([0]))
+    assert terminated or truncated
+    assert out.shape == obs.shape
