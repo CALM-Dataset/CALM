@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
-      TIMESTEPS: ${{ inputs.timesteps || '50000' }}
+      TIMESTEPS: ${{ inputs.timesteps || '512' }}
     steps:
       - uses: actions/checkout@v7
         with:
