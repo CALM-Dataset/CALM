@@ -126,6 +126,7 @@ def list_real_scenarios(kind: str = 'real') -> list[str]:
 
 
 FLAT_SUITE = 'flat'
+EVAL_RUNOUT_M = 40.0
 FLAT_LENGTH_M = 200.0
 FLAT_SPEEDS_KMH = (30, 50)
 
@@ -148,7 +149,9 @@ def load_scenario_any(name_or_path: str):
         road, track = load_scenario_json(real if real.is_file() else p)
         return road, track, road.speed, 'real dataset'
     bumps, speed, name, desc = load_scenario(name_or_path)
-    return make_road_generator(name_or_path), None, speed, desc
+    gen = make_road_generator(name_or_path)
+    gen._runout_m = EVAL_RUNOUT_M
+    return gen, None, speed, desc
 
 
 def _load_trim_cfg() -> dict:
