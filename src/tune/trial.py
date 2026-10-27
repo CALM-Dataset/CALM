@@ -10,7 +10,6 @@ from utils.paths import ROOT as _ROOT
 
 from train.agent import build_model, load_algo_config
 from train.environment import make_eval_vec_env, make_vec_env
-from train.monitoring import SpeedWeightController
 from tune.search_spaces import sample_from_config
 
 _TUNE_CONFIG_PATH = _ROOT / "config" / "agent" / "tune_config.yaml"
@@ -45,7 +44,7 @@ class Objective:
         trial_seed = self.seed + trial.number
         meta       = self._base["training"]
 
-        from gym_env.common.curriculum import load_curriculum_config
+        from gym_env.common.wrappers.curriculum import load_curriculum_config
         curriculum_cfg = load_curriculum_config(_CURRICULUM_PATH)
 
         algo_kwargs = {**self._base["PPO"], **params}
@@ -66,9 +65,7 @@ class Objective:
             train_venv.venv.env_method("set_level", len(curriculum_cfg["levels"]) - 1)
 
         model = build_model("PPO", train_venv, algo_kwargs, tensorboard_log=None, seed=trial_seed, verbose=0)
-        ctrl = meta.get("speed_controller")
-        callback = SpeedWeightController(ctrl["target"], ctrl["init"], ctrl["gain"], ctrl["max"]) if ctrl else None
-        model.learn(total_timesteps=self.timesteps, callback=callback)
+        model.learn(total_timesteps=self.timesteps)
 
         eval_venv = make_eval_vec_env(
             n_envs=1,

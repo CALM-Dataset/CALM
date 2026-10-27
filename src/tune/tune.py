@@ -137,10 +137,6 @@ def main() -> None:
         load_if_exists=True,
     )
 
-    with open(_ALGO_CONFIG_PATH) as fh:
-        if args.n_jobs > 1 and yaml.safe_load(fh)["training"].get("speed_controller"):
-            raise SystemExit("--n-jobs > 1 shares one speed-weight controller between trials; remove training.speed_controller or run with --n-jobs 1")
-
     objective = Objective(
         timesteps=timesteps,
         n_eval_episodes=n_eval_ep,

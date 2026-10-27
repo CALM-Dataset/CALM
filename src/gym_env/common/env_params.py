@@ -15,6 +15,15 @@ POST_BUMP_MARGIN_MATCH_FLAT_START = bool(_cfg.get("POST_BUMP_MARGIN_MATCH_FLAT_S
 
 ACTION_MODE = str(_cfg.get("action_mode", "acceleration"))
 SPEED_GAIN = float(_cfg.get("speed_gain", 2.0))
+SPEED_FLOOR_RATIO = float(_cfg.get("speed_floor_ratio", 0.0))
+DEPTH_OFFSET = float(_cfg.get("depth_offset", 2.0))
+DEPTH_SLOPE = float(_cfg.get("depth_slope", 2.0))
+CHOICE_DEPTHS = [float(x) for x in _cfg.get("choice_depths", [0.0, 0.2, 0.35, 0.5, 0.65, 0.8, 1.0])]
+WINDOW_LEAD_FAR = float(_cfg.get("window_lead_far", 25.0))
+WINDOW_LEAD_NEAR = float(_cfg.get("window_lead_near", 8.0))
+WINDOW_AFTER = float(_cfg.get("window_after", 1.5))
+WINDOW_RELEASE = float(_cfg.get("window_release", 4.0))
+ACTION_REPEAT = int(_cfg.get("action_repeat", 1))
 
 SUSPENSION = {key: float(_cfg[key]) for key in (
     "c_T", "k_T", "A", "v_d", "v_z",

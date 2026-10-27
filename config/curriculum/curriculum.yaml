@@ -3,9 +3,9 @@
 mode: timesteps
 
 advance_time_threshold:
-  0:    2_000_000
-  1:    4_000_000
-  2:    6_000_000
+  0:    5_000
+  1:    10_000
+  2:    15_000
 
 advance_reward_threshold:
   0:    120.0
@@ -14,12 +14,12 @@ advance_reward_threshold:
 
 advance_window: 6
 
-advance_min_steps: 1_500_000
+advance_min_steps: 3_500
 
 scenarios_dir: config/train/scenarios/curriculum
 
 real_scenarios_dir: config/train/scenarios/real
-real_fraction: 0.75
+real_fraction: 0.6
 
 levels:
   0:

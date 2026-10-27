@@ -104,7 +104,19 @@ class RoadGenerator:
         if self._profile is not None:
             s_grid, z, _ = self._profile
             return np.interp(x_ahead, s_grid, z, left=0.0, right=0.0).astype(np.float32)
-        heights   = np.zeros(n_points)
+        return self._bump_heights(x_ahead)
+
+    def get_bump_preview(
+        self,
+        s_pos: float,
+        lookahead_m: float,
+        n_points: int,
+    ) -> np.ndarray:
+        s_offsets = np.linspace(lookahead_m / n_points, lookahead_m, n_points)
+        return self._bump_heights(s_pos + s_offsets)
+
+    def _bump_heights(self, x_ahead: np.ndarray) -> np.ndarray:
+        heights = np.zeros(len(x_ahead))
         for x0, A, L in self._bumps:
             dx   = x_ahead - x0
             mask = (dx >= 0.0) & (dx <= L)

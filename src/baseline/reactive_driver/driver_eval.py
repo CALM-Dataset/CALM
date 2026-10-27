@@ -12,11 +12,11 @@ import gymnasium as gym
 from utils.paths import ROOT as _ROOT
 
 from gym_env.common import TerminationWrapper
-from gym_env.common.render import RenderQuit
+from gym_env.common.render.render import RenderQuit
 from gym_env.common.env_params import DT, EPISODE_STEPS
-from gym_env.common.preview_params import load_preview_config
-from gym_env.common.reward_params import load_reward_config
-from gym_env.common.reward_utils import reward_bounds
+from gym_env.common.preview.preview_params import load_preview_config
+from gym_env.common.reward.reward_params import load_reward_config
+from gym_env.common.utils.reward_utils import reward_bounds
 from gym_env.vehicles import get_vehicle
 from baseline import runner
 from utils.gif import save_gif

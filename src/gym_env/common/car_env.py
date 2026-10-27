@@ -5,10 +5,11 @@ import gymnasium as gym
 from gymnasium import spaces
 
 from road.road_generator import RoadGenerator
-from gym_env.common.reward_params import RewardConfig, load_reward_config
-from gym_env.common.reward import compute_reward, compute_terminal_reward
-from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN
-from gym_env.common.render_params import (
+from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
+from gym_env.common.reward.reward import compute_reward, compute_terminal_reward
+from eval.iso2631 import WkStream
+from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN, SPEED_FLOOR_RATIO, DEPTH_OFFSET, DEPTH_SLOPE, WINDOW_LEAD_FAR, WINDOW_LEAD_NEAR, WINDOW_AFTER, WINDOW_RELEASE, CHOICE_DEPTHS
+from gym_env.common.render.render_params import (
     RENDER_Y_SCALE,
     RENDER_SHOW_TS,
     RENDER_TS_Z,
@@ -62,10 +63,16 @@ class CarEnv(gym.Env):
         self._rcfg = reward_config or load_reward_config()
         self._action_mode = action_mode or ACTION_MODE
 
-        self.action_space = spaces.Box(
-            low=np.array([-1.0], dtype=np.float32),
-            high=np.array([ 1.0], dtype=np.float32),
-        )
+        if self._action_mode == "choice":
+            self.action_space = spaces.Discrete(len(CHOICE_DEPTHS))
+        else:
+            bound = 8.0 if self._action_mode in ("depth", "template") else 1.0
+            self.action_space = spaces.Box(
+                low=np.array([-bound], dtype=np.float32),
+                high=np.array([ bound], dtype=np.float32),
+            )
+        self._choice_latched = False
+        self._choice_depth = 0.0
 
         obs_low, obs_high = self._vehicle.obs_bounds()
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
@@ -121,6 +128,25 @@ class CarEnv(gym.Env):
             "z_ddot": bool(show_ts_z_ddot),
         }
 
+
+    def _slowdown_window(self, s: float) -> float:
+        wheelbase = float(self._ode.wheelbase)
+        weight = 0.0
+        for x0, _, length in getattr(self._road, "_bumps", []):
+            if s < x0:
+                ramp = (s - (x0 - WINDOW_LEAD_FAR)) / max(WINDOW_LEAD_FAR - WINDOW_LEAD_NEAR, 1e-6)
+            else:
+                ramp = 1.0 - (s - (x0 + length + wheelbase + WINDOW_AFTER)) / max(WINDOW_RELEASE, 1e-6)
+            ramp = float(np.clip(ramp, 0.0, 1.0))
+            weight = max(weight, ramp * ramp * (3.0 - 2.0 * ramp))
+        return weight
+
+    @property
+    def hold_action(self) -> np.ndarray:
+        if self._action_mode == "choice":
+            return np.array([0], dtype=np.int64)
+        value = -float(self.action_space.high[0]) if self._action_mode in ("depth", "template") else 0.0
+        return np.array([value], dtype=np.float32)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -191,7 +217,7 @@ class CarEnv(gym.Env):
         self._bumps_total    = sum(1 for (_, h, _) in self._road._bumps if h >= 0)
         self._holes_total    = sum(1 for (_, h, _) in self._road._bumps if h < 0)
         self._last_bump_end  = (
-            float(self._road._bumps[-1][0] + self._road._bumps[-1][2])
+            float(self._road._bumps[-1][0] + self._road._bumps[-1][2] + getattr(self._road, "_runout_m", 0.0))
             if self._road._bumps else None
         )
         prof = getattr(self._road, "_profile", None)
@@ -199,6 +225,9 @@ class CarEnv(gym.Env):
         self._termination_reason = ""
 
         self._prev_a           = 0.0
+        self._choice_latched   = False
+        self._choice_depth     = 0.0
+        self._wk               = WkStream(DT)
 
         self._freeze_render = False
 
@@ -207,15 +236,38 @@ class CarEnv(gym.Env):
     def step(self, action):
         cfg = self._rcfg
 
-        u     = float(np.clip(action[0], -1.0, 1.0))
+        if self._action_mode == "choice":
+            u = 0.0
+        else:
+            bound = float(self.action_space.high[0])
+            u     = float(np.clip(np.asarray(action).ravel()[0], -bound, bound))
         v_old = self._v
         v_top = max(cfg.v_hard_min, self._v_episode_ref)
-        if self._action_mode == "target_speed":
-            v_target = cfg.v_hard_min + (v_top - cfg.v_hard_min) * 0.5 * (u + 1.0)
+        v_floor = max(cfg.v_hard_min, SPEED_FLOOR_RATIO * v_top) if self._action_mode in ("slowdown", "depth", "template", "choice") else cfg.v_hard_min
+        v_floor = min(v_floor, v_top)
+        if self._action_mode == "slowdown":
+            v_target = v_top + (v_top - v_floor) * min(u, 0.0)
+            a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
+        elif self._action_mode == "choice":
+            index = int(np.clip(np.asarray(action).ravel()[0], 0, len(CHOICE_DEPTHS) - 1))
+            window = self._slowdown_window(self._s_pos)
+            if window <= 0.0:
+                self._choice_latched = False
+                self._choice_depth = 0.0
+            elif not self._choice_latched:
+                self._choice_latched = True
+                self._choice_depth = CHOICE_DEPTHS[index]
+            v_target = v_top - (v_top - v_floor) * self._choice_depth * window
+            a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
+        elif self._action_mode in ("depth", "template"):
+            depth = 1.0 / (1.0 + float(np.exp(-DEPTH_SLOPE * (u - DEPTH_OFFSET))))
+            if self._action_mode == "template":
+                depth *= self._slowdown_window(self._s_pos)
+            v_target = v_top - (v_top - v_floor) * depth
             a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
         else:
             a_cmd = u * cfg.a_max
-        v_new = float(np.clip(v_old + a_cmd * DT, cfg.v_hard_min, v_top))
+        v_new = float(np.clip(v_old + a_cmd * DT, v_floor, v_top))
         a_actual = (v_new - v_old) / DT
         self._v        = v_new
         self._state[self._ode.v_index] = v_new
@@ -250,13 +302,14 @@ class CarEnv(gym.Env):
         z_W_ddot_both = 0.5 * (z_Wf_ddot + z_Wr_ddot)
         reward, breakdown = compute_reward(
             v=v_new,
-            z_B_ddot=self._last_z_B_ddot,
+            z_B_ddot=self._wk.step(z_B_ddot) if cfg.wk_heave else self._last_z_B_ddot,
             z_W_ddot=z_W_ddot_both,
             a_actual=a_actual,
             a_prev=self._prev_a,
             cfg=cfg,
             v_ref=v_init,
             phi_ddot=self._last_phi_ddot,
+            dt=DT,
         )
         self._speed_err_sq   += (v_init - v_new) ** 2
 

@@ -176,9 +176,9 @@ A plain PPO on this objective collapsed to one of two extremes, crawling at the
 bumps. The final setup adds six things, each in response to a diagnosed
 failure.
 
-1. The action is a recommended speed between the 8 km/h minimum and the
-   scenario speed, tracked by a follower (gain 2 per second, at most 5 m/s²)
-   (`action_mode: target_speed` in `config/gym_env/env.yaml`). The speed can
+1. The action is a recommended slowdown: 0 holds the scenario speed and -1
+   goes down to the 8 km/h minimum, tracked by a follower (gain 2 per second, at most 5 m/s²)
+   (`action_mode: slowdown` in `config/gym_env/env.yaml`). The speed can
    never exceed the scenario speed.
 2. The mean of the Gaussian policy is bounded by a tanh
    (`src/train/policy.py`), and actions that fall outside the allowed range are
@@ -186,11 +186,10 @@ failure.
    sat beyond the limits at every step (mean action between −2.5 and −4.3),
    where every sample is clipped to the same action and no learning signal
    remains.
-3. The speed weight is set by a feedback controller (`speed_controller` in
-   `config/agent/algo_configs.yaml`) that raises it when the average speed over
-   a rollout is below a target fraction of the scenario speed and lowers it
-   when above. Fixed weights flipped between crawling and cruising; with the
-   controller the policy sits where the target puts it. The final runs use 0.6.
+3. Time is priced directly: every step costs `time_cost * DT` (`time_cost` in
+   `config/reward/reward.yaml`, in reward units per second), so slowing down
+   costs reward in proportion to the delay and speeding up again is rewarded.
+   `time_cost` moves the policy along the comfort/time curve.
 4. `gae_lambda` is 0.995. At a 50 Hz control rate the usual 0.95 gives a credit
    horizon of about 0.4 s, while braking has to start 1–2 s before a bump.
 5. The preview gives time to the bump and its excitation frequency instead of
@@ -210,7 +209,7 @@ Real scenarios make up 75 % of each batch (`real_fraction` in
 `config/curriculum/curriculum.yaml`); the rest are single synthetic bumps whose
 height (30–120 mm) and width (1.5–7 m) are sampled from the real range
 (`real_range` in `config/train/scenario_gen.yaml`) with 10–20 m approaches and
-split into four severity tiers. The real part is the 85 seen scenarios; the 20
+split into four severity tiers. The real part is the 91 seen scenarios; the 14
 held-out ones (see below) are never trained on. The synthetic multi-bump and
 hole suites are not trained on.
 
@@ -221,10 +220,26 @@ the CALM-Scenarios dataset, regenerated with the perception pipeline set to the
 8 m width limit and wheel-only height described above. They are split by
 location: the held-out locations are the German locations with fewer than five
 usable scenarios (sindelfingen, stuttgart) plus one German and one Italian
-location drawn with seed 69 (augsburg, nardo), giving 20 unseen scenarios
-(`real`) against 85 seen in training (`real_train`); `real_all` runs both. The
-rule was fixed before any result and is listed in `split.yaml` of the dataset.
-Seen and unseen are reported separately where it matters.
+location drawn with seed 69 (augsburg, nardo), giving 20 scenarios in held-out
+locations. The rule was fixed before any result and is listed in `split.yaml` of
+the dataset.
+
+The recorded human drive sped up into the bump on one of the 20 (sindelfingen_sb01), and on five more
+(augsburg_sb01, sb04, sb05, sb06 and sindelfingen_sb14) the bump starts within 15 m of the
+recording start, so the approach speed cannot be read. Those six are used for training. The
+evaluation set is the remaining 14 (`real`) against 91 seen in training (`real_train`); `real_all` runs
+both. `paper_split` in `split.yaml` lists the 14, and the dataset puller applies it. Seen and unseen are
+reported separately where it matters.
+
+The results tables below were computed on the earlier 20-scenario held-out set and
+have not been recomputed for the 14.
+
+The recorded human drive is placed on the trimmed road by the trim offset. The scenario road starts `meta.trim.offset_m`
+metres into the recorded drive (the loader reports the sum of that value and any trimming it does itself as
+`_trim_offset_m`), so the replay starts when the recorded distance reaches the offset, the scored span ends where the
+recording ends, and the measured IMU `a_w` covers the same time interval. On the 37 trimmed roads the IMU peak follows
+the bump crossing, computed from the drive's own distance, by 0.30 s (median) with the offset and by 0.97 s without it. Without
+the offset the scored span also runs past the recording by up to 5 m on 32 of the 105 roads.
 
 The IMU calibration was fitted on 13 scenarios; the human replay matches the
 IMU to a median of 16 % over all 105 (86 within 30 %).
@@ -375,7 +390,7 @@ Replaying the MPC and constant-speed profiles under the training reward scored t
   preview, which gives only the distance to a marking (bump height and width
   are hidden until about 0.5 m), selective slowing by bump size is not possible
   and a policy can only slow near markings.
-- The held-out set is 20 scenarios from 4 locations.
+- The held-out set is 14 scenarios from 4 locations (20 before six were moved to training, see Scenarios).
 - The operating point is not controlled by the speed-weight target: targets 0.5
   and 0.7 hold the scenario speed, 0.6 does so in most trainings and settles
   slow in some (2 of 8). Results are reported at equal travel time for that

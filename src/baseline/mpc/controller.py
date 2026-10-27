@@ -9,7 +9,7 @@ from typing import Optional
 import numpy as np
 
 from gym_env.common.env_params import DT
-from gym_env.common.reward_params import RewardConfig, load_reward_config
+from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
 from gym_env.vehicles import get_vehicle
 from road.road_generator import RoadGenerator
 from baseline.mpc.config import ocp_weights

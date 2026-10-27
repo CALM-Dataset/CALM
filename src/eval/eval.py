@@ -17,11 +17,13 @@ import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
+from gym_env.common.wrappers.action_repeat import with_action_repeat
+from gym_env.common.wrappers.decision import with_decisions
 from gym_env.common import PreviewWrapper, TerminationWrapper
-from gym_env.common.render import RenderQuit
+from gym_env.common.render.render import RenderQuit
 from gym_env.vehicles import get_vehicle
-from gym_env.common.reward_utils import reward_bounds
-from gym_env.common.reward_params import load_reward_config
+from gym_env.common.utils.reward_utils import reward_bounds
+from gym_env.common.reward.reward_params import load_reward_config
 from gym_env.common.env_params import EPISODE_STEPS, DT
 from utils.scenario_loader import load_scenario_any, enabled_eval_suites, scenario_title
 
@@ -149,7 +151,7 @@ def run_episode(
         env = gym.make(get_vehicle(vehicle).env_id, render_mode=render_mode,
                        random_road_on_reset=False)
         env = TerminationWrapper(env)
-        return PreviewWrapper(env)
+        return with_decisions(with_action_repeat(PreviewWrapper(env), record_inner=True), record_inner=True)
 
     venv = DummyVecEnv([_env_fn])
     venv = VecNormalize.load(str(vecnorm_path), venv)
@@ -164,7 +166,7 @@ def run_episode(
 
     reset_opts = {"road": scenario_road} if scenario_road is not None else None
     if reset_opts is not None:
-        raw_obs_single, _ = venv.venv.envs[0].reset(seed=seed, options=reset_opts)
+        raw_obs_single, reset_info = venv.venv.envs[0].reset(seed=seed, options=reset_opts)
         raw_obs = np.expand_dims(raw_obs_single, axis=0)
         venv.ret = np.zeros(venv.num_envs)
         obs: np.ndarray = venv.normalize_obs(raw_obs)
@@ -172,9 +174,12 @@ def run_episode(
         venv.seed(seed)
         reset_out       = venv.reset()
         obs: np.ndarray = reset_out[0] if isinstance(reset_out, tuple) else reset_out
+        reset_info      = venv.venv.reset_infos[0]
 
     done   = np.array([False])
     ep: dict = defaultdict(list)
+    for sub in (reset_info or {}).get("inner", []):
+        _record(ep, 0.0, sub["step_reward"], sub)
     frames: list = []
     nav_override = None
 
@@ -192,7 +197,12 @@ def run_episode(
         else:
             done      = step_result[2]
             info_list = step_result[3]
-        _record(ep, float(action[0, 0]), float(reward[0]), info_list[0])
+        inner = info_list[0].get("inner")
+        if inner:
+            for sub in inner:
+                _record(ep, float(np.asarray(action).ravel()[0]), sub["step_reward"], sub)
+        else:
+            _record(ep, float(np.asarray(action).ravel()[0]), float(reward[0]), info_list[0])
 
         if capture_frames:
             frame = venv.venv.envs[0].render()

@@ -42,7 +42,7 @@ def end_point(road, wheelbase: float) -> float:
         return float(prof[0][-1]) + wheelbase + 3.0
     bumps = getattr(road, '_bumps', None)
     if bumps:
-        return float(bumps[-1][0] + bumps[-1][2]) + wheelbase
+        return float(bumps[-1][0] + bumps[-1][2]) + wheelbase + float(getattr(road, '_runout_m', 0.0))
     return 0.0
 
 
@@ -101,24 +101,36 @@ def _load_window(win_dir: Path):
     return ts, np.interp(ts, arr[:, 0], arr[:, 2])
 
 
-def human_speeds(win_dir: Path, end: float) -> tuple[list[float], int]:
+def human_replay(win_dir: Path, end: float, offset: float = 0.0) -> tuple[list[float], int, float]:
     ts, s_ref = _load_window(win_dir)
     t = (ts - ts[0]) / 1e6
     s = s_ref - s_ref[0]
     grid = np.arange(0.0, t[-1], DT)
     s_grid = np.interp(grid, t, s)
     win = int(round(SMOOTH_S / DT)) | 1
-    v = list(np.clip(savgol_filter(s_grid, win, 3, deriv=1, delta=DT), 0.0, None))
-    n_rec = len(v)
+    v_rec = np.clip(savgol_filter(s_grid, win, 3, deriv=1, delta=DT), 0.0, None)
+    t_start = 0.0
+    if offset > 0.0:
+        monotone = np.maximum.accumulate(s_grid)
+        if offset >= monotone[-1]:
+            raise ValueError(f'{win_dir.name}: the recorded drive ends {monotone[-1]:.1f} m in, before the road starts at {offset:.1f} m')
+        t_start = float(np.interp(offset, monotone, grid))
+    n_rec = int(np.floor((grid[-1] - t_start) / DT)) + 1
+    v = list(np.interp(t_start + np.arange(n_rec) * DT, grid, v_rec))
     tail = max(v[-1], 0.5)
     travelled = float(np.sum(v) * DT)
     while travelled < end:
         v.append(tail)
         travelled += tail * DT
+    return v, n_rec, t_start
+
+
+def human_speeds(win_dir: Path, end: float) -> tuple[list[float], int]:
+    v, n_rec, _ = human_replay(win_dir, end)
     return v, n_rec
 
 
-def imu_a_w(win_dir: Path, t_end_s: float) -> float | None:
+def imu_a_w(win_dir: Path, t_end_s: float, t_start_s: float = 0.0) -> float | None:
     f = win_dir / 'export' / 'output.laz.sensor_export.json'
     if not f.is_file():
         return None
@@ -128,7 +140,7 @@ def imu_a_w(win_dir: Path, t_end_s: float) -> float | None:
     ts = np.array([r['timestamp'] for r in imu], float)
     az = np.array([r['accel_z'] for r in imu], float)
     t0, _ = _load_window(win_dir)
-    keep = (ts >= t0[0]) & (ts <= t0[0] + t_end_s * 1e6)
+    keep = (ts >= t0[0] + t_start_s * 1e6) & (ts <= t0[0] + t_end_s * 1e6)
     if keep.sum() < 20:
         return None
     dt_imu = float(np.median(np.diff(ts[keep]))) / 1e6
@@ -199,7 +211,8 @@ def score_scenario(suite: str, name: str, runners: dict, roots: list[Path],
     if prof_dir is not None:
         write_road(prof_dir, suite, name, road)
     win = find_window(name, roots) if suite.startswith('real') else None
-    human = human_speeds(win, end) if win is not None else None
+    offset = float(getattr(road, '_trim_offset_m', 0.0))
+    human = human_replay(win, end, offset) if win is not None else None
     cut = end
     if human is not None:
         cut = min(end, float(np.sum(human[0][:human[1]]) * DT))
@@ -223,8 +236,8 @@ def score_scenario(suite: str, name: str, runners: dict, roots: list[Path],
     add('const', const_speeds(road, end), v_road)
 
     if human is not None:
-        h, n_rec = human
-        add('human', h, h[0], {'a_w_imu': imu_a_w(win, n_rec * DT) or '',
+        h, n_rec, t_start = human
+        add('human', h, h[0], {'a_w_imu': imu_a_w(win, t_start + n_rec * DT, t_start) or '',
                                'padded_frac': round(1.0 - n_rec / len(h), 3)})
 
     for source in ('ppo', 'mpc'):
@@ -256,7 +269,8 @@ def _all_suites() -> list[str]:
 
 
 def _med(v):
-    return float(np.median(v))
+    v = [x for x in v if x != '']
+    return float(np.median(v)) if v else float('nan')
 
 
 def print_summary(rows: list[dict]) -> None:

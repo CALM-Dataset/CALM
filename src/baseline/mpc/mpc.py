@@ -29,12 +29,12 @@ if _acados_py not in sys.path:
 
 from gym_env.common import TerminationWrapper
 from gym_env.common.env_params import DT, EPISODE_STEPS
-from gym_env.common.preview_params import load_preview_config
-from gym_env.common.reward_params import load_reward_config
-from gym_env.common.reward_utils import reward_bounds
+from gym_env.common.preview.preview_params import load_preview_config
+from gym_env.common.reward.reward_params import load_reward_config
+from gym_env.common.utils.reward_utils import reward_bounds
 from gym_env.vehicles import get_vehicle
 from baseline import runner
-from gym_env.common.render import RenderQuit
+from gym_env.common.render.render import RenderQuit
 from utils.gif import save_gif
 from baseline.mpc.config import load_mpc_cfg, reward_config as mpc_reward_config
 from baseline.mpc.controller import MPCController
