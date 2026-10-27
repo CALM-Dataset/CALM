@@ -1,3 +1,4 @@
+set dotenv-load := true
 set shell := ["bash", "-c"]
 set positional-arguments := true
 set quiet := true

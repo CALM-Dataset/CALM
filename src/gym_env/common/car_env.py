@@ -217,7 +217,7 @@ class CarEnv(gym.Env):
         self._bumps_total    = sum(1 for (_, h, _) in self._road._bumps if h >= 0)
         self._holes_total    = sum(1 for (_, h, _) in self._road._bumps if h < 0)
         self._last_bump_end  = (
-            float(self._road._bumps[-1][0] + self._road._bumps[-1][2])
+            float(self._road._bumps[-1][0] + self._road._bumps[-1][2] + getattr(self._road, "_runout_m", 0.0))
             if self._road._bumps else None
         )
         prof = getattr(self._road, "_profile", None)

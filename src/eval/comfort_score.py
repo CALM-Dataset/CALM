@@ -42,7 +42,7 @@ def end_point(road, wheelbase: float) -> float:
         return float(prof[0][-1]) + wheelbase + 3.0
     bumps = getattr(road, '_bumps', None)
     if bumps:
-        return float(bumps[-1][0] + bumps[-1][2]) + wheelbase
+        return float(bumps[-1][0] + bumps[-1][2]) + wheelbase + float(getattr(road, '_runout_m', 0.0))
     return 0.0
 
 

@@ -27,3 +27,11 @@ def test_a_flat_road_has_no_relief_and_the_requested_speed():
     assert track is None
     assert float(abs(z).max()) == 0.0
     assert abs(speed - 50 / 3.6) < 1e-9
+
+
+def test_a_bump_road_runs_on_after_its_last_bump():
+    from eval.comfort_score import end_point
+
+    road, *_ = load_scenario_any('01_single_bump/c')
+    x0, _, length = road._bumps[-1]
+    assert end_point(road, 2.5) - (x0 + length + 2.5) == road._runout_m > 0
