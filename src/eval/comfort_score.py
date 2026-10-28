@@ -259,7 +259,7 @@ def _runners(args) -> dict:
     if args.mpc:
         from baseline.mpc.config import horizon
 
-        out['mpc'] = mpc_runner('half', args.horizon or horizon(), False, args.seed)
+        out['mpc'] = mpc_runner('half', args.horizon or horizon(), False, args.seed, args.mpc_objective)
     return out
 
 
@@ -320,6 +320,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description='ISO 2631-1 comfort score per scenario and speed profile')
     ap.add_argument('--ppo-model', default=None)
     ap.add_argument('--mpc', action='store_true')
+    ap.add_argument('--mpc-objective', choices=('comfort_map', 'frontier'), default='comfort_map',
+                    help='how the MPC picks the crossing speed of each bump: the comfort map, or the frontier reward the policy is trained on')
     ap.add_argument('--horizon', type=int, default=None, help='MPC horizon in steps (default: N in config/baseline/mpc.yaml)')
     ap.add_argument('--suites', nargs='+', default=None,
                     help='suite folders, "real" (held-out), "real_train" (seen in training) or "real_all" (default: every synthetic suite and real)')

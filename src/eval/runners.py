@@ -16,7 +16,7 @@ def ppo_runner(model_path: str, seed: int):
     return run
 
 
-def mpc_runner(vehicle: str, horizon: int, perception: bool, seed: int):
+def mpc_runner(vehicle: str, horizon: int, perception: bool, seed: int, objective: str = 'comfort_map'):
     from baseline.mpc.controller import MPCController
     from baseline.mpc.config import load_mpc_cfg
     from baseline.mpc.mpc import _vehicle_bits, make_env, run_episode
@@ -26,7 +26,7 @@ def mpc_runner(vehicle: str, horizon: int, perception: bool, seed: int):
     cfg = bits['load_reward_config']()
     ctrl = MPCController(cfg=cfg, physics=dict(bits['PHYSICS']),
                          N=horizon, nlp_solver_max_iter=mcfg.get('nlp_solver_max_iter', 10),
-                         vehicle=vehicle)
+                         vehicle=vehicle, objective=objective)
     preview_cfg = bits['load_preview_config']() if perception else None
     env = make_env(bits, cfg)
 
