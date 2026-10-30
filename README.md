@@ -133,7 +133,6 @@ just train --vehicle quarter    # quarter-car plant (same reward and settings)
 just eval demo --render         # evaluate logs/models/PPO/demo/PPO_final.zip
 just compare demo               # ISO 2631 comfort score: PPO vs MPC vs human
 just reproduce                  # train 5 seeds, score them against the MPC and the human drive
-just sync                       # copy comfort scores to the MATLAB figures folder
 just mpc --render               # MPC baseline (needs acados)
 just reactive-driver --render   # rule-based driver baseline
 
@@ -146,8 +145,6 @@ A first run without any data: `just install`, `just doctor`, `just gen-scene`, t
 `just train --timesteps 200000 --run-name demo` (a few minutes) and `just eval demo --scenario c`.
 
 The vehicle at evaluation time must match the one the model was trained on (`--vehicle`).
-The comfort score and its calibration are described in
-[docs/comfort-score.md](docs/comfort-score.md).
 
 ### Render controls
 

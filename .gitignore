@@ -96,3 +96,7 @@ logs/
 !config/**/*.csv
 !tests/**/*.csv
 docs/*.pdf
+
+# local scripts and documents stay local
+*.sh
+docs/
