@@ -240,7 +240,7 @@ def score_scenario(suite: str, name: str, runners: dict, roots: list[Path],
         add('human', h, h[0], {'a_w_imu': imu_a_w(win, t_start + n_rec * DT, t_start) or '',
                                'padded_frac': round(1.0 - n_rec / len(h), 3)})
 
-    for source in ('ppo', 'mpc'):
+    for source in ('ppo', 'mpc', 'mpc_frontier'):
         run = runners.get(source)
         if run is None:
             continue
@@ -260,6 +260,10 @@ def _runners(args) -> dict:
         from baseline.mpc.config import horizon
 
         out['mpc'] = mpc_runner('half', args.horizon or horizon(), False, args.seed, args.mpc_objective)
+    if args.mpc_frontier:
+        from baseline.mpc.config import horizon
+
+        out['mpc_frontier'] = mpc_runner('half', args.horizon or horizon(), False, args.seed, 'frontier')
     return out
 
 
@@ -322,6 +326,8 @@ def main() -> None:
     ap.add_argument('--mpc', action='store_true')
     ap.add_argument('--mpc-objective', choices=('comfort_map', 'frontier'), default='comfort_map',
                     help='how the MPC picks the crossing speed of each bump: the comfort map, or the frontier reward the policy is trained on')
+    ap.add_argument('--mpc-frontier', action='store_true',
+                    help='also run the MPC on the frontier reward as source mpc_frontier; its rows go to <out>_mpc_frontier.csv')
     ap.add_argument('--horizon', type=int, default=None, help='MPC horizon in steps (default: N in config/baseline/mpc.yaml)')
     ap.add_argument('--suites', nargs='+', default=None,
                     help='suite folders, "real" (held-out), "real_train" (seen in training) or "real_all" (default: every synthetic suite and real)')
@@ -359,11 +365,20 @@ def main() -> None:
                          f'(set CALM_SEQUENCES or --real-root, or pass --allow-missing-human): '
                          + ', '.join(missing[:4]) + (' ...' if len(missing) > 4 else ''))
 
+    extra = [r for r in rows if r['source'] == 'mpc_frontier']
+    rows = [r for r in rows if r['source'] != 'mpc_frontier']
     with out.open('w', newline='') as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
         w.writeheader()
         w.writerows(rows)
     print(f'{len(rows)} rows -> {out}')
+    if extra:
+        side = out.with_name(out.stem + '_mpc_frontier.csv')
+        with side.open('w', newline='') as f:
+            w = csv.DictWriter(f, fieldnames=FIELDS)
+            w.writeheader()
+            w.writerows(extra)
+        print(f'{len(extra)} mpc_frontier rows -> {side}')
     print_summary(rows)
 
 
