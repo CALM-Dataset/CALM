@@ -1,5 +1,6 @@
 import collections
 import os
+import sys
 
 import numpy as np
 
@@ -68,7 +69,7 @@ def _build_ts_specs(env):
 
 def init_render(env):
     import matplotlib
-    if not os.environ.get('DISPLAY'):
+    if sys.platform.startswith('linux') and not (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')):
         matplotlib.use('Agg', force=True)
     import matplotlib.pyplot as plt
     from matplotlib.gridspec import GridSpec
