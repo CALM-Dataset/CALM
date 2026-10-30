@@ -146,9 +146,8 @@ A first run without any data: `just install`, `just doctor`, `just gen-scene`, t
 `just train --timesteps 200000 --run-name demo` (a few minutes) and `just eval demo --scenario c`.
 
 The vehicle at evaluation time must match the one the model was trained on (`--vehicle`).
-The comfort score, its calibration and the results are described in
-[docs/comfort-score.md](docs/comfort-score.md); the reward is explained in
-[docs/reward.pdf](docs/reward.pdf) and the observation in [docs/observation.pdf](docs/observation.pdf).
+The comfort score and its calibration are described in
+[docs/comfort-score.md](docs/comfort-score.md).
 
 ### Render controls
 

@@ -168,26 +168,6 @@ driving. `a_w_vs_const_pct`, written for every row, is the a_w of a profile rela
 constant-speed drive of the same duration over the same road (interpolated between
 constant speeds). Negative is better. Roads are averaged with equal weight.
 
-## Results
-
-Calibrated scoring on the 105 real roads, change in a_w against a constant drive of
-the same duration, mean over roads (negative is better). The MPC with the same
-objective uses the frontier choice above. Scored over the full road, without the
-span cut by the recorded drive.
-
-| | all 105 | 14 held out | 91 seen | trip time (s) |
-|---|---|---|---|---|
-| Constant speed | −0.4 % | −0.2 % | −0.5 % | 9.3 |
-| MPC, comfort map | −10.3 % | −7.7 % | −10.7 % | 10.5 |
-| MPC, same objective | −21.7 % | −15.9 % | −22.6 % | 11.4 |
-| PPO (seed 69) | −20.2 % | −22.4 % | −19.8 % | 12.6 |
-
-Five training seeds (68 to 72) give −19.7 to −20.3 % on all roads and −21.8 to −23.3 %
-on the held-out ones. On synthetic roads the PPO slows on 12 of 30 roads and gains about
-1 % at equal time, where both MPC choices gain 25 to 35 %. Against the measured
-acceleration the replay of the recorded drive has a median error of 15.7 %
-(95 % interval 11.8 to 19.1), a mean signed error of +3.5 % and a rank correlation of 0.53.
-
 ## Limits
 
 - Simulation only. Human values are model-based replays, not measurements, and no

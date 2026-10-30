@@ -86,3 +86,13 @@ scratch/
 *.orig
 *.txt
 !requirements.txt
+
+# results and figures stay local until they are published on purpose
+results/
+figures/
+stats/
+logs/
+*.csv
+!config/**/*.csv
+!tests/**/*.csv
+docs/*.pdf
