@@ -20,15 +20,19 @@ Gymnasium environment. Two plant models are available:
   original thesis implementation is kept at the git tag `thesis-quarter-car` (v1.0.2).
 
 The vehicle dynamics use a nonlinear suspension (progressive spring with
-bumpstops, asymmetric compression/rebound damping) integrated with RK4. The
-reward puts ride comfort first: it penalises body vertical and pitch
-acceleration, with secondary terms for longitudinal jerk and throttle
-smoothness. The policy outputs a recommended speed between an 8 km/h floor and the scenario
-speed, which a follower tracks, so it learns how much to slow for each obstacle
-from the comfort terms and a controlled average speed, without using the MPC.
+bumpstops, asymmetric compression/rebound damping) integrated with RK4.
 
-Training uses a four-level performance-gated curriculum over randomised roads.
+The policy makes one decision per bump: how deep to slow down, chosen from the
+depths 0, 0.65 and 0.85 of the range between the scenario speed and a 5 km/h floor.
+The environment times the slowdown around the bump, so the policy learns only the
+depth. The reward is the ISO 2631-1 weighted body acceleration relative to a
+constant-speed drive that takes the same time, with a price on the time lost
+against the scenario speed; the MPC planner can be run on the same objective.
+Training uses a four-level performance-gated curriculum over randomised and real roads.
 A model-based MPC planner and rule-based drivers are included as baselines.
+
+A trained policy is available on Hugging Face:
+[CALM-Dataset/CALM-PPO](https://huggingface.co/CALM-Dataset/CALM-PPO).
 
 ## Installation
 
@@ -39,7 +43,8 @@ just install          # creates .venv, installs CPU PyTorch, the dependencies an
 just lint             # the static check CI runs
 ```
 
-PyTorch comes from the CPU wheel index first; nothing here uses a GPU. The remaining
+PyTorch comes from the CPU wheel index first; nothing here uses a GPU. To use an existing
+conda or virtual environment instead, set `CALM_PYTHON` and `CALM_PIP` (a `.env` file is read by `just`). The remaining
 dependencies are listed in `requirements.txt` (Gymnasium, Stable-Baselines3, NumPy, SciPy,
 Numba, Matplotlib, TensorBoard).
 
@@ -85,7 +90,7 @@ library, which is not included in the image.
 
 ## Scenarios
 
-The synthetic evaluation suites (`config/eval/scenarios/0*`, `10_potholes`) are part of the repository.
+The synthetic evaluation suites (`config/eval/scenarios/01_single_bump`, `05_one_bump_one_hole`, `10_potholes`) are part of the repository.
 The measured (real) roads extend the [CARD dataset](https://huggingface.co/CARD-Data) and are hosted on
 HuggingFace as [CALM-Dataset/CALM-Scenarios](https://huggingface.co/datasets/CALM-Dataset/CALM-Scenarios)
 (German part CC BY 4.0, Italian part CC BY-NC 4.0), not committed to the repository.
@@ -129,7 +134,7 @@ just eval demo --render         # evaluate logs/models/PPO/demo/PPO_final.zip
 just compare demo               # ISO 2631 comfort score: PPO vs MPC vs human
 just reproduce                  # train 5 seeds, score them against the MPC and the human drive
 just sync                       # copy comfort scores to the MATLAB figures folder
-just mpc --render               # MPC baseline
+just mpc --render               # MPC baseline (needs acados)
 just reactive-driver --render   # rule-based driver baseline
 
 just tb                         # TensorBoard
@@ -141,9 +146,9 @@ A first run without any data: `just install`, `just doctor`, `just gen-scene`, t
 `just train --timesteps 200000 --run-name demo` (a few minutes) and `just eval demo --scenario c`.
 
 The vehicle at evaluation time must match the one the model was trained on (`--vehicle`).
-The comfort score, its calibration, the PPO training setup and the results are
-described in [docs/comfort-score.md](docs/comfort-score.md); `res.txt` is the short
-summary.
+The comfort score, its calibration and the results are described in
+[docs/comfort-score.md](docs/comfort-score.md); the reward is explained in
+[docs/reward.pdf](docs/reward.pdf) and the observation in [docs/observation.pdf](docs/observation.pdf).
 
 ### Render controls
 
@@ -181,6 +186,28 @@ m_W z̈_W =  F_spring + F_damp - F_tyre(z_W - ζ)
 
 The half-car adds a pitch degree of freedom about the centre of mass and a
 second axle, with load transfer coupling the front and rear suspension.
+
+## Citation
+
+```bibtex
+@misc{calm_dataset,
+  title  = {CALM: Comfort-Aware Longitudinal Motion Planning},
+  author = {Mohammed S. Azab Abdelazim},
+  year   = {2026},
+  url    = {https://huggingface.co/CALM-Dataset}
+}
+```
+
+The real roads are built on the CARD recordings; please also cite
+
+```bibtex
+@inproceedings{elazab2025card,
+  title     = {CARD: A Multi-Modal Automotive Dataset for Dense 3D Reconstruction in Challenging Road Topography},
+  author    = {Elazab, Gasser and Neuhaus, Frank and Ko{\ss}, Tilman and Splietker, Malte and Date, Aditya and Unterreiner, Michael and Jansen, Maximilian and Hellwich, Olaf},
+  booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2026}
+}
+```
 
 ## License
 
