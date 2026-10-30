@@ -109,9 +109,7 @@ relation per bump width and the agreement with the measured acceleration.
 
 ## Planner objectives
 
-The policy is trained on the equal-time comfort reward described in
-[docs/reward.pdf](reward.pdf) and observes what [docs/observation.pdf](observation.pdf)
-lists. In short: the Wk-weighted body acceleration is compared with a constant-speed
+The policy is trained on an equal-time comfort reward. In short: the Wk-weighted body acceleration is compared with a constant-speed
 drive of the same duration on the same road, and the time lost against the scenario speed
 is priced quadratically. The settings are in `config/reward/reward.yaml`,
 `config/gym_env/env.yaml` and `config/preview/preview.yaml`.
