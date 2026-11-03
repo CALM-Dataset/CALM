@@ -37,6 +37,7 @@ def main() -> None:
     ap.add_argument('--ppo-model', default=None)
     ap.add_argument('--mpc', action='store_true')
     ap.add_argument('--vehicle', default='half')
+    ap.add_argument('--mpc-objective', choices=['comfort_map', 'frontier'], default='comfort_map')
     ap.add_argument('--horizon', type=int, default=None, help='MPC horizon in steps (default: N in config/baseline/mpc.yaml)')
     ap.add_argument('--perception', action='store_true')
     ap.add_argument('--seed', type=int, default=0)
@@ -54,7 +55,7 @@ def main() -> None:
     if args.mpc:
         from baseline.mpc.config import horizon
 
-        mpc = mpc_runner(args.vehicle, args.horizon or horizon(), args.perception, args.seed)
+        mpc = mpc_runner(args.vehicle, args.horizon or horizon(), args.perception, args.seed, args.mpc_objective)
     else:
         mpc = None
 
