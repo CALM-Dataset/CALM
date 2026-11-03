@@ -53,7 +53,7 @@ class FrontierPlanner:
         v = float(speed_at(0.0))
         x = self._ode.reset(v0=v)
         s, n_max = 0.0, int(600.0 / DT)
-        z_b, speeds, ss = [], [], []
+        z_b, speeds = [], []
         v_prev = v
         while s < end and len(z_b) < n_max:
             v = float(speed_at(s))
@@ -66,7 +66,6 @@ class FrontierPlanner:
             x, zb, *_ = self._ode.step(x, road, s_start, road.speed, a)
             z_b.append(zb)
             speeds.append(v)
-            ss.append(s)
         return np.asarray(z_b), np.asarray(speeds), len(z_b) * DT, weight_wk(np.asarray(z_b), DT)
 
     def _heave_cost(self, wk) -> float:
@@ -83,7 +82,7 @@ class FrontierPlanner:
         low = min(float(self._r.v_hard_min), v_nom)
         pts = []
         for v in np.linspace(low, v_nom, _FRONTIER_POINTS):
-            _, sp, t, wk = self._drive(road, lambda s, v=v: v, end)
+            _, _, t, wk = self._drive(road, lambda s, v=v: v, end)
             pts.append((t, self._heave_cost(wk)))
         pts.sort()
         return pts

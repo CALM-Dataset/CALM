@@ -77,5 +77,4 @@ def main(argv: list[str]) -> int:
 
     if not args.dry_run:
         _summary(LOGS / 'comfort' / 'ppo_runs.csv')
-    print('\nfigures: just sync, then run the scripts in the MATLAB folder (see README)')
     return 0
