@@ -103,7 +103,7 @@ and usage terms), then authenticate locally before downloading:
 
 ```bash
 hf auth login                   # once, with a token from huggingface.co/settings/tokens
-just fetch-scenarios            # writes config/train/scenarios/real and config/eval/scenarios/{real,real_train}
+just fetch-scenarios            # writes config/train/scenarios/real, config/eval/scenarios/{real,real_train} and config/perception
 ```
 
 The procedural training scenarios are generated locally, not stored anywhere:
