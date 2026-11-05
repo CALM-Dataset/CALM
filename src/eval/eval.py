@@ -15,7 +15,7 @@ from utils.paths import ROOT as _ROOT
 
 import gymnasium as gym
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv
 
 from gym_env.common.wrappers.action_repeat import with_action_repeat
 from gym_env.common.wrappers.decision import with_decisions
@@ -29,6 +29,7 @@ from utils.scenario_loader import load_scenario_any, enabled_eval_suites, scenar
 
 from utils.gif import keep, save_gif, shrink
 from eval.data_logger import RunLogger, EpisodeData
+from utils.portable import load_vecnormalize
 
 
 _ALGO_MAP: dict[str, type] = {"PPO": PPO}
@@ -79,6 +80,15 @@ def parse_args() -> argparse.Namespace:
 
 
 def _infer_vecnorm(model_path: Path) -> Path:
+    if model_path.suffix == ".safetensors":
+        for parent in [model_path.parent, *model_path.parents]:
+            candidate = parent / "vecnormalize.json"
+            if candidate.exists():
+                return candidate
+        raise FileNotFoundError(
+            f"Could not find vecnormalize.json for {model_path}.\n"
+            "Place vecnormalize.json next to the model."
+        )
     paired = model_path.with_name(f"{model_path.stem}_vec_normalize.pkl")
     if paired.exists():
         return paired
@@ -92,6 +102,13 @@ def _infer_vecnorm(model_path: Path) -> Path:
     )
 
 
+def _build_env(vehicle: str, render_mode: str):
+    env = gym.make(get_vehicle(vehicle).env_id, render_mode=render_mode,
+                   random_road_on_reset=False)
+    env = TerminationWrapper(env)
+    return with_decisions(with_action_repeat(PreviewWrapper(env), record_inner=True), record_inner=True)
+
+
 def load_model(algo: str, model_path: str, vecnorm_path: str | None = None):
     mp = Path(model_path)
     if not mp.exists():
@@ -100,6 +117,14 @@ def load_model(algo: str, model_path: str, vecnorm_path: str | None = None):
     vp = Path(vecnorm_path) if vecnorm_path else _infer_vecnorm(mp)
     if not vp.exists():
         raise FileNotFoundError(f"VecNormalize file not found: {vp}")
+
+    if mp.suffix == ".safetensors":
+        from utils.portable import load_policy
+        from train.agent import load_algo_config
+
+        env = DummyVecEnv([lambda: _build_env("half", "none")])
+        model = load_policy(mp, env, load_algo_config(_ROOT / "config" / "agent" / "algo_configs.yaml")[algo.upper()]["policy_kwargs"])
+        return model, vp
 
     cls   = _ALGO_MAP[algo.upper()]
     model = cls.load(str(mp))
@@ -147,14 +172,8 @@ def run_episode(
     else:
         render_mode = "none"
 
-    def _env_fn():
-        env = gym.make(get_vehicle(vehicle).env_id, render_mode=render_mode,
-                       random_road_on_reset=False)
-        env = TerminationWrapper(env)
-        return with_decisions(with_action_repeat(PreviewWrapper(env), record_inner=True), record_inner=True)
-
-    venv = DummyVecEnv([_env_fn])
-    venv = VecNormalize.load(str(vecnorm_path), venv)
+    venv = DummyVecEnv([lambda: _build_env(vehicle, render_mode)])
+    venv = load_vecnormalize(vecnorm_path, venv)
     venv.training    = False
     venv.norm_reward = False
 

@@ -33,6 +33,9 @@ A model-based MPC planner and rule-based drivers are included as baselines.
 
 A trained policy is available on Hugging Face:
 [CALM-Dataset/CALM-PPO](https://huggingface.co/CALM-Dataset/CALM-PPO).
+The evaluation also accepts the pickle-free files of that repository: pass `policy.safetensors`
+(with `vecnormalize.json` next to it) instead of the `.zip`. `python -m utils.portable model.zip vecnormalize.pkl`
+writes both files for your own models.
 
 ## Installation
 
