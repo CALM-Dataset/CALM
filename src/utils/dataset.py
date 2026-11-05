@@ -70,8 +70,6 @@ def _real_rows() -> list[dict]:
             'peak_z_m': round(peak, 4),
             'road_length_m': float(d.get('meta', {}).get('road_length_m', 0.0)),
             'has_perception': 'perception' in d,
-            'rec_speed_mpc_kmh': None,
-            'rec_speed_ppo_kmh': None,
         })
     return rows
 
