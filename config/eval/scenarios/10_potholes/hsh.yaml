@@ -1,4 +1,4 @@
-name: pothole_shallow
+name: hsh
 description: Shallow pothole, 25 mm deep, 0.40 m wide
 source: "Pothole severity thresholds (UK highway maintenance) - low severity < 25 mm deep"
 source_url: "https://civilengineering.engineer/2020/06/13/whats-that-defect-potholes/"

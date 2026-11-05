@@ -1,4 +1,4 @@
-name: pothole_moderate
+name: hmo
 description: Moderate pothole, 40 mm deep, 0.60 m wide
 source: "Pothole severity thresholds (UK highway maintenance) - 40 mm depth / 0.30 m width repair threshold"
 source_url: "https://www.racfoundation.org/wp-content/uploads/What_is_a_pothole_final_Makwana_December_2018.pdf"
