@@ -326,9 +326,7 @@ def _render_env(env):
         return None
     mod.update_artists(env)
     env._fig.canvas.draw()
-    buf = env._fig.canvas.buffer_rgba()
-    w, h = env._fig.canvas.get_width_height()
-    img = np.frombuffer(buf, dtype=np.uint8).reshape(h, w, 4)
+    img = np.asarray(env._fig.canvas.buffer_rgba())
     return img[..., :3].copy()
 
 

@@ -202,6 +202,22 @@ def run_episode(
     frames: list = []
     nav_override = None
 
+    if capture_frames:
+        outer = venv.venv.envs[0]
+        core = outer.unwrapped
+        core_step = core.step
+        ticks = [0]
+
+        def step_and_capture(action):
+            result = core_step(action)
+            frame = outer.render()
+            if frame is not None and keep(ticks[0]):
+                frames.append(shrink(frame))
+            ticks[0] += 1
+            return result
+
+        core.step = step_and_capture
+
     while not done[0]:
         t0, c0 = time.perf_counter(), time.process_time()
         action, _ = model.predict(obs, deterministic=deterministic)
@@ -222,11 +238,6 @@ def run_episode(
                 _record(ep, float(np.asarray(action).ravel()[0]), sub["step_reward"], sub)
         else:
             _record(ep, float(np.asarray(action).ravel()[0]), float(reward[0]), info_list[0])
-
-        if capture_frames:
-            frame = venv.venv.envs[0].render()
-            if frame is not None and keep(len(ep["speeds"])):
-                frames.append(shrink(frame))
 
         if render_mode == 'human':
             base_env = venv.venv.envs[0].unwrapped
