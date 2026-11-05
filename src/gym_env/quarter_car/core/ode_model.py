@@ -160,10 +160,6 @@ class QuarterCarODE:
     def crash_signals(self, x) -> tuple:
         return abs(float(x[_X_SUSP])), abs(float(x[_X_POS])), abs(float(x[_X_ZW] - x[_X_ZB]))
 
-    def perturb(self, x, rng) -> None:
-        x[0:4] += rng.normal(0.0, 0.005, size=4)
-        x[_X_POS] += rng.normal(0.0, 0.001)
-
     def reset(self, v0: float = 6.0) -> np.ndarray:
 
         x    = np.zeros(6, dtype=np.float64)

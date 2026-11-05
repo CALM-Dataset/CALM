@@ -28,7 +28,8 @@ The environment times the slowdown around the bump, so the policy learns only th
 depth. The reward is the ISO 2631-1 weighted body acceleration relative to a
 constant-speed drive that takes the same time, with a price on the time lost
 against the scenario speed; the MPC planner can be run on the same objective.
-Training uses a four-level performance-gated curriculum over randomised and real roads.
+Training uses a four-level curriculum over randomised and real roads that moves up a level after
+5 000, 10 000 and 15 000 decisions.
 A model-based MPC planner and rule-based drivers are included as baselines.
 
 A trained policy is available on Hugging Face:
@@ -81,8 +82,8 @@ Inside the container:
 
 ```bash
 just train
-just eval PPO <run-name>
-just mpc                                    # requires acados (see below)
+just eval <run-name>
+just mpc                                    # requires acados (see above)
 ```
 
 Training scenarios are generated during the image build. Logs and evaluation
@@ -135,7 +136,7 @@ just test                       # fast tests, no data needed
 ```
 
 A first run without any data: `just install`, `just doctor`, `just gen-scene`, then
-`just train --timesteps 200000 --run-name demo` (a few minutes) and `just eval demo --scenario c`.
+`just train --run-name demo` (20 000 decisions, the default) and `just eval demo --scenario c`.
 
 The vehicle at evaluation time must match the one the model was trained on (`--vehicle`).
 
@@ -144,6 +145,7 @@ The vehicle at evaluation time must match the one the model was trained on (`--v
 - `space` pause, `f` / `s` faster / slower playback (starts at 0.5x)
 - `+` / `-` or scroll wheel zoom, `0` reset zoom
 - Left / right arrow: previous / next scenario
+- `r` replay the scenario, `q` or `escape` quit
 
 The earlier figures read `.mat` data written by `calm run-eval <run>` and
 `calm train-curve <run>`; the comfort study does not need them.

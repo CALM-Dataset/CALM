@@ -76,13 +76,6 @@ def place_snapshot(src: Path, train_dirs: tuple[Path, ...], eval_dirs: tuple[Pat
     return skipped
 
 
-ITALY_LOCATIONS = ('carmiano', 'salice_salentino', 'nardo', 'monteroni_di_lecce')
-
-
-def region_of(name: str) -> str:
-    return 'italy' if name.startswith(ITALY_LOCATIONS) else 'germany'
-
-
 def index_path() -> Path:
     return ROOT / 'config' / 'dataset' / 'index.json'
 
@@ -136,13 +129,6 @@ def build_index(write: bool = False) -> list[dict]:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(rows, indent=2))
     return rows
-
-
-def load_index() -> list[dict]:
-    p = index_path()
-    if p.is_file():
-        return json.loads(p.read_text())
-    return build_index()
 
 
 def ensure_local() -> None:

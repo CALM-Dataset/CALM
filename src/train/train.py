@@ -55,7 +55,7 @@ def parse_args() -> argparse.Namespace:
                     "--timesteps",
                     type=int,
                     default=None,
-                    help="Total env steps.")
+                    help="Total decisions.")
     p.add_argument(
                     "--n-envs",
                     type=int,

@@ -12,8 +12,7 @@ from baseline.mpc.vehicle import make_vehicle_spec
 _FRONTIER_POINTS = 8
 _PASSES = 2
 _VEH = (load_mpc_cfg().get("comfort_map") or {}).get("vehicle") or {}
-_FR = load_mpc_cfg().get("frontier") or {}
-_DV = float(_FR.get("dv", 0.4))
+_DV = 0.4
 
 
 class FrontierPlanner:

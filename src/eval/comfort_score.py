@@ -125,11 +125,6 @@ def human_replay(win_dir: Path, end: float, offset: float = 0.0) -> tuple[list[f
     return v, n_rec, t_start
 
 
-def human_speeds(win_dir: Path, end: float) -> tuple[list[float], int]:
-    v, n_rec, _ = human_replay(win_dir, end)
-    return v, n_rec
-
-
 def imu_a_w(win_dir: Path, t_end_s: float, t_start_s: float = 0.0) -> float | None:
     f = win_dir / 'export' / 'output.laz.sensor_export.json'
     if not f.is_file():

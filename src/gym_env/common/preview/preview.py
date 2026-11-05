@@ -76,8 +76,7 @@ class PreviewWrapper(gym.ObservationWrapper):
             dtype=np.float32,
         )
 
-        self.preview: np.ndarray = self._empty_preview()
-        self._filtered_preview = self.preview.copy()
+        self._filtered_preview = self._empty_preview()
         self._track = None
         self._model = None
         if self._cfg.perception_mode == "model":
@@ -97,7 +96,6 @@ class PreviewWrapper(gym.ObservationWrapper):
 
     def reset(self, **kwargs):
         self._filtered_preview = self._empty_preview()
-        self.preview = self._filtered_preview.copy()
         return super().reset(**kwargs)
 
     def _compute_v2(self) -> np.ndarray:
@@ -140,7 +138,6 @@ class PreviewWrapper(gym.ObservationWrapper):
         out[base]     = np.clip(v / v_top, 0.0, 1.0)
         out[base + 1] = np.clip(min(passed) / D, 0.0, 1.0) if passed else 1.0
         out[base + 2] = 1.0 if any(x0 <= s < x0 + L for x0, _, L in bumps) else 0.0
-        self.preview = out.copy()
         return out
 
     def _compute_peaks(self) -> np.ndarray:
@@ -199,8 +196,6 @@ class PreviewWrapper(gym.ObservationWrapper):
             else:
                 freq = v_safe / max(peak_w_m, 0.01)
                 peak_arr[i * 3 + 2] = float(np.clip(freq / cfg.freq_max, 0.0, 1.0))
-
-        self.preview = peak_arr.copy()
 
         if self._track is not None and cfg.perception_mode in ("replay", "model"):
             for i, d in enumerate(peak_dists):

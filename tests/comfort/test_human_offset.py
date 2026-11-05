@@ -3,7 +3,7 @@ import json
 import numpy as np
 import pytest
 
-from eval.comfort_score import human_replay, human_speeds
+from eval.comfort_score import human_replay
 from gym_env.common.env_params import DT
 from utils.scenario_loader import load_scenario_json
 
@@ -22,11 +22,10 @@ def _window(tmp_path, speed_fn, seconds=12.0, s0=1.0):
 
 
 def test_without_an_offset_the_replay_is_the_recorded_drive(tmp_path):
-    win, _ = _window(tmp_path, lambda t: 5.0 + 0.0 * t)
-    legacy, n_legacy = human_speeds(win, 30.0)
-    shifted, n_shifted, t_start = human_replay(win, 30.0, 0.0)
-    assert t_start == 0.0 and n_legacy == n_shifted
-    assert np.allclose(legacy, shifted)
+    win, s = _window(tmp_path, lambda t: 5.0 + 0.0 * t)
+    v, n_rec, t_start = human_replay(win, 30.0, 0.0)
+    assert t_start == 0.0
+    assert abs(np.sum(v[:n_rec]) * DT - s[-1]) < 0.3
 
 
 def test_the_replay_starts_where_the_road_starts(tmp_path):

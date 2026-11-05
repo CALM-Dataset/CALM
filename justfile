@@ -42,7 +42,7 @@ test *args:
 build-acados:
     git submodule update --init --recursive acados
     mkdir -p acados/build
-    cd acados/build && cmake -DACADOS_WITH_QPOASES=ON -DCMAKE_INSTALL_PREFIX=$(pwd)/.. .. && make -j$(nproc) && make install
+    cd acados/build && cmake -DACADOS_WITH_QPOASES=ON -DCMAKE_INSTALL_PREFIX=$(pwd)/.. .. && make -j$(python3 -c "import os; print(os.cpu_count())") && make install
     {{pip}} install vcs-versioning setuptools_scm
     {{pip}} install -e acados/interfaces/acados_template
 

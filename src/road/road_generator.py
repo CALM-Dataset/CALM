@@ -23,22 +23,13 @@ _DEFAULT_BUMP_CONFIG = {
 
 
 class RoadGenerator:
-    def __init__(self, vehicle_speed: float = 6.0,
-                 params: Optional[dict] = None):
+    def __init__(self, vehicle_speed: float = 6.0):
         self.speed = vehicle_speed
         self._bump_labels: Optional[list] = None
         self._profile: Optional[tuple] = None
         self._s_bump: Optional[float] = None
 
-        if params and all(k in params for k in ('bump_height', 'bump_length', 'bump_x_start')):
-            self._bumps = [(
-                float(params['bump_x_start']),
-                float(params['bump_height']),
-                float(params['bump_length']),
-            )]
-        else:
-            mc = (params or {}).get('bump_config', _DEFAULT_BUMP_CONFIG)
-            self._bumps = self._build_bumps(mc)
+        self._bumps = self._build_bumps(_DEFAULT_BUMP_CONFIG)
 
     @staticmethod
     def _build_bumps(config: dict) -> list:
@@ -148,19 +139,14 @@ class RoadGenerator:
         cls,
         rng: np.random.Generator,
         vehicle_speed: float,
-        params: Optional[dict] = None,
         *,
         catalog_ids: Optional[list] = None,
-        explicit_obstacles: Optional[list] = None,
         flat_start: float = 8.0,
         hole_fraction: float = 0.0,
     ) -> 'RoadGenerator':
-        if explicit_obstacles:
-            pool = [(float(h), float(w)) for h, w in explicit_obstacles]
-        else:
-            catalog  = _get_catalog()
-            eligible = [catalog[i] for i in catalog_ids] if catalog_ids else catalog
-            pool = [(float(e['height_m']), float(e['width_m'])) for e in eligible]
+        catalog  = _get_catalog()
+        eligible = [catalog[i] for i in catalog_ids] if catalog_ids else catalog
+        pool = [(float(e['height_m']), float(e['width_m'])) for e in eligible]
 
         _a_max = 5.0
         flat_start_safe = max(float(flat_start), vehicle_speed ** 2 / (2.0 * _a_max))
@@ -169,7 +155,7 @@ class RoadGenerator:
             A = -abs(A)
         bumps = [(flat_start_safe, A, L)]
 
-        gen = cls(vehicle_speed=vehicle_speed, params=params)
+        gen = cls(vehicle_speed=vehicle_speed)
         gen._bumps = bumps
         gen._clamp_speed_to_geometry()
         return gen

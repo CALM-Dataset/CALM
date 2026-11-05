@@ -64,7 +64,7 @@ def parse_args() -> argparse.Namespace:
                    help="Fixed single eval scenario name or path")
     p.add_argument("--suites", nargs="+", metavar="FOLDER", default=None,
                    help="Suite folder names to run (default: enabled suites from eval_suites.yaml). "
-                        "Example: --suites 01_single_bump 09_italy_full")
+                        "Example: --suites 01_single_bump")
     p.add_argument("--n-episodes", type=int, default=5)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--render", action="store_true")
@@ -73,8 +73,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--save-gif", action="store_true",
                    help="Save an animated GIF for each episode.")
     p.add_argument("--log-data", metavar="DIR", default='data',
-                   help="Save run data (.mat/.npz) to DIR/PPO/<road>/<exp_N>/. "
-                        "Default root is <repo>/data/ when flag is given without value.",
+                   help="Save run data (.mat/.npz) to DIR/PPO/<road>/<exp_N>/ (default: data). "
+                        "Given without a value, DIR is <repo>/data/.",
                    nargs="?", const="__default__")
     return p.parse_args()
 
@@ -226,12 +226,8 @@ def run_episode(
         step_result = venv.step(action)
         obs    = step_result[0]
         reward = step_result[1]
-        if len(step_result) == 5:
-            done      = np.logical_or(step_result[2], step_result[3])
-            info_list = step_result[4]
-        else:
-            done      = step_result[2]
-            info_list = step_result[3]
+        done      = step_result[2]
+        info_list = step_result[3]
         inner = info_list[0].get("inner")
         if inner:
             for sub in inner:
@@ -431,7 +427,7 @@ def plot_timeseries(ep: dict, ep_i: int, rcfg, bounds: dict, save_dir: Path | No
     ax_action.plot(t, ep["actions"], color="#E65100", lw=1.4, label="action u")
     ax_action.axhline(0, color="gray", ls=":", lw=0.8)
     ax_action.set_ylim(-1.15, 1.15)
-    ax_action.set_ylabel("action [-1, 1]", fontsize=9)
+    ax_action.set_ylabel("action", fontsize=9)
     ax_action.legend(fontsize=7, loc="upper right")
 
     ax_reward.plot(t, ep["rewards"], color="#212121", lw=1.4, label="step reward")
@@ -799,21 +795,16 @@ def main() -> None:
         _run_suite(args, model, vecnorm_path, deterministic, bounds, rcfg, exp_tag)
         return
 
-    scenario_road  = None
-    scenario_track = None
-    scenario_label = 'speed_bump'
-    if args.scenario:
-        scenario_road, scenario_track, _, sc_desc = load_scenario_any(args.scenario)
-        sc_name        = args.scenario
-        scenario_label = Path(args.scenario).stem
+    scenario_road, scenario_track, _, sc_desc = load_scenario_any(args.scenario)
+    sc_name        = args.scenario
+    scenario_label = Path(args.scenario).stem
 
     save_dir = _ROOT / "logs" / "eval" / "results" / f"eval_{args.algo}_{scenario_label}_{exp_tag or 'run'}"
 
     print(f"\n{'═'*60}")
     print("  CALM EVAL")
     print(f"  algo={args.algo}  road={scenario_label}  episodes={args.n_episodes}")
-    if args.scenario:
-        print(f"  scenario: {sc_name} - {sc_desc}")
+    print(f"  scenario: {sc_name} - {sc_desc}")
     print(f"  model: {args.model_path}")
     print(f"  deterministic={deterministic}  render={args.render}  save_plots={args.save_plots}  save_gif={args.save_gif}")
     print(f"{'═'*60}\n")
