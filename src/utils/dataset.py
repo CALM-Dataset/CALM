@@ -26,17 +26,55 @@ def real_files() -> list[tuple[Path, str]]:
     return sorted({**seen, **held}.values(), key=lambda t: t[0].name)
 
 
-def assign_split(stem: str, folder_split: str, eval_names: set[str] | None) -> str:
+def assign_split(stem: str, folder_split: str | None, eval_names: set[str] | None) -> str:
     if eval_names is None:
         return folder_split
     return 'eval' if stem in eval_names else 'train'
 
 
-def paper_eval_names(split_file: Path) -> set[str] | None:
+def split_eval_names(split_file: Path) -> set[str] | None:
     if not split_file.is_file():
         return None
-    names = (yaml.safe_load(split_file.read_text()) or {}).get('paper_split', {}).get('eval')
+    d = yaml.safe_load(split_file.read_text()) or {}
+    names = d.get('eval') or (d.get('paper_split') or {}).get('eval')
     return set(names) if names else None
+
+
+def _region_files(region_dir: Path) -> list[tuple[Path, str | None]]:
+    folders = [s for s in ('train', 'eval') if (region_dir / s).is_dir()]
+    if folders:
+        return [(f, s) for s in folders for f in sorted((region_dir / s).glob('*.json'))]
+    return [(f, None) for f in sorted((region_dir / 'crossings').glob('*.json'))]
+
+
+def place_snapshot(src: Path, train_dirs: tuple[Path, ...], eval_dirs: tuple[Path, ...], perception_file: Path) -> int:
+    import shutil
+
+    eval_names = split_eval_names(src / 'split.yaml')
+    files = [item for region in REGIONS for item in _region_files(src / region)]
+    if eval_names is None and any(folder_split is None for _, folder_split in files):
+        raise SystemExit(
+            f"{SCENARIOS_REPO} holds the scenarios without train/eval folders, "
+            "but its split.yaml has no eval list naming the evaluation roads"
+        )
+    targets = {'train': train_dirs, 'eval': eval_dirs}
+    for d in (*train_dirs, *eval_dirs):
+        d.mkdir(parents=True, exist_ok=True)
+    skipped = 0
+    for f, folder_split in files:
+        # low-confidence bumps may not exist on the road, so they are skipped
+        bumps = json.loads(f.read_text()).get('bumps') or []
+        if bumps and bumps[0].get('low_confidence'):
+            skipped += 1
+            continue
+        for dst in targets[assign_split(f.stem, folder_split, eval_names)]:
+            shutil.copy2(f, dst / f.name)
+    models = [src / 'perception_model_de_it.yaml', src / 'germany' / 'perception_model' / 'perception_model_de.yaml', src / 'italy' / 'perception_model' / 'perception_model_it.yaml']
+    model = next((m for m in models if m.is_file()), None)
+    if model is not None and not perception_file.is_file():
+        perception_file.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(model, perception_file)
+    return skipped
 
 
 ITALY_LOCATIONS = ('carmiano', 'salice_salentino', 'nardo', 'monteroni_di_lecce')
@@ -115,17 +153,10 @@ def ensure_local() -> None:
     seen_dir = _eval_dir() / 'real_train'
     if all(d.is_dir() and any(d.glob('*.json')) for d in (train_dir, eval_dir, seen_dir)):
         return
-    import shutil
     import tempfile
 
     from huggingface_hub import snapshot_download
 
-    for d in (_real_dir(), _eval_dir() / 'real', seen_dir):
-        d.mkdir(parents=True, exist_ok=True)
-    perception_dir = ROOT / 'config' / 'perception'
-    perception_dir.mkdir(parents=True, exist_ok=True)
-
-    skipped = 0
     with tempfile.TemporaryDirectory() as tmp:
         try:
             snapshot_download(repo_id=SCENARIOS_REPO, repo_type='dataset', local_dir=tmp)
@@ -137,21 +168,8 @@ def ensure_local() -> None:
                     "request access on its Hugging Face page, then run `hf auth login` with a token that can read it."
                 ) from None
             raise
-        eval_names = paper_eval_names(Path(tmp, 'split.yaml'))
-        targets = {'train': (_real_dir(), seen_dir), 'eval': (_eval_dir() / 'real',)}
-        for region in REGIONS:
-            for folder_split in ('train', 'eval'):
-                for f in Path(tmp, region, folder_split).glob('*.json'):
-                    # low-confidence bumps may not exist on the road, so they are skipped
-                    bumps = json.loads(f.read_text()).get('bumps') or []
-                    if bumps and bumps[0].get('low_confidence'):
-                        skipped += 1
-                        continue
-                    for dst in targets[assign_split(f.stem, folder_split, eval_names)]:
-                        shutil.copy2(f, dst / f.name)
-            model = Path(tmp, region, 'perception_model.yaml')
-            if model.is_file() and not (perception_dir / 'perception_model.yaml').is_file():
-                shutil.copy2(model, perception_dir / 'perception_model.yaml')
+        skipped = place_snapshot(Path(tmp), (train_dir, seen_dir), (eval_dir,),
+                                 ROOT / 'config' / 'perception' / 'perception_model.yaml')
     if skipped:
         print(f"skipped {skipped} low_confidence scenario(s)")
 
