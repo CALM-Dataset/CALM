@@ -56,11 +56,6 @@ fetch-scenarios:
 build-index:
     {{calm}} build-index
 
-# MPC and PPO speed profiles for every scenario
-[group('data')]
-build-labels *args:
-    {{calm}} build-labels "$@"
-
 # procedural training scenarios
 [group('data')]
 gen-scene *args:

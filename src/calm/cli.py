@@ -14,7 +14,6 @@ TOOLS = {
     'train-curve': ('utils.export_training_curve', 'export training curves for the thesis figures', []),
     'frontier': ('eval.mpc_frontier', 'MPC comfort-versus-time frontier (build, excess)', []),
     'export-runs': ('eval.export_runs', 'collect per-run comfort scores for the figures', []),
-    'build-labels': ('utils.build_labels', 'recommended-speed labels for every scenario', []),
     'gen-scenes': ('utils.generate_train_scenarios', 'procedural training scenarios', []),
     'build-index': ('utils.dataset', 'metadata table over every scenario', []),
 }

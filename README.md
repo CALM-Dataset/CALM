@@ -113,17 +113,7 @@ just gen-scene                  # writes config/train/scenarios/curriculum
 ```
 
 `just build-index` writes `config/dataset/index.json`, a metadata table over
-every scenario (source, size, bump count, recommended speeds).
-
-Each scenario can carry a recommended crossing-speed profile from two planners,
-MPC and the trained PPO agent. Generate the labels with:
-
-```bash
-just build-labels --ppo-model logs/models/PPO/<run>/PPO_final.zip --mpc
-```
-
-This runs both planners over every scenario and writes a per-timestep speed
-profile into the `comfort` block, then refreshes the index. MPC needs acados.
+every scenario (source, size, bump count).
 
 ## Usage
 
