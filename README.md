@@ -93,10 +93,10 @@ library, which is not included in the image.
 
 ## Scenarios
 
-The synthetic evaluation suites (`config/eval/scenarios/01_single_bump`, `05_one_bump_one_hole`, `10_potholes`) are part of the repository.
+The synthetic evaluation suites (`config/eval/scenarios/01_single_bump` and `10_potholes`) are part of the repository.
 The measured (real) roads extend the [CARD dataset](https://huggingface.co/CARD-Data) and are hosted on
 HuggingFace as [CALM-Dataset/CALM-Scenarios](https://huggingface.co/datasets/CALM-Dataset/CALM-Scenarios)
-(German part CC BY 4.0, Italian part CC BY-NC 4.0), not committed to the repository.
+(CC BY-NC 4.0), not committed to the repository.
 
 The scenarios are gated: request access on the dataset page (agreeing to its license
 and usage terms), then authenticate locally before downloading:
