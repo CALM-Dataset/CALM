@@ -181,7 +181,7 @@ second axle, with load transfer coupling the front and rear suspension.
 ```bibtex
 @misc{calm_dataset,
   title  = {CALM: Comfort-Aware Longitudinal Motion Planning},
-  author = {Mohammed S. Azab Abdelazim},
+  author = {Mohammed El Said Azab Abdelazim},
   year   = {2026},
   url    = {https://huggingface.co/CALM-Dataset}
 }

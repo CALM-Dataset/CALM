@@ -1,4 +1,4 @@
-name: pothole_severe
+name: hsv
 description: Severe pothole, 70 mm deep, 0.90 m wide
 source: "Pothole severity thresholds (UK highway maintenance) - high severity > 50 mm deep"
 source_url: "https://civilengineering.engineer/2020/06/13/whats-that-defect-potholes/"

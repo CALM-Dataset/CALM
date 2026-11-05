@@ -1,4 +1,4 @@
-name: pothole_minor
+name: hmi
 description: Minor pothole, 15 mm deep, 0.30 m wide
 source: "Extrapolated below the RAC Foundation low-severity boundary (config/catalog/potholes.json)"
 vehicle_speed_kmh: 30.0
