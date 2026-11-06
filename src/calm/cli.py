@@ -10,10 +10,10 @@ TOOLS = {
     'tune': ('tune.tune', 'Optuna hyperparameter search', []),
     'mpc': ('baseline.mpc.mpc', 'MPC baseline (needs acados)', []),
     'reactive': ('baseline.reactive_driver.driver_eval', 'rule-based driver baseline', []),
-    'run-eval': ('eval.run_eval', 'evaluate one run with every method and save .mat data for the thesis figures', []),
-    'train-curve': ('utils.export_training_curve', 'export training curves for the thesis figures', []),
+    'run-eval': ('eval.run_eval', 'evaluate one run with every method and save .mat data for the figures', []),
+    'train-curve': ('utils.export_training_curve', 'export training curves for the figures', []),
     'frontier': ('eval.mpc_frontier', 'MPC comfort-versus-time frontier (build, excess)', []),
-    'export-runs': ('eval.export_runs', 'collect per-run comfort scores for the figures', []),
+    'export-runs': ('eval.export_runs', 'collect per-run comfort results for the figures', []),
     'gen-scenes': ('utils.generate_train_scenarios', 'procedural training scenarios', []),
     'build-index': ('utils.dataset', 'metadata table over every scenario', []),
 }
@@ -35,7 +35,7 @@ def _split_checkpoint(rest: list[str], default: str = 'PPO_final.zip') -> tuple[
 
 def cmd_eval(rest: list[str]) -> int:
     if not rest or rest[0].startswith('-'):
-        print('usage: calm eval <run> [checkpoint.zip] [eval options]')
+        print('usage: calm eval <run> [checkpoint] [eval options]')
         return 2
     run, (ckpt, extra) = rest[0], _split_checkpoint(rest[1:])
     return _run('eval.eval', ['--algo', 'PPO', '--model_path', _model_path(run, ckpt), *extra])
@@ -43,7 +43,7 @@ def cmd_eval(rest: list[str]) -> int:
 
 def cmd_compare(rest: list[str]) -> int:
     if not rest or rest[0].startswith('-'):
-        print('usage: calm compare <run> [checkpoint.zip] [comfort_score options]')
+        print('usage: calm compare <run> [checkpoint] [comfort_score options]')
         return 2
     run, (ckpt, extra) = rest[0], _split_checkpoint(rest[1:])
     return _run('eval.comfort_score', ['--ppo-model', _model_path(run, ckpt), '--mpc',
@@ -76,11 +76,11 @@ def cmd_tb(rest: list[str]) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     special = {
-        'eval': ('evaluate a trained run: calm eval <run> [checkpoint.zip]', cmd_eval),
+        'eval': ('evaluate a trained run: calm eval <run> [checkpoint]', cmd_eval),
         'compare': ('ISO 2631 comfort of PPO, MPC and the recorded drive: calm compare <run>', cmd_compare),
         'fetch': ('download the gated real scenarios, then check what is present', cmd_fetch),
         'doctor': ('check Python, packages, acados, data and login, with hints', cmd_doctor),
-        'reproduce': ('train, score and export several seeds end to end (see calm reproduce --help)', cmd_reproduce),
+        'reproduce': ('train, evaluate and export several seeds end to end (see calm reproduce --help)', cmd_reproduce),
         'tb': ('TensorBoard on logs/tensorboard', cmd_tb),
     }
     if not argv or argv[0] in ('-h', '--help'):

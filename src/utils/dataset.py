@@ -62,7 +62,6 @@ def place_snapshot(src: Path, train_dirs: tuple[Path, ...], eval_dirs: tuple[Pat
         d.mkdir(parents=True, exist_ok=True)
     skipped = 0
     for f, folder_split in files:
-        # low-confidence bumps may not exist on the road, so they are skipped
         bumps = json.loads(f.read_text()).get('bumps') or []
         if bumps and bumps[0].get('low_confidence'):
             skipped += 1

@@ -17,7 +17,7 @@ Gymnasium environment. Two plant models are available:
   front.
 - **Quarter-car**: 2 degrees of freedom, single-axle heave only. It shares the reward,
   action mode and scenarios with the half-car (select with `--vehicle quarter`); the
-  original thesis implementation is kept at the git tag `thesis-quarter-car` (v1.0.2).
+  first implementation is kept at the git tag `thesis-quarter-car`.
 
 The vehicle dynamics use a nonlinear suspension (progressive spring with
 bumpstops, asymmetric compression/rebound damping) integrated with RK4.
@@ -93,10 +93,10 @@ library, which is not included in the image.
 
 ## Scenarios
 
-The synthetic evaluation suites (`config/eval/scenarios/01_single_bump`, `05_one_bump_one_hole`, `10_potholes`) are part of the repository.
+The synthetic evaluation suites (`config/eval/scenarios/01_single_bump` and `10_potholes`) are part of the repository.
 The measured (real) roads extend the [CARD dataset](https://huggingface.co/CARD-Data) and are hosted on
 HuggingFace as [CALM-Dataset/CALM-Scenarios](https://huggingface.co/datasets/CALM-Dataset/CALM-Scenarios)
-(German part CC BY 4.0, Italian part CC BY-NC 4.0), not committed to the repository.
+(CC BY-NC 4.0), not committed to the repository.
 
 The scenarios are gated: request access on the dataset page (agreeing to its license
 and usage terms), then authenticate locally before downloading:
@@ -145,7 +145,7 @@ The vehicle at evaluation time must match the one the model was trained on (`--v
 - `+` / `-` or scroll wheel zoom, `0` reset zoom
 - Left / right arrow: previous / next scenario
 
-The earlier thesis figures read `.mat` data written by `calm run-eval <run>` and
+The earlier figures read `.mat` data written by `calm run-eval <run>` and
 `calm train-curve <run>`; the comfort study does not need them.
 
 ## Repository layout
