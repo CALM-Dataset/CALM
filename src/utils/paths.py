@@ -13,4 +13,3 @@ def find_root() -> Path:
 ROOT = find_root()
 CONFIG = ROOT / 'config'
 LOGS = ROOT / 'logs'
-DATA = ROOT / 'data'

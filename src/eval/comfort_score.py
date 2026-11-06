@@ -150,19 +150,6 @@ def find_window(name: str, roots: list[Path]) -> Path | None:
     return None
 
 
-def write_profile(out_dir: Path, suite: str, name: str, source: str, speeds, z_b, s_pos, cut: float) -> None:
-    reached = np.nonzero(s_pos >= cut)[0]
-    k = int(reached[0]) + 1 if reached.size else len(s_pos)
-    a_w = weight_wk(z_b[:k], DT)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    with (out_dir / f'{suite}__{name}__{source}.csv').open('w', newline='') as f:
-        w = csv.writer(f)
-        w.writerow(['t_s', 's_m', 'v_kmh', 'a_body', 'a_w'])
-        for i in range(k):
-            w.writerow([round(i * DT, 3), round(float(s_pos[i]), 4), round(float(speeds[i]) * 3.6, 3),
-                        round(float(z_b[i]), 4), round(float(a_w[i]), 4)])
-
-
 def const_frontier(road_name: str, end: float, cut: float):
     pts = []
     for kmh in FRONTIER_KMH:
@@ -184,27 +171,12 @@ def _UNSEEN() -> set:
     return set(list_real_scenarios('real'))
 
 
-def write_road(out_dir: Path, suite: str, name: str, road) -> None:
-    prof = getattr(road, '_profile', None)
-    if prof is None:
-        return
-    out_dir.mkdir(parents=True, exist_ok=True)
-    with (out_dir / f'road__{suite}__{name}.csv').open('w', newline='') as f:
-        w = csv.writer(f)
-        w.writerow(['s_m', 'z_mm'])
-        for x, z in zip(prof[0], prof[1]):
-            w.writerow([round(float(x), 3), round(float(z) * 1000.0, 2)])
-
-
-def score_scenario(suite: str, name: str, runners: dict, roots: list[Path],
-                   prof_dir: Path | None = None) -> list[dict]:
+def score_scenario(suite: str, name: str, runners: dict, roots: list[Path]) -> list[dict]:
     road, track, _, _ = load_scenario_any(name)
     end = end_point(road, HalfCarODE().wheelbase)
     v_road = float(road.speed)
     rows: list[dict] = []
 
-    if prof_dir is not None:
-        write_road(prof_dir, suite, name, road)
     win = find_window(name, roots) if suite.startswith('real') else None
     offset = float(getattr(road, '_trim_offset_m', 0.0))
     human = human_replay(win, end, offset) if win is not None else None
@@ -218,8 +190,6 @@ def score_scenario(suite: str, name: str, runners: dict, roots: list[Path],
     def add(source: str, speeds, v_start: float, extra: dict | None = None):
         r, _, _, _ = load_scenario_any(name)
         z_b, phi, s_pos = replay(r, speeds, v_start)
-        if prof_dir is not None:
-            write_profile(prof_dir, suite, name, source, speeds, z_b, s_pos, cut)
         row = {'suite': suite, 'scenario': name, 'source': source,
                **_metrics(z_b, phi, s_pos, speeds, cut), 'a_w_imu': '', 'padded_frac': ''}
         ref = float(np.interp(row['travel_time_s'], *frontier))
@@ -235,7 +205,7 @@ def score_scenario(suite: str, name: str, runners: dict, roots: list[Path],
         add('human', h, h[0], {'a_w_imu': imu_a_w(win, t_start + n_rec * DT, t_start) or '',
                                'padded_frac': round(1.0 - n_rec / len(h), 3)})
 
-    for source in ('ppo', 'mpc', 'mpc_frontier'):
+    for source in ('ppo', 'mpc'):
         run = runners.get(source)
         if run is None:
             continue
@@ -255,10 +225,6 @@ def _runners(args) -> dict:
         from baseline.mpc.config import horizon
 
         out['mpc'] = mpc_runner('half', args.horizon or horizon(), False, args.seed, args.mpc_objective)
-    if args.mpc_frontier:
-        from baseline.mpc.config import horizon
-
-        out['mpc_frontier'] = mpc_runner('half', args.horizon or horizon(), False, args.seed, 'frontier')
     return out
 
 
@@ -321,8 +287,6 @@ def main() -> None:
     ap.add_argument('--mpc', action='store_true')
     ap.add_argument('--mpc-objective', choices=('comfort_map', 'frontier'), default='comfort_map',
                     help='how the MPC picks the crossing speed of each bump: the comfort map, or the frontier reward the policy is trained on')
-    ap.add_argument('--mpc-frontier', action='store_true',
-                    help='also run the MPC on the frontier reward as source mpc_frontier; its rows go to <out>_mpc_frontier.csv')
     ap.add_argument('--horizon', type=int, default=None, help='MPC horizon in steps (default: N in config/baseline/mpc.yaml)')
     ap.add_argument('--suites', nargs='+', default=None,
                     help='suite folders, "real" (held-out), "real_train" (seen in training) or "real_all" (default: every synthetic suite and real)')
@@ -333,8 +297,6 @@ def main() -> None:
     ap.add_argument('--allow-missing-human', action='store_true',
                     help='score real scenarios without the recorded drive when the recordings are not found')
     ap.add_argument('--seed', type=int, default=0)
-    ap.add_argument('--profiles-dir', default=None,
-                    help='write per-scenario speed and acceleration time series for plotting')
     ap.add_argument('--out', default='logs/comfort/comfort_scores.csv')
     args = ap.parse_args()
 
@@ -345,11 +307,10 @@ def main() -> None:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    prof_dir = Path(args.profiles_dir) if args.profiles_dir else None
     rows: list[dict] = []
     for suite, names in enabled_eval_suites(args.suites or _all_suites()):
         for i, name in enumerate(names, 1):
-            rows += score_scenario(suite, name, runners, roots, prof_dir)
+            rows += score_scenario(suite, name, runners, roots)
             print(f'{suite} {i}/{len(names)} {name}', flush=True)
 
     scored = {(r['suite'], r['scenario']) for r in rows}
@@ -360,20 +321,11 @@ def main() -> None:
                          f'(set CALM_SEQUENCES or --real-root, or pass --allow-missing-human): '
                          + ', '.join(missing[:4]) + (' ...' if len(missing) > 4 else ''))
 
-    extra = [r for r in rows if r['source'] == 'mpc_frontier']
-    rows = [r for r in rows if r['source'] != 'mpc_frontier']
     with out.open('w', newline='') as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
         w.writeheader()
         w.writerows(rows)
     print(f'{len(rows)} rows -> {out}')
-    if extra:
-        side = out.with_name(out.stem + '_mpc_frontier.csv')
-        with side.open('w', newline='') as f:
-            w = csv.DictWriter(f, fieldnames=FIELDS)
-            w.writeheader()
-            w.writerows(extra)
-        print(f'{len(extra)} mpc_frontier rows -> {side}')
     print_summary(rows)
 
 

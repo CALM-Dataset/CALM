@@ -28,7 +28,6 @@ from gym_env.common.env_params import EPISODE_STEPS, DT
 from utils.scenario_loader import load_scenario_any, enabled_eval_suites, scenario_title
 
 from utils.gif import keep, save_gif, shrink
-from eval.data_logger import RunLogger, EpisodeData
 from utils.portable import load_vecnormalize
 
 
@@ -72,10 +71,6 @@ def parse_args() -> argparse.Namespace:
                    help="Save matplotlib figures next to the JSON results.")
     p.add_argument("--save-gif", action="store_true",
                    help="Save an animated GIF for each episode.")
-    p.add_argument("--log-data", metavar="DIR", default='data',
-                   help="Save run data (.mat/.npz) to DIR/PPO/<road>/<exp_N>/ (default: data). "
-                        "Given without a value, DIR is <repo>/data/.",
-                   nargs="?", const="__default__")
     return p.parse_args()
 
 
@@ -253,16 +248,6 @@ def run_episode(
 
     venv.close()
     return dict(ep), frames, nav
-
-
-def _count_params(model) -> float:
-    policy = getattr(model, "policy", None)
-    if policy is None or not hasattr(policy, "parameters"):
-        return 0.0
-    try:
-        return float(sum(p.numel() for p in policy.parameters()))
-    except Exception:
-        return 0.0
 
 
 def episode_metrics(ep: dict) -> dict:
@@ -594,7 +579,6 @@ def _run_one_scenario(
     rcfg,
     save_dir: Path,
     ep_index: int,
-    log_root: Path | None = None,
 ) -> tuple[str, str, float, dict] | None:
     while True:
         scenario_road, perception_track, speed_ms, sc_desc = load_scenario_any(sc_name)
@@ -638,28 +622,6 @@ def _run_one_scenario(
         save_dir.mkdir(parents=True, exist_ok=True)
         plot_timeseries(ep, ep_index, rcfg, bounds, save_dir)
 
-    if log_root is not None:
-        logger = RunLogger(
-            method=args.algo, road=sc_name, out_root=log_root,
-            dt=DT, v_max_kmh=rcfg.v_limit * 3.6,
-            a_comfort=rcfg.a_comfort, a_limit=rcfg.a_limit,
-            run_subdir=False,
-            bumps=getattr(scenario_road, '_bumps', None),
-        )
-        logger.add(EpisodeData(
-            v=ep["speeds"], v_init=ep["v_inits"],
-            z_B_ddot=ep["body_accels"], z_W_ddot=ep["wheel_accels"],
-            susp_defl=ep["susp_defl"], tire_defl=ep["tire_defl"],
-            action=ep["actions"], reward=ep["rewards"],
-            episode_return=m["total_return"],
-            rms_accel=m["rms_accel"],
-            comfort_score=m["comfort_score"],
-            solve_ms_mean=float(np.mean(ep["solve_ms"])) if ep.get("solve_ms") else float("nan"),
-            cpu_ms_mean=float(np.mean(ep["cpu_ms"])) if ep.get("cpu_ms") else float("nan"),
-            n_params=_count_params(model),
-        ))
-        logger.save()
-
     return sc_name, sc_desc, speed_ms, m
 
 
@@ -698,12 +660,6 @@ def _run_suite(args, model, vecnorm_path: Path, deterministic: bool,
                bounds: dict, rcfg, exp_tag: str | None) -> None:
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     save_dir = _ROOT / "logs" / "eval" / "results" / f"eval_{args.algo}_suite_{exp_tag or 'run'}"
-    log_root = (
-        _ROOT / "data"
-        if args.log_data == "__default__"
-        else Path(args.log_data) if args.log_data
-        else None
-    )
 
     suites = enabled_eval_suites(args.suites)
     if not suites:
@@ -733,7 +689,6 @@ def _run_suite(args, model, vecnorm_path: Path, deterministic: bool,
             result = _run_one_scenario(
                 sc_name, model, vecnorm_path, args,
                 deterministic, bounds, rcfg, save_dir / suite_name, ep_index,
-                log_root=log_root,
             )
             if result is None:
                 aborted = True
@@ -775,8 +730,6 @@ def _run_suite(args, model, vecnorm_path: Path, deterministic: bool,
     out = save_dir / f"suite_{args.algo}_{ts}.json"
     out.write_text(json.dumps(export, indent=2))
     print(f"  JSON saved → {out}")
-    if log_root:
-        print(f"  data logged → {log_root}/{args.algo}/")
 
 
 def main() -> None:
@@ -809,28 +762,6 @@ def main() -> None:
     print(f"  deterministic={deterministic}  render={args.render}  save_plots={args.save_plots}  save_gif={args.save_gif}")
     print(f"{'═'*60}\n")
 
-    log_root = (
-        _ROOT / "data"
-        if args.log_data == "__default__"
-        else Path(args.log_data) if args.log_data
-        else None
-    )
-    run_logger: RunLogger | None = (
-        RunLogger(
-            method=args.algo,
-            road=scenario_label,
-            out_root=log_root,
-            dt=DT,
-            v_max_kmh=rcfg.v_limit * 3.6,
-            a_comfort=rcfg.a_comfort,
-            a_limit=rcfg.a_limit,
-            run_id=exp_tag,
-            run_subdir=False,
-            bumps=getattr(scenario_road, '_bumps', None),
-        )
-        if log_root is not None else None
-    )
-
     all_eps:     list[dict] = []
     all_metrics: list[dict] = []
 
@@ -862,24 +793,6 @@ def main() -> None:
         if nav == 'quit':
             break
 
-        if run_logger is not None:
-            run_logger.add(EpisodeData(
-                v=ep["speeds"],
-                v_init=ep["v_inits"],
-                z_B_ddot=ep["body_accels"],
-                z_W_ddot=ep["wheel_accels"],
-                susp_defl=ep["susp_defl"],
-                tire_defl=ep["tire_defl"],
-                action=ep["actions"],
-                reward=ep["rewards"],
-                episode_return=m["total_return"],
-                rms_accel=m["rms_accel"],
-                comfort_score=m["comfort_score"],
-                solve_ms_mean=float(np.mean(ep["solve_ms"])) if ep.get("solve_ms") else float("nan"),
-                cpu_ms_mean=float(np.mean(ep["cpu_ms"])) if ep.get("cpu_ms") else float("nan"),
-                n_params=_count_params(model),
-            ))
-
         if args.save_gif and frames:
             save_dir.mkdir(parents=True, exist_ok=True)
             gif_path = save_dir / f"ep{ep_i + 1}.gif"
@@ -894,12 +807,6 @@ def main() -> None:
 
     save_dir.mkdir(parents=True, exist_ok=True)
     save_json(agg, all_metrics, args.algo, args.model_path, save_dir)
-
-    if run_logger is not None:
-        saved = run_logger.save()
-        print(f"  data logged → {run_logger.save_dir}")
-        if "mat" not in saved:
-            print("  (install scipy for .mat output: pip install scipy)")
 
     if args.save_plots:
         print("\n  Generating summary figures ...")
