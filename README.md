@@ -1,6 +1,6 @@
 # CALM
 
-**Comfort-Aware Longitudinal Motion**
+**Comfort-Aware Longitudinal Motion Planning**
 
 A car is approaching a speed bump. How much should it slow down so that the people inside barely feel it, without wasting time?
 
