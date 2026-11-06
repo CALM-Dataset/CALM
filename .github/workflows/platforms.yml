@@ -1,4 +1,4 @@
-name: Fresh install
+name: Platforms
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: fresh-install-${{ github.workflow }}-${{ github.ref }}
+  group: platforms-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -47,13 +47,10 @@ jobs:
       - run: just eval demo --suites 01_single_bump --n-episodes 2
       - run: just reactive-driver --scenario c --save-gif
       - name: Build acados
-        if: runner.os != 'Windows'
         run: just build-acados
       - name: MPC
-        if: runner.os != 'Windows'
         run: just mpc --scenario c
       - name: Compare
-        if: runner.os != 'Windows'
         run: just compare demo --allow-missing-human
 
   docker:
