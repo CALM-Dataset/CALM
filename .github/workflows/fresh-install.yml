@@ -1,0 +1,73 @@
+name: Fresh install
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: fresh-install-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    env:
+      MPLBACKEND: Agg
+      SDL_AUDIODRIVER: dummy
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install rust-just
+      - run: just install
+      - run: just doctor
+      - run: just gen-scene
+      - run: just test
+      - run: just lint
+      - run: just train --run-name demo --timesteps 512 --n-envs 2
+      - run: just eval demo --scenario c
+      - run: just eval demo --suites 01_single_bump --n-episodes 2
+      - run: just reactive-driver --scenario c --save-gif
+      - name: Build acados
+        if: runner.os != 'Windows'
+        run: just build-acados
+      - name: MPC
+        if: runner.os != 'Windows'
+        run: just mpc --scenario c
+      - name: Compare
+        if: runner.os != 'Windows'
+        run: just compare demo --allow-missing-human
+
+  docker:
+    name: docker
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the image
+        run: |
+          mkdir -p logs data
+          export LOCAL_UID=$(id -u) LOCAL_GID=$(id -g)
+          docker compose build
+      - name: Train, evaluate and test in the container
+        run: |
+          export LOCAL_UID=$(id -u) LOCAL_GID=$(id -g)
+          docker compose run --rm -T planner sh -c 'just train --run-name demo --timesteps 512 --n-envs 2 && just eval demo --scenario c && just test'
