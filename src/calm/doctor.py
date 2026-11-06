@@ -34,7 +34,7 @@ def _packages() -> list[tuple[str, str, str]]:
     rows.append(_package('huggingface_hub', fix))
     try:
         import torch
-        rows.append((OK, 'torch device', 'cuda available (unused, training is CPU only)' if torch.cuda.is_available() else 'cpu'))
+        rows.append((OK, 'torch device', 'cuda available (Stable-Baselines3 picks the device automatically)' if torch.cuda.is_available() else 'cpu'))
     except Exception:
         pass
     return rows

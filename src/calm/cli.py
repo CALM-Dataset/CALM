@@ -29,6 +29,8 @@ def _split_checkpoint(rest: list[str], default: str = 'PPO_final.zip') -> tuple[
 
 
 def cmd_eval(rest: list[str]) -> int:
+    if rest and rest[0] in ('-h', '--help'):
+        return _run('eval.eval', ['--help'])
     if not rest or rest[0].startswith('-'):
         print('usage: calm eval <run> [checkpoint] [eval options]')
         return 2
@@ -37,6 +39,8 @@ def cmd_eval(rest: list[str]) -> int:
 
 
 def cmd_compare(rest: list[str]) -> int:
+    if rest and rest[0] in ('-h', '--help'):
+        return _run('eval.comfort_score', ['--help'])
     if not rest or rest[0].startswith('-'):
         print('usage: calm compare <run> [checkpoint] [comfort_score options]')
         return 2
@@ -45,6 +49,9 @@ def cmd_compare(rest: list[str]) -> int:
 
 
 def cmd_fetch(rest: list[str]) -> int:
+    if rest and rest[0] in ('-h', '--help'):
+        print('usage: calm fetch\n\ndownload the gated real scenarios from Hugging Face, then check what is present')
+        return 0
     from utils.dataset import ensure_local
 
     ensure_local()
