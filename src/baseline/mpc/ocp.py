@@ -1,7 +1,18 @@
+import glob
+import os
+import shutil
+
 import numpy as np
 import casadi as ca
 
 from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
+
+
+def _fix_windows_lib_name(gen_dir: str) -> None:
+    for built in glob.glob(os.path.join(gen_dir, 'libacados_ocp_solver_*.dll')):
+        target = os.path.join(gen_dir, os.path.basename(built)[len('lib'):])
+        if not os.path.exists(target):
+            shutil.copy2(built, target)
 
 
 def build_solver_simple(
@@ -89,7 +100,14 @@ def build_solver_simple(
     ocp.solver_options.print_level         = 0
     ocp.code_export_directory              = gen_dir
 
-    solver = AcadosOcpSolver(ocp, json_file=f'{gen_dir}/acados_ocp.json', verbose=False)
+    json_file = f'{gen_dir}/acados_ocp.json'
+    try:
+        solver = AcadosOcpSolver(ocp, json_file=json_file, verbose=False)
+    except FileNotFoundError:
+        if os.name != 'nt':
+            raise
+        _fix_windows_lib_name(gen_dir)
+        solver = AcadosOcpSolver(ocp, json_file=json_file, generate=False, build=False, verbose=False)
     solver.options_set('print_level',    0)
     solver.options_set('qp_print_level', 0)
     return solver

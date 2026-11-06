@@ -11,7 +11,12 @@ _acados = _repo_acados if (_repo_acados / 'lib').is_dir() else _Path(os.environ.
 os.environ['ACADOS_SOURCE_DIR'] = str(_acados)
 _lib = str(_acados / 'lib')
 if _lib not in os.environ.get('LD_LIBRARY_PATH', ''):
-    os.environ['LD_LIBRARY_PATH'] = _lib + ':' + os.environ.get('LD_LIBRARY_PATH', '')
+    os.environ['LD_LIBRARY_PATH'] = _lib + os.pathsep + os.environ.get('LD_LIBRARY_PATH', '')
+if os.name == 'nt':
+    for _d in (_acados / 'bin', _acados / 'lib'):
+        if _d.is_dir():
+            os.add_dll_directory(str(_d))
+            os.environ['PATH'] = str(_d) + os.pathsep + os.environ.get('PATH', '')
 
 import argparse
 import gc
