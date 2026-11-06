@@ -104,5 +104,5 @@ def ensure_local() -> None:
         skipped = place_snapshot(Path(tmp), (train_dir, seen_dir), (eval_dir,),
                                  ROOT / 'config' / 'perception' / 'perception_model.yaml')
     if skipped:
-        print(f"skipped {skipped} low_confidence scenario(s)")
+        print(f"skipped {skipped} low-confidence crossing(s) whose bump could not be confirmed in the road data")
 

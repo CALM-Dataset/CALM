@@ -84,6 +84,8 @@ Everything below is on Hugging Face under CC BY-NC 4.0, with access on request.
 | [CALM-Germany](https://huggingface.co/datasets/CALM-Dataset/CALM-Germany) | Recorded bump crossings from Germany |
 | [CALM-Italy](https://huggingface.co/datasets/CALM-Dataset/CALM-Italy) | Recorded bump crossings from Italy |
 
+To run the trained policy, download `PPO_final.zip` and `vecnormalize.pkl` from CALM-PPO into `logs/models/PPO/calm_ppo/` and run `just eval calm_ppo --scenario c --render`. The pickle-free files work too: put `policy.safetensors` and `vecnormalize.json` there and run `just eval calm_ppo policy.safetensors`.
+
 The same ride models in MATLAB and Simulink are in a separate package, [ride-models-matlab](https://github.com/CALM-Dataset/ride-models-matlab).
 
 ## Repository layout
