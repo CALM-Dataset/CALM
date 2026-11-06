@@ -3,8 +3,9 @@ set shell := ["bash", "-c"]
 set positional-arguments := true
 set quiet := true
 
-venv := env("CALM_PYTHON", ".venv/bin/python3")
-pip  := env("CALM_PIP", ".venv/bin/pip3")
+bindir := if os() == "windows" { ".venv/Scripts" } else { ".venv/bin" }
+venv := env("CALM_PYTHON", bindir + if os() == "windows" { "/python.exe" } else { "/python3" })
+pip  := env("CALM_PIP", bindir + if os() == "windows" { "/pip.exe" } else { "/pip3" })
 calm := venv + " -m calm"
 
 export PYTHONPATH := "src"
@@ -22,7 +23,7 @@ doctor:
 # create .venv, then install CPU PyTorch, the dependencies and the package
 [group('setup')]
 install:
-    [ -x .venv/bin/python3 ] || python3 -m venv .venv
+    [ -d .venv ] || python3 -m venv .venv || python -m venv .venv
     {{pip}} install torch --index-url https://download.pytorch.org/whl/cpu
     {{pip}} install -r requirements.txt
     {{pip}} install -e ".[dev]"
