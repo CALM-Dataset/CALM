@@ -3,8 +3,9 @@ set shell := ["bash", "-c"]
 set positional-arguments := true
 set quiet := true
 
-venv := env("CALM_PYTHON", ".venv/bin/python3")
-pip  := env("CALM_PIP", ".venv/bin/pip3")
+bindir := if os() == "windows" { ".venv/Scripts" } else { ".venv/bin" }
+venv := env("CALM_PYTHON", bindir + if os() == "windows" { "/python.exe" } else { "/python3" })
+pip  := env("CALM_PIP", bindir + if os() == "windows" { "/pip.exe" } else { "/pip3" })
 calm := venv + " -m calm"
 
 export PYTHONPATH := "src"
@@ -22,7 +23,7 @@ doctor:
 # create .venv, then install CPU PyTorch, the dependencies and the package
 [group('setup')]
 install:
-    [ -x .venv/bin/python3 ] || python3 -m venv .venv
+    [ -d .venv ] || python3 -m venv .venv || python -m venv .venv
     {{pip}} install torch --index-url https://download.pytorch.org/whl/cpu
     {{pip}} install -r requirements.txt
     {{pip}} install -e ".[dev]"
@@ -39,10 +40,22 @@ test *args:
 
 # build the acados submodule (only the MPC needs it)
 [group('setup')]
+[unix]
 build-acados:
     git submodule update --init --recursive acados
     mkdir -p acados/build
     cd acados/build && cmake -DACADOS_WITH_QPOASES=ON -DCMAKE_INSTALL_PREFIX=$(pwd)/.. .. && make -j$(python3 -c "import os; print(os.cpu_count())") && make install
+    if [ "$(uname)" = Darwin ]; then for f in acados/lib/*.dylib; do install_name_tool -add_rpath @loader_path "$f" 2>/dev/null || true; done; fi
+    {{pip}} install vcs-versioning setuptools_scm
+    {{pip}} install -e acados/interfaces/acados_template
+
+# build the acados submodule on Windows (generic BLAS, shared libraries)
+[group('setup')]
+[windows]
+build-acados:
+    git submodule update --init --recursive acados
+    mkdir -p acados/build
+    cd acados/build && cmake -DACADOS_WITH_QPOASES=ON -DBLASFEO_TARGET=GENERIC -DHPIPM_TARGET=GENERIC -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$(pwd)/.. .. && cmake --build . --config Release -j4 && cmake --install . --config Release
     {{pip}} install vcs-versioning setuptools_scm
     {{pip}} install -e acados/interfaces/acados_template
 

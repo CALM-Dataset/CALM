@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import multiprocessing
+
 from pathlib import Path
 from typing import Callable
 
@@ -88,7 +90,8 @@ def make_vec_env(
         _make_env(base_seed + i, monitor_dir, env_kwargs, curriculum_cfg, n_envs, sparse_reward, vehicle, action_penalty)
         for i in range(n_envs)
     ]
-    venv = SubprocVecEnv(fns, start_method='fork') if subproc and n_envs > 1 else DummyVecEnv(fns)
+    use_fork = subproc and n_envs > 1 and 'fork' in multiprocessing.get_all_start_methods()
+    venv = SubprocVecEnv(fns, start_method='fork') if use_fork else DummyVecEnv(fns)
     venv = VecNormalize(
         venv,
         norm_obs=norm_obs,

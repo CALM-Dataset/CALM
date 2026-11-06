@@ -9,6 +9,7 @@ ENV CALM_PYTHON=python \
     SDL_AUDIODRIVER=dummy \
     MPLBACKEND=Agg \
     PYTHONUNBUFFERED=1 \
+    NUMBA_CACHE_DIR=/tmp/numba_cache \
     PYTHONPATH=/workspace/src
 
 WORKDIR /workspace
