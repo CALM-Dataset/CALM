@@ -39,5 +39,5 @@ jobs:
           uid=$(id -u)
           gid=$(id -g)
           mkdir -p logs data
-          LOCAL_UID=$uid LOCAL_GID=$gid docker compose run --rm --no-build -T planner sh -c \
+          LOCAL_UID=$uid LOCAL_GID=$gid docker compose run --rm -T planner sh -c \
             'just train --run-name demo --timesteps 512 --n-envs 2 && just eval demo --scenario c && just eval demo --suites 01_single_bump --n-episodes 2'
