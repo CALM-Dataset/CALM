@@ -91,7 +91,6 @@ scratch/
 results/
 figures/
 stats/
-logs/
 *.csv
 !config/**/*.csv
 !tests/**/*.csv

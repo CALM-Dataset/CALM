@@ -128,18 +128,10 @@ class CurriculumWrapper(gym.Wrapper):
             return super().reset(**kwargs)
 
         sc = pool[int(self._rng.integers(0, len(pool)))]
-        if "obstacles" in sc:
-            obstacles = [(o["height_m"], o["width_m"]) for o in sc["obstacles"]]
-            gaps      = sc.get("gaps_m", [])
-        else:
-            obstacles = [(sc["height_m"], sc["width_m"])]
-            gaps      = []
-
         road = RoadGenerator.from_scenario(
             vehicle_speed = sc["speed_kmh"] / 3.6,
             flat_start    = sc["flat_start_m"],
-            obstacles     = obstacles,
-            gaps          = gaps,
+            obstacles     = [(sc["height_m"], sc["width_m"])],
         )
 
         opts = kwargs.get("options") or {}

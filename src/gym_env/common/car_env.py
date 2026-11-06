@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Optional
 
 import numpy as np
 import gymnasium as gym
@@ -33,7 +33,6 @@ class CarEnv(gym.Env):
         vehicle_speed: float = 6.0,
         render_mode: str = 'none',
         physics_params: Optional[dict] = None,
-        road_params: Optional[dict] = None,
         reward_config: Optional[RewardConfig] = None,
         render_y_scale: int = RENDER_Y_SCALE,
         show_time_series: bool = RENDER_SHOW_TS,
@@ -41,11 +40,8 @@ class CarEnv(gym.Env):
         show_ts_z_ddot: bool = RENDER_TS_Z_DDOT,
         show_ts_speed: bool = RENDER_TS_SPEED,
         freeze_episode: bool = RENDER_FREEZE_EPISODE,
-        start_at_equilibrium: bool = True,
-        ref_speed_profile: str = "constant",
         max_episode_steps: int = EPISODE_STEPS,
         random_road_on_reset: bool = True,
-        road_override_kwargs: Optional[dict] = None,
         action_mode: Optional[str] = None,
     ):
         super().__init__()
@@ -53,11 +49,7 @@ class CarEnv(gym.Env):
         self._v0                = float(vehicle_speed)
         self._random_road_on_reset = bool(random_road_on_reset)
         self._y_scale           = int(render_y_scale)
-        self._ref_speed_profile = ref_speed_profile
         self._max_episode_steps = int(max_episode_steps)
-        self._start_at_eq       = bool(start_at_equilibrium)
-
-        self._v_init_fn: Optional[Callable[[float], float]] = (road_params or {}).get('v_init_fn', None)
 
         self._vehicle = get_vehicle(self.VEHICLE)
         self._rcfg = reward_config or load_reward_config()
@@ -78,7 +70,7 @@ class CarEnv(gym.Env):
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
 
         self._ode  = self._vehicle.make_ode(physics_params or self._vehicle.default_plant_params())
-        self._road = RoadGenerator(vehicle_speed, road_params)
+        self._road = RoadGenerator(vehicle_speed)
 
         self._state          = self._ode.reset(self._v0)
         self._t              = 0.0
@@ -109,8 +101,6 @@ class CarEnv(gym.Env):
             "flat_start":      60.0,
             "hole_fraction":   0.0,
         }
-        if road_override_kwargs:
-            self._random_road_kwargs.update(road_override_kwargs)
         self._v_random_low = self._rcfg.v_min * 2.0
 
         self._prev_a           = 0.0
@@ -154,19 +144,15 @@ class CarEnv(gym.Env):
         cfg = self._rcfg
         opts = options or {}
 
-        randomize       = opts.get("randomize_road",  self._random_road_on_reset)
-        randomize_speed = opts.get("randomize_speed", True)
+        randomize = opts.get("randomize_road", self._random_road_on_reset)
 
         if "road" in opts:
             self._road = opts["road"]
             self._v    = self._road.speed
         elif randomize:
-            road_kwargs = opts.get("road_kwargs", self._random_road_kwargs)
-            v_low  = float(opts.get("v_random_low",  self._v_random_low))
-            v_high = float(opts.get("v_random_high", cfg.v_limit))
-            v = float(rng.uniform(v_low, v_high)) if randomize_speed else self._v0
+            v = float(rng.uniform(self._v_random_low, cfg.v_limit))
             self._road = RoadGenerator.from_random(
-                rng, vehicle_speed=v, **road_kwargs
+                rng, vehicle_speed=v, **self._random_road_kwargs
             )
             self._v = self._road.speed
         else:
@@ -180,10 +166,7 @@ class CarEnv(gym.Env):
             v_ref = float(self.np_random.uniform(cfg.v_init_low, cfg.v_limit))
         self._v = float(np.clip(self._v, cfg.v_hard_min, max(cfg.v_hard_min, v_ref)))
         self._road.set_speed(self._v)
-        x = self._ode.reset(self._v)
-        if not self._start_at_eq:
-            self._ode.perturb(x, rng)
-        self._state = x
+        self._state = self._ode.reset(self._v)
 
         self._t              = 0.0
         self._step_count     = 0
@@ -397,6 +380,4 @@ class CarEnv(gym.Env):
         }
 
     def _compute_v_init(self, t: float) -> float:
-        if self._ref_speed_profile == "custom" and self._v_init_fn is not None:
-            return float(self._v_init_fn(t))
         return self._v_episode_ref

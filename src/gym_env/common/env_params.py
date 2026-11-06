@@ -13,12 +13,12 @@ TRUNC_DAMPER_VEL  = float(_cfg["TRUNC_DAMPER_VEL"])
 POST_BUMP_MARGIN  = float(_cfg["POST_BUMP_MARGIN"])
 POST_BUMP_MARGIN_MATCH_FLAT_START = bool(_cfg.get("POST_BUMP_MARGIN_MATCH_FLAT_START", False))
 
-ACTION_MODE = str(_cfg.get("action_mode", "acceleration"))
+ACTION_MODE = str(_cfg.get("action_mode", "choice"))
 SPEED_GAIN = float(_cfg.get("speed_gain", 2.0))
 SPEED_FLOOR_RATIO = float(_cfg.get("speed_floor_ratio", 0.0))
 DEPTH_OFFSET = float(_cfg.get("depth_offset", 2.0))
 DEPTH_SLOPE = float(_cfg.get("depth_slope", 2.0))
-CHOICE_DEPTHS = [float(x) for x in _cfg.get("choice_depths", [0.0, 0.2, 0.35, 0.5, 0.65, 0.8, 1.0])]
+CHOICE_DEPTHS = [float(x) for x in _cfg.get("choice_depths", [0.0, 0.65, 0.85])]
 WINDOW_LEAD_FAR = float(_cfg.get("window_lead_far", 25.0))
 WINDOW_LEAD_NEAR = float(_cfg.get("window_lead_near", 8.0))
 WINDOW_AFTER = float(_cfg.get("window_after", 1.5))

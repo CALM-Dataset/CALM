@@ -66,7 +66,6 @@ class MPCController:
         self._gen_base            = Path(tempfile.gettempdir()) / 'acados_qc'
 
         self._comfort_map = ComfortMap(self._cfg, self._physics, vehicle=vehicle)
-        self._objective = objective
         self._crossing: list[float] = []
         self._planner = None
         if objective == "frontier":
@@ -140,9 +139,6 @@ class MPCController:
 
 
     def act(self, x: np.ndarray, s_pos: float, road: RoadGenerator) -> float:
-        if self._solver is None:
-            self.reset(road)
-
         solver  = self._solver
         v_refs  = self._compute_speed_profile(s_pos, float(x[self._v_idx]), road)
 

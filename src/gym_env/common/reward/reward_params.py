@@ -12,7 +12,7 @@ class RewardConfig:
     Q_a:       float =  1.0
     Q_v:       float =  1.0
     track_scale: float = 1.0
-    Q_step:    float =  0.5
+    Q_step:    float =  0.0
     time_cost: float =  0.0
     wk_heave:  bool  = False
     rel_scale: float = 0.0
@@ -62,7 +62,7 @@ def load_reward_config() -> RewardConfig:
         Q_a             = float(w.get("Q_a",              1.0)),
         Q_v             = float(w.get("Q_v",              1.0)),
         track_scale     = float(w.get("track_scale",      1.0)),
-        Q_step          = float(w.get("Q_step",           0.5)),
+        Q_step          = float(w.get("Q_step",           0.0)),
         time_cost       = float(w.get("time_cost",        0.0)),
         wk_heave        = bool(w.get("wk_heave",          False)),
         rel_scale       = float(w.get("rel_scale",        0.0)),

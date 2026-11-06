@@ -25,10 +25,6 @@ def list_scenarios() -> list[str]:
     for p in (root / 'config' / 'eval' / 'scenarios').rglob('*.yaml'):
         if p.name != 'manifest.yaml':
             seen.add(p.stem)
-    dataset_dir = root / 'config' / 'eval' / 'dataset'
-    if dataset_dir.is_dir():
-        for p in dataset_dir.rglob('*.yaml'):
-            seen.add(p.stem)
     return sorted(seen)
 
 
@@ -51,21 +47,13 @@ def _find_scenario_path(name_or_path: str) -> Path:
                if p.name != 'manifest.yaml']
     if matches:
         return matches[0]
-    dataset_dir = root / 'config' / 'eval' / 'dataset'
-    if dataset_dir.is_dir():
-        matches = list(dataset_dir.rglob(f'{name_or_path}.yaml'))
-        if matches:
-            return matches[0]
     available = list_scenarios()
     raise FileNotFoundError(
         f"Scenario '{name_or_path}' not found. Available: {available}"
     )
 
 
-def load_scenario(
-    name_or_path: str,
-    include_holes: bool = True,
-) -> tuple[list, float, str, str]:
+def load_scenario(name_or_path: str) -> tuple[list, float, str, str]:
     path = _find_scenario_path(name_or_path)
 
     with open(path) as fh:
@@ -83,8 +71,6 @@ def load_scenario(
         else:
             h = float(entry['height_m'])
             w = float(entry['width_m'])
-        if not include_holes and h < 0:
-            continue
         obstacles.append((x_start, h, w))
 
     speed_m_s = float(cfg['vehicle_speed_kmh']) / 3.6

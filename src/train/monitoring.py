@@ -23,7 +23,7 @@ class MetricsCallback(BaseCallback):
         spd_kmh, spd_err   = [], []
         ep_reward                   = []
         pitch_a                     = []
-        J_heave, J_pitch, J_speed, J_jerk, J_floor, J_total = [], [], [], [], [], []
+        J_heave, J_pitch, J_speed, J_jerk, J_total = [], [], [], [], []
         term_reasons: list[str] = []
 
         for info in infos:
@@ -38,7 +38,6 @@ class MetricsCallback(BaseCallback):
             if "J_pitch"        in info: J_pitch.append(info["J_pitch"])
             if "J_long_vel"     in info: J_speed.append(info["J_long_vel"])
             if "J_long_jerk"    in info: J_jerk.append(info["J_long_jerk"])
-            if "J_floor"        in info: J_floor.append(info["J_floor"])
             if "J_total"        in info: J_total.append(info["J_total"])
             if info.get("termination_reason"): term_reasons.append(info["termination_reason"])
 
@@ -55,7 +54,6 @@ class MetricsCallback(BaseCallback):
         if J_pitch: log("reward/J_pitch", float(np.mean(J_pitch)))
         if J_speed: log("reward/J_speed", float(np.mean(J_speed)))
         if J_jerk:  log("reward/J_jerk",  float(np.mean(J_jerk)))
-        if J_floor: log("reward/J_floor", float(np.mean(J_floor)))
         if J_total: log("reward/J_total", float(np.mean(J_total)))
 
         try:

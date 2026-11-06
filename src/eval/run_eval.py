@@ -15,9 +15,6 @@ _MODEL_ROOT = _ROOT / "logs" / "models" / "PPO"
 
 _ALL = ["PPO", "MPC", "Reactive", "TrainCurve"]
 
-silent = True
-
-
 def _norm_exp(tag: str) -> str:
     return f"exp_{tag}" if tag.isdigit() else tag
 
@@ -33,16 +30,12 @@ def _model_path(exp: str) -> Path:
 
 def _run(label: str, cmd: list[str]) -> bool:
     print(f"\n{'='*70}\n  {label}\n  $ {' '.join(str(c) for c in cmd)}\n{'='*70}", flush=True)
-    if silent:
-        res = subprocess.run(cmd, cwd=str(_ROOT), stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT, text=True)
-        ok = res.returncode == 0
-        if not ok:
-            tail = "".join((res.stdout or "").splitlines(keepends=True)[-25:])
-            print(tail, flush=True)
-    else:
-        res = subprocess.run(cmd, cwd=str(_ROOT))
-        ok = res.returncode == 0
+    res = subprocess.run(cmd, cwd=str(_ROOT), stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, text=True)
+    ok = res.returncode == 0
+    if not ok:
+        tail = "".join((res.stdout or "").splitlines(keepends=True)[-25:])
+        print(tail, flush=True)
     print(f"  -> {label}: {'OK' if ok else f'FAILED (exit {res.returncode})'}", flush=True)
     return ok
 

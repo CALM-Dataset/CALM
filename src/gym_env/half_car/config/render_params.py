@@ -6,16 +6,7 @@ _cfg = _load_yaml("render.yaml")
 
 
 
-RENDER_Y_W_NOM = float(_cfg["RENDER_Y_W_NOM"])
-RENDER_Y_B_NOM = float(_cfg["RENDER_Y_B_NOM"])
-RENDER_H_MW = float(_cfg["RENDER_H_MW"])
 RENDER_REALISTIC_WHEELS = bool(_cfg.get("RENDER_REALISTIC_WHEELS", True))
-RENDER_W_MW = float(_cfg["RENDER_W_MW"])
-RENDER_H_MB = float(_cfg["RENDER_H_MB"])
-RENDER_W_MB = float(_cfg["RENDER_W_MB"])
-
-RENDER_XLIM = tuple(_cfg["RENDER_XLIM"])
-RENDER_YLIM = tuple(_cfg["RENDER_YLIM"])
 
 RENDER_ROAD_HALF = float(_cfg["RENDER_ROAD_HALF"])
 RENDER_ROAD_N = int(_cfg["RENDER_ROAD_N"])
@@ -33,17 +24,10 @@ RENDER_SP_N = int(_cfg["RENDER_SP_N"])
 
 RENDER_DA_X = float(_cfg["RENDER_DA_X"])
 RENDER_DA_W = float(_cfg["RENDER_DA_W"])
-RENDER_DA_PIST_H = float(_cfg["RENDER_DA_PIST_H"])
 RENDER_DA_PIST_FRAC = float(_cfg["RENDER_DA_PIST_FRAC"])
-RENDER_DA_LOWER_STEM = float(_cfg["RENDER_DA_LOWER_STEM"])
-RENDER_DA_CYL_H_SUSP = float(_cfg["RENDER_DA_CYL_H_SUSP"])
-RENDER_DA_CYL_H_TIRE = float(_cfg["RENDER_DA_CYL_H_TIRE"])
 
 RENDER_CONTACT_STEM = float(_cfg["RENDER_CONTACT_STEM"])
-Y_LINE_OFFSET = float(_cfg["Y_LINE_OFFSET"])
 
-RENDER_ARR_X   = float(_cfg.get("RENDER_ARR_X",    -2.5))
-RENDER_ARR_Y   = float(_cfg.get("RENDER_ARR_Y",     5.5))
 RENDER_ARR_LEN = float(_cfg.get("RENDER_ARR_LEN",   8.0))
 
 from gym_env.half_car.config.env_params import BODY as _BODY

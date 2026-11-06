@@ -29,7 +29,6 @@ training:
   eval_freq: 2_000
   n_eval_episodes: 30
   checkpoint_freq: 4_000
-  norm_obs: true
   norm_reward: true
   action_saturation_penalty: 0.0
   subproc: true
