@@ -51,11 +51,6 @@ build-acados:
 fetch-scenarios:
     {{calm}} fetch
 
-# metadata table over every scenario (config/dataset/index.json)
-[group('data')]
-build-index:
-    {{calm}} build-index
-
 # procedural training scenarios
 [group('data')]
 gen-scene *args:
@@ -86,21 +81,10 @@ tb:
 compare *args:
     {{calm}} compare "$@"
 
-# train several seeds, score them against the MPC and the human drive, summarise
+# train several seeds and score each one against the MPC and the human drive
 [group('comfort')]
 reproduce *args:
     {{calm}} reproduce "$@"
-
-# MPC comfort-versus-time frontier: `just frontier build` then `just frontier excess`
-[group('comfort')]
-frontier *args:
-    {{calm}} frontier "$@"
-
-# collect the per-run comfort scores listed in config/eval/runs.yaml
-[group('comfort')]
-export-runs *args:
-    {{calm}} export-runs "$@"
-
 
 # MPC baseline (needs acados); pass --scenario <name> or --render
 [group('baselines')]

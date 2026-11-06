@@ -8,10 +8,8 @@ from pathlib import Path
 
 import numpy as np
 
-from eval.data_logger import EpisodeData, RunLogger
 from gym_env.common.env_params import DT
 from utils.gif import keep, shrink
-from utils.paths import DATA
 from utils.scenario_loader import enabled_eval_suites, load_scenario_any, scenario_title
 
 try:
@@ -23,7 +21,7 @@ NO_SCENARIOS = ('No scenarios. Enable a suite in config/eval/eval_suites.yaml '
                 '(incl. `real`), or pass --suites <folder|real>.')
 
 
-def add_common_args(ap, method: str) -> None:
+def add_common_args(ap) -> None:
     ap.add_argument('--vehicle', default='half', choices=('quarter', 'half'),
                     help='vehicle dynamics model')
     ap.add_argument('--no-perception', dest='perception', action='store_false', default=True,
@@ -37,15 +35,6 @@ def add_common_args(ap, method: str) -> None:
     ap.add_argument('--save-gif', action='store_true',
                     help='save per-episode GIF (headless-safe offscreen rendering)')
     ap.add_argument('--save-plots', action='store_true', help='save per-episode time-series PNG')
-    ap.add_argument('--log-data', metavar='DIR', default='data', nargs='?', const='__default__',
-                    help=f'Save run data (.mat/.npz) to DIR/{method}/<road>/<run_N>/. '
-                         'Omit DIR to use <repo>/data/.')
-
-
-def log_root(args) -> Path | None:
-    if args.log_data == '__default__':
-        return DATA
-    return Path(args.log_data) if args.log_data else None
 
 
 def obst_str(r: dict) -> str:
@@ -189,28 +178,6 @@ def run_episode(env, ctrl, seed: int, steps_fn, scenario_road=None,
     }
 
 
-def log_episode(log_root, method: str, road_name: str, road, cfg, r: dict) -> None:
-    logger = RunLogger(
-        method=method, road=road_name, out_root=log_root,
-        dt=DT, v_max_kmh=cfg.v_limit * 3.6,
-        a_comfort=cfg.a_comfort, a_limit=cfg.a_limit,
-        run_subdir=False, bumps=getattr(road, '_bumps', None),
-    )
-    logger.add(EpisodeData(
-        v=r['_speeds'], v_init=r['_v_inits'],
-        z_B_ddot=r['_accels'], action=r['_actions'],
-        reward=r['_rewards'],
-        susp_defl=r.get('_susp'), tire_defl=r.get('_tire'),
-        episode_return=r['episode_return'],
-        rms_accel=r['rms_accel'],
-        comfort_score=r['comfort_score'],
-        solve_ms_mean=r['act_ms_mean'],
-        cpu_ms_mean=r['cpu_ms_mean'],
-        n_params=r['n_params'],
-    ))
-    logger.save()
-
-
 def render_scenarios(env, run_fn, args, nav_fn, preview_cfg=None,
                      label: str = '', report=print) -> None:
     scenarios = [(name, sc) for name, scs in enabled_eval_suites(args.suites) for sc in scs]
@@ -243,7 +210,7 @@ def render_scenarios(env, run_fn, args, nav_fn, preview_cfg=None,
             idx -= 1
 
 
-def run_suite(env, run_fn, args, save_dir: Path, log_root, cfg, method: str, slug: str,
+def run_suite(env, run_fn, args, save_dir: Path, method: str, slug: str,
               preview_cfg=None, progress_out=None, time_header: str | None = None) -> None:
     suites = enabled_eval_suites(args.suites)
     if not suites:
@@ -285,8 +252,6 @@ def run_suite(env, run_fn, args, save_dir: Path, log_root, cfg, method: str, slu
             if bar is not None:
                 bar.set_postfix({'scenario': sc_name, 'return': f'{r["episode_return"]:+.0f}'}, refresh=False)
                 bar.update(1)
-            if log_root is not None:
-                log_episode(log_root, method, sc_name, road, cfg, r)
             suite_rows.append({'scenario': sc_name, **{k: v for k, v in r.items() if not k.startswith('_')}})
 
         suite_mean = float(np.mean([row['episode_return'] for row in suite_rows])) if suite_rows else 0.0
@@ -303,5 +268,3 @@ def run_suite(env, run_fn, args, save_dir: Path, log_root, cfg, method: str, slu
     out = save_dir / f'suite_{slug}_{ts}.json'
     out.write_text(json.dumps({'timestamp': ts, 'method': method, 'suites': export_suites}, indent=2))
     print(f'\n  JSON saved → {out}')
-    if log_root:
-        print(f'  data logged → {log_root}/{method}/')

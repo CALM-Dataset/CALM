@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 import yaml
@@ -18,12 +17,6 @@ def _real_dir() -> Path:
 
 def _eval_dir() -> Path:
     return ROOT / 'config' / 'eval' / 'scenarios'
-
-
-def real_files() -> list[tuple[Path, str]]:
-    seen = {p.name: (p, 'seen') for p in sorted(_real_dir().glob('*.json')) if p.name not in ('manifest.json', 'curriculum.json')}
-    held = {p.name: (p, 'unseen') for p in sorted((_eval_dir() / 'real').glob('*.json')) if p.name != 'manifest.json'}
-    return sorted({**seen, **held}.values(), key=lambda t: t[0].name)
 
 
 def assign_split(stem: str, folder_split: str | None, eval_names: set[str] | None) -> str:
@@ -88,61 +81,6 @@ def place_snapshot(src: Path, train_dirs: tuple[Path, ...], eval_dirs: tuple[Pat
     return skipped
 
 
-def index_path() -> Path:
-    return ROOT / 'config' / 'dataset' / 'index.json'
-
-
-def _source_of(name: str) -> str:
-    m = re.match(r'[A-Za-z]+', name)
-    return m.group(0).lower() if m else 'unknown'
-
-
-def _real_rows() -> list[dict]:
-    rows: list[dict] = []
-    for p, split in real_files():
-        d = json.loads(p.read_text())
-        bumps = d.get('bumps') or []
-        peak = max((float(b.get('peak_z_m', 0.0)) for b in bumps), default=0.0)
-        rows.append({
-            'id': d.get('name', p.stem),
-            'group': 'real',
-            'split': split,
-            'source': _source_of(d.get('name', p.stem)),
-            'n_bumps': len(bumps),
-            'peak_z_m': round(peak, 4),
-            'road_length_m': float(d.get('meta', {}).get('road_length_m', 0.0)),
-            'has_perception': 'perception' in d,
-        })
-    return rows
-
-
-def _eval_rows() -> list[dict]:
-    rows: list[dict] = []
-    for p in sorted(_eval_dir().rglob('*.yaml')):
-        if p.name == 'manifest.yaml':
-            continue
-        d = yaml.safe_load(p.read_text()) or {}
-        obstacles = d.get('road_obstacles') or d.get('bumps') or []
-        rows.append({
-            'id': d.get('name', p.stem),
-            'group': 'eval',
-            'suite': p.parent.name,
-            'source': str(d.get('source', 'unknown')),
-            'n_bumps': len(obstacles),
-            'vehicle_speed_kmh': float(d.get('vehicle_speed_kmh', 0.0)),
-        })
-    return rows
-
-
-def build_index(write: bool = False) -> list[dict]:
-    rows = _real_rows() + _eval_rows()
-    if write:
-        out = index_path()
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(rows, indent=2))
-    return rows
-
-
 def ensure_local() -> None:
     train_dir, eval_dir = _real_dir(), _eval_dir() / 'real'
     seen_dir = _eval_dir() / 'real_train'
@@ -168,11 +106,3 @@ def ensure_local() -> None:
     if skipped:
         print(f"skipped {skipped} low_confidence scenario(s)")
 
-
-def main() -> None:
-    rows = build_index(write=True)
-    print(f"wrote {index_path()} ({len(rows)} rows)")
-
-
-if __name__ == '__main__':
-    main()

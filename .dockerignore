@@ -1,7 +1,6 @@
 .git
 .github
 logs
-data
 .venv
 venv
 __pycache__
@@ -14,4 +13,3 @@ config/eval/scenarios/real
 config/eval/scenarios/real_train
 config/train/scenarios
 config/perception
-config/dataset

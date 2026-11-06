@@ -40,7 +40,6 @@ desktop.ini
 ._*
 
 logs/
-data/
 models/
 runs/
 outputs/
@@ -77,7 +76,6 @@ assets/music/*.wav
 config/train/scenarios/
 config/eval/scenarios/real/
 config/eval/scenarios/real_train/
-config/dataset/
 config/perception/
 
 tmp/

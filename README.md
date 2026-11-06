@@ -95,7 +95,7 @@ src/tune/      Optuna hyperparameter search
 src/baseline/  MPC and rule-based driver
 src/eval/      evaluation and ISO 2631-1 comfort
 src/road/      road profile generation
-src/utils/     scenario generation, dataset index and helpers
+src/utils/     scenario generation, dataset download and helpers
 src/calm/      the calm command line
 config/        environment, reward, curriculum, planner and evaluation settings
 tests/         fast tests that need no data or GPU
