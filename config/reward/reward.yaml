@@ -1,3 +1,4 @@
+# reward weights; pitch_arm in m, pitch_clip in rad/s^2
 weights:
   Q_zBddot:         50.0
   Q_zWddot:         0.0
@@ -18,11 +19,13 @@ weights:
   w_jerk:           0.4
   w_action_smooth:  0.2
 
+# gravity and vertical acceleration clips in m/s^2
 vertical:
   g:           9.81
   heave_clip:  1.0e9
   wheel_clip:  1.0e9
 
+# speeds in km/h, a_max in m/s^2
 velocity:
   v_limit:     35.0
   v_min:       8.0
@@ -30,9 +33,11 @@ velocity:
   v_init_low:  8.0
   a_max:       5.0
 
+# comfort acceleration of the baselines in m/s^2
 eval:
   a_comfort:   2.0
 
+# episode end: speed bounds in m/s, a_limit in m/s^2
 terminal:
   bonus:          100.0
   penalty:       -250.0
@@ -41,5 +46,6 @@ terminal:
   Q_t:            0.0
   a_limit:        5.0
 
+# speed limit in km/h
 traffic_rules:
   v_max:       50

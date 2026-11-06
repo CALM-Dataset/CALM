@@ -1,3 +1,4 @@
+# preview source and features; length_clip in m, freq_clip in Hz
 perception_mode:     none
 source:              bumps
 features:            v2
@@ -5,26 +6,32 @@ length_clip:         8.0
 freq_clip:           10.0
 model_path:          config/perception/perception_model.yaml
 
+# preview range and peak search; distances and heights in m
 preview_distance:    40.0
 h_clip:              0.15
 n_peaks:             3
 peak_height_min:     0.01
 peak_distance_min_m: 0.5
 
+# noise on the seen bumps; height and distance std in m
 noise_active:        false
 noise_height_std:    0.005
 noise_distance_std:  0.5
 noise_width_std:     0.05
 
+# low pass filter time constant in s
 pt1_tau:             0.05
 
+# perception: on_bump_m and the nominal bump size in m
 on_bump_m:           0.5
 baseline_nominal_bump_h: 0.05
 baseline_nominal_bump_w:  1.0
 sentinel:            0.0
 
+# v1 features: distance instead of time to the bump
 use_dist_obs:        false
 
+# v1 features: sample count, freq_max in Hz, v_min_preview in m/s
 dense_n:             200
 freq_max:            21.74
 v_min_preview:       0.5

@@ -1,11 +1,13 @@
 [build-system]
-requires = ["setuptools>=64"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "CALM"
 version = "0.1.0"
-description = "Comfort-aware reinforcement-learning speed planner for a half-car over speed bumps"
+description = "Comfort-aware reinforcement-learning speed planner for a half-car or quarter-car over speed bumps"
+license = "MIT"
+authors = [{ name = "Mohammed El Said Azab Abdelazim" }]
 requires-python = ">=3.10"
 dependencies = [
     "gymnasium>=0.29.0,<1.1",

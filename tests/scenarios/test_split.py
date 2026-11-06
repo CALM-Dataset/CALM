@@ -3,7 +3,7 @@ import json
 import pytest
 import yaml
 
-from utils.dataset import assign_split, place_snapshot, split_eval_names
+from utils.dataset import assign_split, place_snapshot, split_eval_names, split_exclude_names
 
 
 def _crossing(path, low_confidence=False):
@@ -44,6 +44,15 @@ def test_the_split_file_lists_the_eval_names(tmp_path):
     assert split_eval_names(tmp_path / "missing.yaml") is None
 
 
+def test_the_split_file_lists_the_excluded_names(tmp_path):
+    f = tmp_path / "split.yaml"
+    f.write_text(yaml.safe_dump({"eval": ["a_sb01"], "exclude": ["b_sb02"]}))
+    assert split_exclude_names(f) == {"b_sb02"}
+    f.write_text(yaml.safe_dump({"eval": ["a_sb01"]}))
+    assert split_exclude_names(f) == set()
+    assert split_exclude_names(tmp_path / "missing.yaml") == set()
+
+
 def test_flat_layout_sends_the_listed_roads_to_eval_and_the_rest_to_training(tmp_path):
     src = tmp_path / "snap"
     stems = {"germany": ["augsburg_sb07", "berlin_sb01", "berlin_sb02"], "italy": ["nardo_sb01", "carmiano_sb01"]}
@@ -81,6 +90,51 @@ def test_flat_layout_without_an_eval_list_fails_before_copying(tmp_path):
     with pytest.raises(SystemExit, match="eval list"):
         _place(src, tmp_path / "out")
     assert not (tmp_path / "out").exists()
+
+
+def test_an_excluded_crossing_goes_nowhere_and_is_not_counted_as_skipped(tmp_path):
+    src = tmp_path / "snap"
+    for s in ("augsburg_sb06", "augsburg_sb13", "berlin_sb01"):
+        _crossing(src / "germany" / "crossings" / f"{s}.json")
+    _crossing(src / "italy" / "crossings" / "nardo_sb01.json", low_confidence=True)
+    (src / "split.yaml").write_text(yaml.safe_dump({"eval": ["augsburg_sb13"], "exclude": ["augsburg_sb06"]}))
+    skipped, names = _place(src, tmp_path / "out")
+    assert all("augsburg_sb06" not in v for v in names.values())
+    assert skipped == 1
+    assert names["held"] == {"augsburg_sb13"}
+    assert names["train"] == names["seen"] == {"berlin_sb01"}
+
+
+def test_an_excluded_crossing_is_left_out_of_the_folder_layout_too(tmp_path):
+    src = tmp_path / "snap"
+    _crossing(src / "germany" / "train" / "augsburg_sb06.json")
+    _crossing(src / "germany" / "train" / "berlin_sb01.json")
+    _crossing(src / "germany" / "eval" / "augsburg_sb13.json")
+    (src / "split.yaml").write_text(yaml.safe_dump({"exclude": ["augsburg_sb06"]}))
+    _, names = _place(src, tmp_path / "out")
+    assert names["held"] == {"augsburg_sb13"}
+    assert names["train"] == names["seen"] == {"berlin_sb01"}
+
+
+def test_a_crossing_both_in_eval_and_excluded_fails_before_copying(tmp_path):
+    src = tmp_path / "snap"
+    _crossing(src / "germany" / "crossings" / "augsburg_sb06.json")
+    (src / "split.yaml").write_text(yaml.safe_dump({"eval": ["augsburg_sb06"], "exclude": ["augsburg_sb06"]}))
+    with pytest.raises(SystemExit, match="augsburg_sb06"):
+        _place(src, tmp_path / "out")
+    assert not (tmp_path / "out").exists()
+
+
+def test_a_split_file_without_exclude_places_the_same_roads(tmp_path):
+    src = tmp_path / "snap"
+    for s in ("augsburg_sb06", "augsburg_sb13", "berlin_sb01"):
+        _crossing(src / "germany" / "crossings" / f"{s}.json")
+    (src / "split.yaml").write_text(yaml.safe_dump({"eval": ["augsburg_sb13"]}))
+    _, without = _place(src, tmp_path / "a")
+    (src / "split.yaml").write_text(yaml.safe_dump({"eval": ["augsburg_sb13"], "exclude": []}))
+    _, empty = _place(src, tmp_path / "b")
+    assert without == empty
+    assert without["train"] == {"augsburg_sb06", "berlin_sb01"}
 
 
 def test_low_confidence_crossings_are_skipped(tmp_path):
