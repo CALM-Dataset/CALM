@@ -135,6 +135,11 @@ just tune --trials 50           # Optuna hyperparameter search
 just test                       # fast tests, no data needed
 ```
 
+`just compare` and `just reproduce` run the MPC, so they need acados. They also score the recorded human
+drive on the real roads: set `CALM_SEQUENCES` to the `sequences` folders of the CALM-Italy and CALM-Germany
+datasets on your disk (separated by `:`), otherwise they stop with an error; `just compare` accepts
+`--allow-missing-human` to score without it.
+
 A first run without any data: `just install`, `just doctor`, `just gen-scene`, then
 `just train --run-name demo` (20 000 decisions, the default) and `just eval demo --scenario c`.
 
