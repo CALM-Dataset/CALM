@@ -49,8 +49,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
                     "--seed",
                     type=int,
-                    default=69,
-                    help="Random seed.")
+                    default=None,
+                    help="Random seed (default: training.seed in config/agent/algo_configs.yaml).")
     p.add_argument(
                     "--timesteps",
                     type=int,
