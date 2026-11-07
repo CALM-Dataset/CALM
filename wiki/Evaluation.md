@@ -57,11 +57,6 @@ a_w_vs_const_pct = 100 * ( a_w / a_w_const(T) - 1 )
 - negative means smoother than a constant-speed drive that spends the same time on the road
 - the span ends at the last profile point plus a wheelbase plus 3 m on recorded roads, at the end of the last obstacle plus a wheelbase plus a 40 m run-out on synthetic roads (flat roads are 200 m), and where the human drive ends if that is earlier
 
-<p align="center">
-  <img src="images/data-time-tradeoff.png" alt="Comfort against travel time" width="720"><br>
-  <em>Median a<sub>w</sub> and median travel time of the human drive, constant speed, MPC and PPO, each relative to constant speed, with a sweep of the MPC tracking weight.</em>
-</p>
-
 ## Basic use
 
 ```bash
