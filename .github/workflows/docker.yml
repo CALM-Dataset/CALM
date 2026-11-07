@@ -30,6 +30,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: docker/Dockerfile
           load: true
           tags: calm:latest
           cache-from: type=gha
@@ -39,5 +40,5 @@ jobs:
           uid=$(id -u)
           gid=$(id -g)
           mkdir -p logs data
-          LOCAL_UID=$uid LOCAL_GID=$gid docker compose run --rm -T planner sh -c \
+          LOCAL_UID=$uid LOCAL_GID=$gid docker compose -f docker/docker-compose.yml run --rm -T planner sh -c \
             'just train --run-name demo --timesteps 512 --n-envs 2 && just eval demo --scenario c && just eval demo --suites 01_single_bump --n-episodes 2'

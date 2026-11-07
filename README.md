@@ -26,7 +26,7 @@ just doctor         # checks Python, packages, acados, data and login
 
 - Conda instead of `.venv`: set `CALM_PYTHON` and `CALM_PIP` to its `python` and `pip` (a `.env` file works too).
 - MPC only: `git submodule update --init --recursive` then `just build-acados` (Linux, macOS, Windows; needs cmake and a C compiler).
-- Docker: `docker compose run --rm planner` opens a shell with everything but acados installed.
+- Docker: `docker compose -f docker/docker-compose.yml run --rm planner` opens a shell with everything but acados installed.
 - Windows: run `just` from Git Bash.
 
 ## Getting started
