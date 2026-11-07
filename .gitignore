@@ -67,7 +67,7 @@ c_generated_code/
 acados_ocp*.json
 acados_sim*.json
 
-docker-compose.override.yml
+docker/docker-compose.override.yml
 
 assets/music/*.mp3
 assets/music/*.ogg

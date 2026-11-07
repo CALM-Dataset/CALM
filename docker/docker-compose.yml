@@ -1,10 +1,14 @@
+name: calm
+
 services:
   planner:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     image: calm
     stdin_open: true
     tty: true
     user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     volumes:
-      - ./logs:/workspace/logs
+      - ../logs:/workspace/logs
     command: bash

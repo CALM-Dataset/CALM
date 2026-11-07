@@ -46,8 +46,8 @@ The image has everything except acados and renders headless.
 ```bash
 mkdir -p logs
 export LOCAL_UID=$(id -u) LOCAL_GID=$(id -g)
-docker compose build
-docker compose run --rm planner
+docker compose -f docker/docker-compose.yml build
+docker compose -f docker/docker-compose.yml run --rm planner
 ```
 </details>
 
