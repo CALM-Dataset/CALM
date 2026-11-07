@@ -6,7 +6,7 @@ import numpy as np
 
 from gym_env.common.env_params import DT
 from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
-from baseline.mpc.config import load_mpc_cfg
+from baseline.mpc.config import load_mpc_cfg, ramp_decel
 from baseline.mpc.vehicle import make_vehicle_spec
 
 _FRONTIER_POINTS = 8
@@ -25,10 +25,11 @@ class FrontierPlanner:
         self._vi = vs.v_index
         self._wb = float(self._ode.wheelbase)
         self._cache: dict[tuple, list[float]] = {}
+        self.ramp_decel = ramp_decel()
 
     def _profile(self, s: float, bumps, speeds, v_nom: float) -> float:
         v = v_nom
-        a_max = float(self._m.a_max)
+        a_max = self.ramp_decel
         for (x0, _, length), vc in zip(bumps, speeds):
             vc = min(vc, v_nom)
             ramp = max(0.0, v_nom ** 2 - vc ** 2) / (2.0 * max(a_max, 1e-6))

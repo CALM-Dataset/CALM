@@ -100,7 +100,7 @@ class MPCController:
         dt    = self._dt
         v_max = float(cfg.v_limit)
         v_min = float(cfg.v_min)
-        a_max = float(cfg.a_max)
+        a_max = self._planner.ramp_decel if self._planner is not None else float(cfg.a_max)
 
         v_nom   = self._v_nom
         s_nodes = s_pos + v_current * np.arange(N + 1) * dt

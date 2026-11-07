@@ -27,6 +27,10 @@ velocity:
   v_min: 8.0
   v_hard_min: 8.0
 
+# slowdown ramp of the frontier objective in m/s^2
+frontier:
+  ramp_decel: 1.0
+
 # speed search per bump: x0 and pre_m in m, settle_s in s, dv in m/s
 comfort_map:
   x0:         20.0
