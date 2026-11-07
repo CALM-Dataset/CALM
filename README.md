@@ -1,77 +1,68 @@
-# CALM
+# CALM: Comfort-Aware Longitudinal Motion Planning
 
-**Comfort-Aware Longitudinal Motion Planning**
+![Code: MIT](https://img.shields.io/badge/code-MIT-blue)
+![Data: CC BY-NC 4.0](https://img.shields.io/badge/data-CC%20BY--NC%204.0-lightgrey)
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-CALM--Dataset-ffd21e)](https://huggingface.co/CALM-Dataset)
 
-A car is approaching a speed bump. How much should it slow down so that the people inside barely feel it, without wasting time?
+CALM recommends how much a car should slow down for a speed bump so that the people inside barely feel it, without wasting time. It is a half-car and quarter-car simulator with nonlinear suspension, wrapped as Gymnasium environments, with a PPO policy, an acados MPC and a rule-based driver on top. Comfort is measured with the ISO 2631-1 weighted acceleration, on 159 recorded bump crossings from Germany and Italy built on CARD.
 
 ![The CALM simulator](assets/gym_env.png)
 
 *The half-car simulator on a real bump from Augsburg, with body motion, pitch, speed and acceleration traced on the right.*
 
-## What it is
+> [!NOTE]
+> The real roads are gated on Hugging Face. Synthetic roads need no download, so a first run works without access.
 
-Every driver makes this choice by feel: brake too little and the bump hits the passengers, brake too much and the trip gets slower for nothing. CALM turns the choice into a planning problem. A planner reads the road ahead and recommends a crossing speed for each bump, and the result is judged by the ISO 2631-1 weighted acceleration that the passengers would feel.
+## Installation
 
-The repository holds a half-car and a quarter-car simulator with nonlinear suspension, both as Gymnasium environments. On top of them sit a PPO policy trained with a curriculum, an MPC reference built on acados, and a rule-based driver. An evaluation tool measures every planner with ISO 2631-1. The real roads come from a dataset of 159 recorded bump crossings in Germany and Italy, built on CARD.
-
-## Get started
-
-You need Python 3.10 or newer and [just](https://github.com/casey/just). Then:
+You need Python 3.10 or newer and [just](https://github.com/casey/just).
 
 ```bash
 git clone https://github.com/CALM-Dataset/CALM.git && cd CALM
-just install        # creates .venv with CPU PyTorch, the dependencies and the package
+just install        # .venv with CPU PyTorch, the dependencies and the package
 just doctor         # checks Python, packages, acados, data and login
 ```
 
-To use a conda environment instead of `.venv`, set `CALM_PYTHON` and `CALM_PIP` to its `python` and `pip` (a `.env` file works too). acados is only needed for the MPC: `just build-acados` builds the submodule. Docker users can run `docker compose run --rm planner` for a shell with everything but acados installed.
+- Conda instead of `.venv`: set `CALM_PYTHON` and `CALM_PIP` to its `python` and `pip` (a `.env` file works too).
+- MPC only: `git submodule update --init --recursive` then `just build-acados` (Linux, macOS, Windows; needs cmake and a C compiler).
+- Docker: `docker compose run --rm planner` opens a shell with everything but acados installed.
+- Windows: run `just` from Git Bash.
 
-A first run needs no downloaded data:
-
-```bash
-just gen-scene                  # procedural training roads
-just train --run-name demo      # PPO through the curriculum, half-car by default
-just eval demo --scenario c --render
-```
-
-The real roads live on Hugging Face and are gated. Request access on the [CALM-Scenarios](https://huggingface.co/datasets/CALM-Dataset/CALM-Scenarios) page, then:
+## Getting started
 
 ```bash
-hf auth login
-just fetch-scenarios
+just gen-scene                        # procedural training roads
+just train --run-name demo            # PPO through the curriculum, half-car
+just eval demo --scenario c --render  # watch it cross a raised crosswalk
 ```
 
-`just compare` and `just reproduce` run the MPC, so they need acados. They also evaluate the recorded human drive: point `CALM_SEQUENCES` at the `sequences` folders of CALM-Italy and CALM-Germany (separated by `:`). `just compare` accepts `--allow-missing-human` to skip it.
+Real roads and the trained policy:
+
+```bash
+hf auth login                         # once, after requesting access to CALM-Scenarios
+just fetch-scenarios                  # real roads and the perception model
+just eval calm_ppo --scenario c       # after copying the CALM-PPO files to logs/models/PPO/calm_ppo/
+```
+
+Comparing PPO, MPC and the recorded human drive:
+
+```bash
+just compare demo --allow-missing-human
+```
+
+Point `CALM_SEQUENCES` at the `sequences` folders of CALM-Italy and CALM-Germany (separated by `:`) to include the human drive. `just --list` shows every recipe.
 
 ## Documentation
 
-The full documentation is in the [wiki](https://github.com/CALM-Dataset/CALM/wiki). `just --list`, or `calm --help` inside the environment, shows every command.
+Reference pages live in the [wiki](https://github.com/CALM-Dataset/CALM/wiki):
 
-| Page | What you find there |
-| --- | --- |
-| **Start here** | |
-| [Home](https://github.com/CALM-Dataset/CALM/wiki/Home) | The project at a glance and a map of the wiki |
-| [Getting started](https://github.com/CALM-Dataset/CALM/wiki/Getting-Started) | Install, data, and a first training run step by step |
-| [Command line](https://github.com/CALM-Dataset/CALM/wiki/Command-Line) | Every `calm` and `just` command with its options |
-| [Architecture](https://github.com/CALM-Dataset/CALM/wiki/Architecture) | How the packages fit together |
-| **The simulator** | |
-| [Simulator and buttons](https://github.com/CALM-Dataset/CALM/wiki/Simulator-and-Buttons) | What the render window shows and the keys that control it |
-| [Vehicle models](https://github.com/CALM-Dataset/CALM/wiki/Vehicle-Models) | The half-car and quarter-car equations and parameters |
-| [Road and bumps](https://github.com/CALM-Dataset/CALM/wiki/Road-and-Bumps) | How bump profiles and road sections are built |
-| [Gymnasium environment](https://github.com/CALM-Dataset/CALM/wiki/Gymnasium-Environment) | The environment loop, actions and episodes |
-| **The learning side** | |
-| [Observation](https://github.com/CALM-Dataset/CALM/wiki/Observation) | What the policy sees before each bump |
-| [Reward](https://github.com/CALM-Dataset/CALM/wiki/Reward) | How comfort and time are traded in the reward |
-| [Training the policy](https://github.com/CALM-Dataset/CALM/wiki/Training-the-Policy) | PPO settings, the curriculum and tuning |
-| **The planners** | |
-| [MPC](https://github.com/CALM-Dataset/CALM/wiki/MPC) | The acados reference planner and its objectives |
-| [Reactive driver](https://github.com/CALM-Dataset/CALM/wiki/Reactive-Driver) | The rule-based driver |
-| **Data and evaluation** | |
-| [Scenarios and data](https://github.com/CALM-Dataset/CALM/wiki/Scenarios-and-Data) | Synthetic and real scenarios, and the Hugging Face datasets |
-| [Comfort metric](https://github.com/CALM-Dataset/CALM/wiki/Comfort-Metric) | ISO 2631-1 weighting and how comfort is measured |
-| [Evaluation](https://github.com/CALM-Dataset/CALM/wiki/Evaluation) | Comparing PPO, the MPC and the human drive |
-| **Help** | |
-| [Troubleshooting](https://github.com/CALM-Dataset/CALM/wiki/Troubleshooting) | Common errors and how to fix them |
+- Start: [Getting started](https://github.com/CALM-Dataset/CALM/wiki/Getting-Started), [Command line](https://github.com/CALM-Dataset/CALM/wiki/Command-Line), [Simulator](https://github.com/CALM-Dataset/CALM/wiki/Simulator)
+- Environment: [Gymnasium environment](https://github.com/CALM-Dataset/CALM/wiki/Gymnasium-Environment) with [action space](https://github.com/CALM-Dataset/CALM/wiki/Action-Space), [observation space](https://github.com/CALM-Dataset/CALM/wiki/Observation-Space), [reward](https://github.com/CALM-Dataset/CALM/wiki/Reward-Function), [episodes](https://github.com/CALM-Dataset/CALM/wiki/Episodes-and-Termination) and [roads](https://github.com/CALM-Dataset/CALM/wiki/Roads-and-Bumps)
+- Vehicles: [Vehicle models](https://github.com/CALM-Dataset/CALM/wiki/Vehicle-Models), [half-car](https://github.com/CALM-Dataset/CALM/wiki/Half-Car-Model), [quarter-car](https://github.com/CALM-Dataset/CALM/wiki/Quarter-Car-Model)
+- Policy and planners: [PPO training](https://github.com/CALM-Dataset/CALM/wiki/PPO-Training), [curriculum](https://github.com/CALM-Dataset/CALM/wiki/Curriculum), [MPC](https://github.com/CALM-Dataset/CALM/wiki/MPC-Planner), [reactive driver](https://github.com/CALM-Dataset/CALM/wiki/Reactive-Driver)
+- Data and evaluation: [Scenarios](https://github.com/CALM-Dataset/CALM/wiki/Scenarios), [dataset format](https://github.com/CALM-Dataset/CALM/wiki/Dataset-Format), [Evaluation](https://github.com/CALM-Dataset/CALM/wiki/Evaluation), [comfort metric](https://github.com/CALM-Dataset/CALM/wiki/Comfort-Metric)
+- Help: [Troubleshooting](https://github.com/CALM-Dataset/CALM/wiki/Troubleshooting)
 
 ## Models and data
 
@@ -79,28 +70,26 @@ Everything below is on Hugging Face under CC BY-NC 4.0, with access on request.
 
 | Name | Contents |
 | --- | --- |
-| [CALM-PPO](https://huggingface.co/CALM-Dataset/CALM-PPO) | The trained PPO policy |
-| [CALM-Scenarios](https://huggingface.co/datasets/CALM-Dataset/CALM-Scenarios) | The real road scenarios used for training and evaluation |
+| [CALM-PPO](https://huggingface.co/CALM-Dataset/CALM-PPO) | The trained PPO policy, as Stable-Baselines3 files and `policy.safetensors` |
+| [CALM-Scenarios](https://huggingface.co/datasets/CALM-Dataset/CALM-Scenarios) | The real road scenarios and the train and evaluation split |
 | [CALM-Germany](https://huggingface.co/datasets/CALM-Dataset/CALM-Germany) | Recorded bump crossings from Germany |
 | [CALM-Italy](https://huggingface.co/datasets/CALM-Dataset/CALM-Italy) | Recorded bump crossings from Italy |
 
-To run the trained policy, download `PPO_final.zip` and `vecnormalize.pkl` from CALM-PPO into `logs/models/PPO/calm_ppo/` and run `just eval calm_ppo --scenario c --render`. The pickle-free files work too: put `policy.safetensors` and `vecnormalize.json` there and run `just eval calm_ppo policy.safetensors`.
-
-The same ride models in MATLAB and Simulink are in a separate package, [ride-models-matlab](https://github.com/CALM-Dataset/ride-models-matlab).
+The same ride models in MATLAB and Simulink are in [ride-models-matlab](https://github.com/CALM-Dataset/ride-models-matlab).
 
 ## Repository layout
 
 ```
-src/gym_env/   Gymnasium environment, half-car and quarter-car plants, reward, renderer
+src/gym_env/   environments, half-car and quarter-car plants, reward, renderer
 src/train/     PPO training and the curriculum
 src/tune/      Optuna hyperparameter search
 src/baseline/  MPC and rule-based driver
 src/eval/      evaluation and ISO 2631-1 comfort
 src/road/      road profile generation
-src/utils/     scenario generation, dataset download and helpers
+src/utils/     scenario generation, dataset download, helpers
 src/calm/      the calm command line
 config/        environment, reward, curriculum, planner and evaluation settings
-tests/         fast tests that need no data or GPU
+tests/         fast tests, no data or GPU needed
 ```
 
 The first quarter-car implementation is kept at the git tag `thesis-quarter-car`.
@@ -126,6 +115,12 @@ The real roads are built on the CARD recordings, so please also cite:
   year      = {2026}
 }
 ```
+
+## Acknowledgement
+
+- [CARD](https://huggingface.co/CARD-Data) for the recordings the real roads are built on
+- [acados](https://github.com/acados/acados) for the MPC solver
+- [Gymnasium](https://gymnasium.farama.org) and [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3) for the environment interface and PPO
 
 ## License
 
