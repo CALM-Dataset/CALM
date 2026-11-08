@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+message: Please cite the thesis, and CARD for the real roads.
+title: "CALM: Comfort-Aware Longitudinal Motion Planning"
+authors:
+  - family-names: Azab Abdelazim
+    given-names: Mohammed El Said
+repository-code: https://github.com/CALM-Dataset/CALM
+url: https://huggingface.co/CALM-Dataset
+license: MIT
+preferred-citation:
+  type: thesis
+  thesis-type: Bachelor's thesis
+  title: "Comfort-Aware Speed Planning over Road Anomalies: A Reinforcement-Learning Approach"
+  authors:
+    - family-names: Azab Abdelazim
+      given-names: Mohammed El Said
+  institution:
+    name: Technische Universität Berlin
+  year: 2026
+references:
+  - type: conference-paper
+    title: "CARD: A Multi-Modal Automotive Dataset for Dense 3D Reconstruction in Challenging Road Topography"
+    authors:
+      - family-names: Elazab
+        given-names: Gasser
+      - family-names: Neuhaus
+        given-names: Frank
+      - family-names: Koß
+        given-names: Tilman
+      - family-names: Splietker
+        given-names: Malte
+      - family-names: Date
+        given-names: Aditya
+      - family-names: Unterreiner
+        given-names: Michael
+      - family-names: Jansen
+        given-names: Maximilian
+      - family-names: Hellwich
+        given-names: Olaf
+    collection-title: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)
+    year: 2026

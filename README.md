@@ -94,11 +94,12 @@ The first quarter-car implementation is kept at the git tag `thesis-quarter-car`
 ## Citation
 
 ```bibtex
-@misc{calm_dataset,
-  title  = {CALM: Comfort-Aware Longitudinal Motion Planning},
+@mastersthesis{azab2026calm,
+  title  = {Comfort-Aware Speed Planning over Road Anomalies: A Reinforcement-Learning Approach},
   author = {Mohammed El Said Azab Abdelazim},
-  year   = {2026},
-  url    = {https://huggingface.co/CALM-Dataset}
+  school = {Technische Universit{\"a}t Berlin},
+  type   = {Bachelor's thesis},
+  year   = {2026}
 }
 ```
 
