@@ -78,9 +78,9 @@ def _damper(v_S: float, p: np.ndarray) -> float:
 
 
 @njit(cache=True)
-def _axle_force(susp, susp_vel, tyre, zr_dot, zw_vel, p):
+def _axle_force(susp, susp_vel, tire, zr_dot, zw_vel, p):
     F_susp = p[_I_KS] * susp + _spring_nonlin(susp, p) + _damper(susp_vel, p)
-    F_tire = p[_I_KT] * tyre + p[_I_CT] * (zr_dot - zw_vel)
+    F_tire = p[_I_KT] * tire + p[_I_CT] * (zr_dot - zw_vel)
     return F_susp, F_tire
 
 
