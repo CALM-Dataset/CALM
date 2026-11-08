@@ -1,6 +1,7 @@
-
-steep_full_slow: 0.05
+steep_full_slow: 0.015
 
 hole_severity:   0.60
+
+clear_m:         5.0
 
 brake_margin:    3.0

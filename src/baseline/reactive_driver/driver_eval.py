@@ -36,7 +36,7 @@ def run_episode(env, ctrl: ReactiveController, seed: int, scenario_road=None,
                 collect_frames: bool = False, render_live: bool = False,
                 perception_track=None, preview_cfg=None) -> dict:
     def steps(road):
-        speed = max(float(road.speed), 1.0) if road is not None else 1.0
+        speed = max(0.2 * float(road.speed), 1.0) if road is not None else 1.0
         return runner.steps_for_road(road, speed, no_bumps=1200, floor=600)
 
     def on_start(plan_road, road):

@@ -32,6 +32,7 @@ class ReactiveController:
         brake_margin:   Optional[float] = None,
         a_brake:        Optional[float] = None,
         a_accel:        Optional[float] = None,
+        clear_m:        Optional[float] = None,
         v_index:        int = 4,
     ):
         p = _load_params()
@@ -45,6 +46,7 @@ class ReactiveController:
         self.brake_margin    = brake_margin    if brake_margin    is not None else float(p.get('brake_margin',    3.0))
         self.a_brake         = a_brake         if a_brake         is not None else float(p.get('a_brake',         2.5))
         self.a_accel         = a_accel         if a_accel         is not None else float(p.get('a_accel',         2.0))
+        self.clear_m         = clear_m         if clear_m         is not None else float(p.get('clear_m',         0.0))
 
     def _crossing_speed(self, H: float, W: float) -> float:
         steepness = abs(H) / max(W, 1e-6)
@@ -63,7 +65,7 @@ class ReactiveController:
         need_brake = False
         on_bump    = False
         for x0, A, L in getattr(road, '_bumps', []):
-            if s_pos >= x0 + L:
+            if s_pos >= x0 + L + self.clear_m:
                 continue
             v_cross = self._crossing_speed(A, L)
             if s_pos >= x0:
