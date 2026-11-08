@@ -48,12 +48,21 @@ Hugging Face, CC BY-NC 4.0, access on request.
 ## Citing CALM
 
 ```bibtex
-@mastersthesis{azab2026calm,
+@thesis{azab2026calm,
   title  = {Comfort-Aware Speed Planning over Road Anomalies: A Reinforcement-Learning Approach},
   author = {Mohammed El Said Azab Abdelazim},
-  school = {Technische Universit{\"a}t Berlin},
+  institution = {Technische Universit{\"a}t Berlin},
   type   = {Bachelor's thesis},
   year   = {2026}
+}
+```
+
+```bibtex
+@misc{calm_dataset,
+  title  = {CALM: Comfort-Aware Longitudinal Motion Planning},
+  author = {Mohammed El Said Azab Abdelazim},
+  year   = {2026},
+  url    = {https://huggingface.co/CALM-Dataset}
 }
 ```
 
