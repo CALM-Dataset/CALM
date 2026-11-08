@@ -12,7 +12,7 @@ Every `calm` command and `just` recipe. `calm <command> --help` lists all option
 | `calm tb`, `just tb` | TensorBoard on `logs/tensorboard` | `--port` |
 | `calm eval <run> [checkpoint]`, `just eval` | evaluates `logs/models/PPO/<run>/`, default checkpoint `PPO_final.zip` | `--scenario`, `--suites`, `--n-episodes` (5), `--seed` (0), `--vehicle`, `--render`, `--save-gif`, `--save-plots` |
 | `calm mpc`, `just mpc` | MPC baseline, needs acados | `--scenario`, `--suites`, `--vehicle`, `--no-perception`, `--horizon`, `--seed`, `--render`, `--save-gif`, `--save-plots` |
-| `calm reactive`, `just reactive-driver` | reactive driver baseline | as `calm mpc`, with `--preview` (metres) instead of `--horizon` |
+| `calm reactive`, `just reactive-driver` | reactive driver baseline | as `calm mpc`, with `--preview` (meters) instead of `--horizon` |
 | `calm compare <run> [checkpoint]`, `just compare` | comfort of PPO, MPC and the recorded drive on the same roads | `--suites`, `--mpc-objective comfort_map\|frontier`, `--horizon`, `--real-root`, `--uncalibrated`, `--allow-missing-human`, `--seed`, `--out` |
 | `calm reproduce`, `just reproduce` | trains several seeds and compares each | `--seeds`, `--timesteps`, `--prefix`, `--suites`, `--skip-train`, `--dry-run` |
 | `just install` | creates `.venv`, installs CPU PyTorch, `requirements.txt`, the package | |

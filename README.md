@@ -123,7 +123,7 @@ The real roads are built on the CARD recordings, so please also cite:
 }
 ```
 
-## Acknowledgement
+## Acknowledgment
 
 - [CARD](https://huggingface.co/CARD-Data) for the recordings the real roads are built on
 - [acados](https://github.com/acados/acados) for the MPC solver

@@ -18,7 +18,7 @@ flowchart LR
 
 - `RoadGenerator` with constructors `from_random`, `from_scenario`, `from_profile` and queries for height and slope.
 - Bump list `_bumps`: tuples `(x0, H, W)` for catalog bumps, potholes and generated roads.
-- Profile: grid `s`, height `z`, slope `dz/ds` (`numpy.gradient`, interpolated) for recorded crossings, `flat30`, `flat50`. `_bumps` then holds the labelled bumps.
+- Profile: grid `s`, height `z`, slope `dz/ds` (`numpy.gradient`, interpolated) for recorded crossings, `flat30`, `flat50`. `_bumps` then holds the labeled bumps.
 - Edge trimming of recorded profiles and `_trim_offset_m` (`src/utils/scenario_loader.py`).
 - Catalogs `config/catalog/speed_bumps.json` (ids 5 to 9) and `potholes.json` (ids 0 to 4), referred to by `catalog_id`.
 
