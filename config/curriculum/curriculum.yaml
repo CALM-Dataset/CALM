@@ -1,26 +1,34 @@
 
 
+# timesteps advances by training time, counted in decisions (one decision per bump)
 mode: timesteps
 
+# total decisions at which each level advances in timesteps mode
 advance_time_threshold:
-  0:    2_000_000
-  1:    4_000_000
-  2:    6_000_000
+  0:    5_000
+  1:    10_000
+  2:    15_000
 
+# mean eval return each level needs in reward mode
 advance_reward_threshold:
   0:    120.0
   1:    105.0
   2:    150.0
 
+# evaluations averaged in reward mode
 advance_window: 6
 
-advance_min_steps: 1_500_000
+# decisions a level lasts at least in reward mode
+advance_min_steps: 3_500
 
+# synthetic training scenarios
 scenarios_dir: config/train/scenarios/curriculum
 
+# real training scenarios and the share of episodes drawn from them
 real_scenarios_dir: config/train/scenarios/real
-real_fraction: 0.75
+real_fraction: 0.6
 
+# difficulty tier of each level
 levels:
   0:
     difficulty: easy

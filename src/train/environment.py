@@ -1,26 +1,31 @@
 from __future__ import annotations
 
+import multiprocessing
+
 from pathlib import Path
 from typing import Callable
 
 import gymnasium as gym
 import numpy as np
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 
 from gym_env.common import (
     CurriculumWrapper, EpisodeLogger, PreviewWrapper, TerminalRewardWrapper,
     TerminationWrapper,
 )
+from gym_env.common.wrappers.action_repeat import with_action_repeat
+from gym_env.common.wrappers.decision import with_decisions
+from gym_env.common.wrappers.relative_comfort import RelativeComfort
 from gym_env.vehicles import get_vehicle
 
 
 class ActionSaturationPenalty(gym.Wrapper):
-    def __init__(self, env: gym.Env, coef: float):
+    def __init__(self, env: gym.Env, coef: float, high: float | None = None):
         super().__init__(env)
         self._coef = float(coef)
         self._low = env.action_space.low
-        self._high = env.action_space.high
+        self._high = env.action_space.high if high is None else np.full_like(env.action_space.high, high)
         self.action_space = gym.spaces.Box(-10.0, 10.0, shape=env.action_space.shape, dtype=np.float32)
 
     def step(self, action):
@@ -46,12 +51,13 @@ def _make_env(
     def _init() -> gym.Env:
         env = gym.make(env_id, **env_kwargs)
         env = TerminationWrapper(env)
+        env = RelativeComfort(env, lambda: TerminationWrapper(gym.make(env_id, **env_kwargs)))
         if sparse_reward:
             env = TerminalRewardWrapper(env)
-        env = PreviewWrapper(env)
+        env = with_decisions(with_action_repeat(PreviewWrapper(env)))
         env = CurriculumWrapper(env, curriculum_cfg, n_envs=n_envs)
         if action_penalty > 0.0:
-            env = ActionSaturationPenalty(env, action_penalty)
+            env = ActionSaturationPenalty(env, action_penalty, high=0.0 if env.unwrapped._action_mode == "slowdown" else None)
         if monitor_dir:
             Path(monitor_dir).mkdir(parents=True, exist_ok=True)
             env = Monitor(env, str(Path(monitor_dir) / f"env{seed}"))
@@ -77,13 +83,15 @@ def make_vec_env(
     sparse_reward: bool = False,
     vehicle: str = "half",
     action_penalty: float = 0.0,
+    subproc: bool = False,
 ) -> VecNormalize:
     env_kwargs = env_kwargs or {}
     fns = [
         _make_env(base_seed + i, monitor_dir, env_kwargs, curriculum_cfg, n_envs, sparse_reward, vehicle, action_penalty)
         for i in range(n_envs)
     ]
-    venv = DummyVecEnv(fns)
+    use_fork = subproc and n_envs > 1 and 'fork' in multiprocessing.get_all_start_methods()
+    venv = SubprocVecEnv(fns, start_method='fork') if use_fork else DummyVecEnv(fns)
     venv = VecNormalize(
         venv,
         norm_obs=norm_obs,
@@ -156,7 +164,7 @@ def make_real_val_env(vehicle: str, seed: int = 0) -> VecNormalize:
     def _init() -> gym.Env:
         env = gym.make(env_id, random_road_on_reset=False)
         env = TerminationWrapper(env)
-        env = PreviewWrapper(env)
+        env = with_decisions(with_action_repeat(PreviewWrapper(env)))
         env.reset(seed=seed)
         return env
 

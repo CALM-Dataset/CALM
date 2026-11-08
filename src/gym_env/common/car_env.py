@@ -1,14 +1,15 @@
-from typing import Callable, Optional
+from typing import Optional
 
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
 from road.road_generator import RoadGenerator
-from gym_env.common.reward_params import RewardConfig, load_reward_config
-from gym_env.common.reward import compute_reward, compute_terminal_reward
-from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN
-from gym_env.common.render_params import (
+from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
+from gym_env.common.reward.reward import compute_reward, compute_terminal_reward
+from eval.iso2631 import WkStream
+from gym_env.common.env_params import DT, EPISODE_STEPS, ACTION_MODE, SPEED_GAIN, SPEED_FLOOR_RATIO, DEPTH_OFFSET, DEPTH_SLOPE, WINDOW_LEAD_FAR, WINDOW_LEAD_NEAR, WINDOW_AFTER, WINDOW_RELEASE, CHOICE_DEPTHS
+from gym_env.common.render.render_params import (
     RENDER_Y_SCALE,
     RENDER_SHOW_TS,
     RENDER_TS_Z,
@@ -32,7 +33,6 @@ class CarEnv(gym.Env):
         vehicle_speed: float = 6.0,
         render_mode: str = 'none',
         physics_params: Optional[dict] = None,
-        road_params: Optional[dict] = None,
         reward_config: Optional[RewardConfig] = None,
         render_y_scale: int = RENDER_Y_SCALE,
         show_time_series: bool = RENDER_SHOW_TS,
@@ -40,11 +40,8 @@ class CarEnv(gym.Env):
         show_ts_z_ddot: bool = RENDER_TS_Z_DDOT,
         show_ts_speed: bool = RENDER_TS_SPEED,
         freeze_episode: bool = RENDER_FREEZE_EPISODE,
-        start_at_equilibrium: bool = True,
-        ref_speed_profile: str = "constant",
         max_episode_steps: int = EPISODE_STEPS,
         random_road_on_reset: bool = True,
-        road_override_kwargs: Optional[dict] = None,
         action_mode: Optional[str] = None,
     ):
         super().__init__()
@@ -52,26 +49,28 @@ class CarEnv(gym.Env):
         self._v0                = float(vehicle_speed)
         self._random_road_on_reset = bool(random_road_on_reset)
         self._y_scale           = int(render_y_scale)
-        self._ref_speed_profile = ref_speed_profile
         self._max_episode_steps = int(max_episode_steps)
-        self._start_at_eq       = bool(start_at_equilibrium)
-
-        self._v_init_fn: Optional[Callable[[float], float]] = (road_params or {}).get('v_init_fn', None)
 
         self._vehicle = get_vehicle(self.VEHICLE)
         self._rcfg = reward_config or load_reward_config()
         self._action_mode = action_mode or ACTION_MODE
 
-        self.action_space = spaces.Box(
-            low=np.array([-1.0], dtype=np.float32),
-            high=np.array([ 1.0], dtype=np.float32),
-        )
+        if self._action_mode == "choice":
+            self.action_space = spaces.Discrete(len(CHOICE_DEPTHS))
+        else:
+            bound = 8.0 if self._action_mode in ("depth", "template") else 1.0
+            self.action_space = spaces.Box(
+                low=np.array([-bound], dtype=np.float32),
+                high=np.array([ bound], dtype=np.float32),
+            )
+        self._choice_latched = False
+        self._choice_depth = 0.0
 
         obs_low, obs_high = self._vehicle.obs_bounds()
         self.observation_space = spaces.Box(low=obs_low, high=obs_high, dtype=np.float32)
 
         self._ode  = self._vehicle.make_ode(physics_params or self._vehicle.default_plant_params())
-        self._road = RoadGenerator(vehicle_speed, road_params)
+        self._road = RoadGenerator(vehicle_speed)
 
         self._state          = self._ode.reset(self._v0)
         self._t              = 0.0
@@ -102,8 +101,6 @@ class CarEnv(gym.Env):
             "flat_start":      60.0,
             "hole_fraction":   0.0,
         }
-        if road_override_kwargs:
-            self._random_road_kwargs.update(road_override_kwargs)
         self._v_random_low = self._rcfg.v_min * 2.0
 
         self._prev_a           = 0.0
@@ -122,25 +119,40 @@ class CarEnv(gym.Env):
         }
 
 
+    def _slowdown_window(self, s: float) -> float:
+        wheelbase = float(self._ode.wheelbase)
+        weight = 0.0
+        for x0, _, length in getattr(self._road, "_bumps", []):
+            if s < x0:
+                ramp = (s - (x0 - WINDOW_LEAD_FAR)) / max(WINDOW_LEAD_FAR - WINDOW_LEAD_NEAR, 1e-6)
+            else:
+                ramp = 1.0 - (s - (x0 + length + wheelbase + WINDOW_AFTER)) / max(WINDOW_RELEASE, 1e-6)
+            ramp = float(np.clip(ramp, 0.0, 1.0))
+            weight = max(weight, ramp * ramp * (3.0 - 2.0 * ramp))
+        return weight
+
+    @property
+    def hold_action(self) -> np.ndarray:
+        if self._action_mode == "choice":
+            return np.array([0], dtype=np.int64)
+        value = -float(self.action_space.high[0]) if self._action_mode in ("depth", "template") else 0.0
+        return np.array([value], dtype=np.float32)
+
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         rng = self.np_random
         cfg = self._rcfg
         opts = options or {}
 
-        randomize       = opts.get("randomize_road",  self._random_road_on_reset)
-        randomize_speed = opts.get("randomize_speed", True)
+        randomize = opts.get("randomize_road", self._random_road_on_reset)
 
         if "road" in opts:
             self._road = opts["road"]
             self._v    = self._road.speed
         elif randomize:
-            road_kwargs = opts.get("road_kwargs", self._random_road_kwargs)
-            v_low  = float(opts.get("v_random_low",  self._v_random_low))
-            v_high = float(opts.get("v_random_high", cfg.v_limit))
-            v = float(rng.uniform(v_low, v_high)) if randomize_speed else self._v0
+            v = float(rng.uniform(self._v_random_low, cfg.v_limit))
             self._road = RoadGenerator.from_random(
-                rng, vehicle_speed=v, **road_kwargs
+                rng, vehicle_speed=v, **self._random_road_kwargs
             )
             self._v = self._road.speed
         else:
@@ -154,10 +166,7 @@ class CarEnv(gym.Env):
             v_ref = float(self.np_random.uniform(cfg.v_init_low, cfg.v_limit))
         self._v = float(np.clip(self._v, cfg.v_hard_min, max(cfg.v_hard_min, v_ref)))
         self._road.set_speed(self._v)
-        x = self._ode.reset(self._v)
-        if not self._start_at_eq:
-            self._ode.perturb(x, rng)
-        self._state = x
+        self._state = self._ode.reset(self._v)
 
         self._t              = 0.0
         self._step_count     = 0
@@ -191,7 +200,7 @@ class CarEnv(gym.Env):
         self._bumps_total    = sum(1 for (_, h, _) in self._road._bumps if h >= 0)
         self._holes_total    = sum(1 for (_, h, _) in self._road._bumps if h < 0)
         self._last_bump_end  = (
-            float(self._road._bumps[-1][0] + self._road._bumps[-1][2])
+            float(self._road._bumps[-1][0] + self._road._bumps[-1][2] + getattr(self._road, "_runout_m", 0.0))
             if self._road._bumps else None
         )
         prof = getattr(self._road, "_profile", None)
@@ -199,6 +208,9 @@ class CarEnv(gym.Env):
         self._termination_reason = ""
 
         self._prev_a           = 0.0
+        self._choice_latched   = False
+        self._choice_depth     = 0.0
+        self._wk               = WkStream(DT)
 
         self._freeze_render = False
 
@@ -207,15 +219,38 @@ class CarEnv(gym.Env):
     def step(self, action):
         cfg = self._rcfg
 
-        u     = float(np.clip(action[0], -1.0, 1.0))
+        if self._action_mode == "choice":
+            u = 0.0
+        else:
+            bound = float(self.action_space.high[0])
+            u     = float(np.clip(np.asarray(action).ravel()[0], -bound, bound))
         v_old = self._v
         v_top = max(cfg.v_hard_min, self._v_episode_ref)
-        if self._action_mode == "target_speed":
-            v_target = cfg.v_hard_min + (v_top - cfg.v_hard_min) * 0.5 * (u + 1.0)
+        v_floor = max(cfg.v_hard_min, SPEED_FLOOR_RATIO * v_top) if self._action_mode in ("slowdown", "depth", "template", "choice") else cfg.v_hard_min
+        v_floor = min(v_floor, v_top)
+        if self._action_mode == "slowdown":
+            v_target = v_top + (v_top - v_floor) * min(u, 0.0)
+            a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
+        elif self._action_mode == "choice":
+            index = int(np.clip(np.asarray(action).ravel()[0], 0, len(CHOICE_DEPTHS) - 1))
+            window = self._slowdown_window(self._s_pos)
+            if window <= 0.0:
+                self._choice_latched = False
+                self._choice_depth = 0.0
+            elif not self._choice_latched:
+                self._choice_latched = True
+                self._choice_depth = CHOICE_DEPTHS[index]
+            v_target = v_top - (v_top - v_floor) * self._choice_depth * window
+            a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
+        elif self._action_mode in ("depth", "template"):
+            depth = 1.0 / (1.0 + float(np.exp(-DEPTH_SLOPE * (u - DEPTH_OFFSET))))
+            if self._action_mode == "template":
+                depth *= self._slowdown_window(self._s_pos)
+            v_target = v_top - (v_top - v_floor) * depth
             a_cmd = float(np.clip(SPEED_GAIN * (v_target - v_old), -cfg.a_max, cfg.a_max))
         else:
             a_cmd = u * cfg.a_max
-        v_new = float(np.clip(v_old + a_cmd * DT, cfg.v_hard_min, v_top))
+        v_new = float(np.clip(v_old + a_cmd * DT, v_floor, v_top))
         a_actual = (v_new - v_old) / DT
         self._v        = v_new
         self._state[self._ode.v_index] = v_new
@@ -250,13 +285,14 @@ class CarEnv(gym.Env):
         z_W_ddot_both = 0.5 * (z_Wf_ddot + z_Wr_ddot)
         reward, breakdown = compute_reward(
             v=v_new,
-            z_B_ddot=self._last_z_B_ddot,
+            z_B_ddot=self._wk.step(z_B_ddot) if cfg.wk_heave else self._last_z_B_ddot,
             z_W_ddot=z_W_ddot_both,
             a_actual=a_actual,
             a_prev=self._prev_a,
             cfg=cfg,
             v_ref=v_init,
             phi_ddot=self._last_phi_ddot,
+            dt=DT,
         )
         self._speed_err_sq   += (v_init - v_new) ** 2
 
@@ -344,6 +380,4 @@ class CarEnv(gym.Env):
         }
 
     def _compute_v_init(self, t: float) -> float:
-        if self._ref_speed_profile == "custom" and self._v_init_fn is not None:
-            return float(self._v_init_fn(t))
         return self._v_episode_ref

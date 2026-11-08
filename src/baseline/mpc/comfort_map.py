@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from gym_env.common.env_params import DT
-from gym_env.common.reward_params import RewardConfig
+from gym_env.common.reward.reward_params import RewardConfig
 from baseline.mpc.config import load_mpc_cfg
 from baseline.mpc.vehicle import make_vehicle_spec
 

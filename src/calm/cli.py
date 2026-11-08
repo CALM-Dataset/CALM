@@ -11,7 +11,6 @@ TOOLS = {
     'mpc': ('baseline.mpc.mpc', 'MPC baseline (needs acados)', []),
     'reactive': ('baseline.reactive_driver.driver_eval', 'rule-based driver baseline', []),
     'gen-scenes': ('utils.generate_train_scenarios', 'procedural training scenarios', []),
-    'build-index': ('utils.dataset', 'metadata table over every scenario', []),
 }
 
 
@@ -30,14 +29,29 @@ def _split_checkpoint(rest: list[str], default: str = 'PPO_final.zip') -> tuple[
 
 
 def cmd_eval(rest: list[str]) -> int:
+    if rest and rest[0] in ('-h', '--help'):
+        return _run('eval.eval', ['--help'])
     if not rest or rest[0].startswith('-'):
-        print('usage: calm eval <run> [checkpoint.zip] [eval options]')
+        print('usage: calm eval <run> [checkpoint] [eval options]')
         return 2
     run, (ckpt, extra) = rest[0], _split_checkpoint(rest[1:])
     return _run('eval.eval', ['--algo', 'PPO', '--model_path', _model_path(run, ckpt), *extra])
 
 
+def cmd_compare(rest: list[str]) -> int:
+    if rest and rest[0] in ('-h', '--help'):
+        return _run('eval.comfort_score', ['--help'])
+    if not rest or rest[0].startswith('-'):
+        print('usage: calm compare <run> [checkpoint] [comfort_score options]')
+        return 2
+    run, (ckpt, extra) = rest[0], _split_checkpoint(rest[1:])
+    return _run('eval.comfort_score', ['--ppo-model', _model_path(run, ckpt), '--mpc', *extra])
+
+
 def cmd_fetch(rest: list[str]) -> int:
+    if rest and rest[0] in ('-h', '--help'):
+        print('usage: calm fetch\n\ndownload the gated real scenarios from Hugging Face, then check what is present')
+        return 0
     from utils.dataset import ensure_local
 
     ensure_local()
@@ -50,6 +64,12 @@ def cmd_doctor(rest: list[str]) -> int:
     return run_checks(data_only='--data-only' in rest)
 
 
+def cmd_reproduce(rest: list[str]) -> int:
+    from calm.reproduce import main as reproduce
+
+    return reproduce(rest)
+
+
 def cmd_tb(rest: list[str]) -> int:
     return _run('tensorboard.main', ['--logdir', str(ROOT / 'logs' / 'tensorboard'), *rest])
 
@@ -57,9 +77,11 @@ def cmd_tb(rest: list[str]) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     special = {
-        'eval': ('evaluate a trained run: calm eval <run> [checkpoint.zip]', cmd_eval),
+        'eval': ('evaluate a trained run: calm eval <run> [checkpoint]', cmd_eval),
+        'compare': ('ISO 2631 comfort of PPO, MPC and the recorded drive: calm compare <run>', cmd_compare),
         'fetch': ('download the gated real scenarios, then check what is present', cmd_fetch),
         'doctor': ('check Python, packages, acados, data and login, with hints', cmd_doctor),
+        'reproduce': ('train several seeds and score each one (see calm reproduce --help)', cmd_reproduce),
         'tb': ('TensorBoard on logs/tensorboard', cmd_tb),
     }
     if not argv or argv[0] in ('-h', '--help'):

@@ -19,6 +19,10 @@ def horizon() -> int:
     return int(load_mpc_cfg()['N'])
 
 
+def ramp_decel() -> float:
+    return float(load_mpc_cfg()['frontier']['ramp_decel'])
+
+
 def ocp_weights() -> dict:
     weights = load_mpc_cfg()['ocp']
     missing = [k for k in OCP_KEYS if k not in weights]

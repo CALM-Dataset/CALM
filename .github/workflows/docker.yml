@@ -1,0 +1,44 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  container:
+    name: Build, train and evaluate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          load: true
+          tags: calm:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Train and evaluate in the container
+        run: |
+          uid=$(id -u)
+          gid=$(id -g)
+          mkdir -p logs data
+          LOCAL_UID=$uid LOCAL_GID=$gid docker compose -f docker/docker-compose.yml run --rm -T planner sh -c \
+            'just train --run-name demo --timesteps 512 --n-envs 2 && just eval demo --scenario c && just eval demo --suites 01_single_bump --n-episodes 2'

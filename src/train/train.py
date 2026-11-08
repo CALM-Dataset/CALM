@@ -15,17 +15,17 @@ from utils.paths import ROOT as _ROOT
 
 from train.agent import build_model, load_algo_config, supported_algos
 from stable_baselines3.common.callbacks import CallbackList
-from train.monitoring import build_callbacks, RealValidationCallback, SpeedWeightController
+from train.monitoring import build_callbacks, RealValidationCallback
 from train.environment import (
     make_eval_vec_env, make_vec_env, restore_vecnormalize,
     make_real_val_env, load_real_val_scenarios,
 )
 from train.seed import seed_everything
-from gym_env.common.reward_params import load_reward_config
-from gym_env.common.preview_params import load_preview_config
+from gym_env.common.reward.reward_params import load_reward_config
+from gym_env.common.preview.preview_params import load_preview_config
 from gym_env.common.env_params import EPISODE_STEPS
-from gym_env.common.reward_utils import reward_bounds
-from gym_env.common.curriculum import load_curriculum_config
+from gym_env.common.utils.reward_utils import reward_bounds
+from gym_env.common.wrappers.curriculum import load_curriculum_config
 
 
 _CONFIG_PATH      = _ROOT / "config" / "agent" / "algo_configs.yaml"
@@ -49,13 +49,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
                     "--seed",
                     type=int,
-                    default=69,
-                    help="Random seed.")
+                    default=None,
+                    help="Random seed (default: training.seed in config/agent/algo_configs.yaml).")
     p.add_argument(
                     "--timesteps",
                     type=int,
                     default=None,
-                    help="Total env steps.")
+                    help="Total decisions.")
     p.add_argument(
                     "--n-envs",
                     type=int,
@@ -287,6 +287,7 @@ def main() -> None:
         sparse_reward=args.sparse_reward,
         vehicle=args.vehicle,
         action_penalty=float(train_meta.get("action_saturation_penalty", 0.0)),
+        subproc=bool(train_meta.get("subproc", False)),
     )
     if args.resume and normalize:
         vn_path = Path(args.resume).parent / "vecnormalize.pkl"
@@ -336,11 +337,6 @@ def main() -> None:
         callbacks = CallbackList([callbacks, real_val_cb])
         print(f"  real-sample: {len(real_val_scenarios)} training scenarios (not the held-out ones) → best_real/best_model")
 
-    ctrl = train_meta.get("speed_controller")
-    if ctrl:
-        callbacks = CallbackList([callbacks, SpeedWeightController(ctrl["target"], ctrl["init"], ctrl["gain"], ctrl["max"])])
-        print(f"  speed weight controller: target speed ratio {ctrl['target']}")
-
     bounds = reward_bounds(rcfg, EPISODE_STEPS, n_bumps=5)
 
     print(f"\n{'─'*58}")
@@ -353,7 +349,8 @@ def main() -> None:
     print(f"  v_limit    : {rcfg.v_limit * 3.6:.0f} km/h")
     print(f"  v_min      : {rcfg.v_min * 3.6:.1f} km/h")
     pcfg = load_preview_config()
-    print(f"  preview    : {pcfg.n_peaks} peaks × 3 = {pcfg.n_peaks * 3} features over {pcfg.preview_distance}m")
+    n_feat = pcfg.n_peaks * 4 + 3 if pcfg.features == "v2" else pcfg.n_peaks * 3
+    print(f"  preview    : {pcfg.n_peaks} bumps, {n_feat} features ({pcfg.features}) over {pcfg.preview_distance}m")
     print(f"  curriculum : {len(curriculum_cfg['levels'])} levels, start={start_level}")
     print(f"  sparse     : {args.sparse_reward}")
     print(f"  output     : {model_dir}")

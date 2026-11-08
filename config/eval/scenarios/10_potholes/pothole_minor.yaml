@@ -1,9 +1,0 @@
-name: pothole_minor
-description: Minor pothole, 15 mm deep, 0.30 m wide
-source: "Extrapolated below the RAC Foundation low-severity boundary (config/catalog/potholes.json)"
-vehicle_speed_kmh: 30.0
-road_obstacles:
-- x_start_m: 40.0
-  height_m: -0.015
-  width_m: 0.30
-  type: hole

@@ -1,13 +1,14 @@
 import collections
 import os
+import sys
 
 import numpy as np
 
-from gym_env.common.render import (
+from gym_env.common.render.render import (
     Hud, Road, Wheel, build_bump_vlines, draw_sky, wheel_radius_x, bump_signature, close_env, damper_xy, ground_symbol_xy,
     init_music, render_bumps, render_env, spring_xy, wait_for_episode_nav,
 )
-from gym_env.common.render_params import RENDER_MUSIC
+from gym_env.common.render.render_params import RENDER_MUSIC
 
 from gym_env.quarter_car.config.render_params import (
     RENDER_Y_W_NOM, RENDER_Y_B_NOM,
@@ -68,7 +69,7 @@ def _build_ts_specs(env):
 
 def init_render(env):
     import matplotlib
-    if not os.environ.get('DISPLAY'):
+    if sys.platform.startswith('linux') and not (os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')):
         matplotlib.use('Agg', force=True)
     import matplotlib.pyplot as plt
     from matplotlib.gridspec import GridSpec

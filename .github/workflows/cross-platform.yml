@@ -1,0 +1,52 @@
+name: Cross-platform
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cross-platform-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  install-and-run:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    env:
+      MPLBACKEND: Agg
+      SDL_AUDIODRIVER: dummy
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install rust-just
+      - run: just install
+      - run: just doctor
+      - run: just gen-scene
+      - name: Tests
+        if: runner.os != 'Linux'
+        run: just test
+      - run: just train --run-name demo --timesteps 512 --n-envs 2
+      - run: just eval demo --scenario c
+      - run: just eval demo --suites 01_single_bump --n-episodes 2
+      - run: just reactive-driver --scenario c --save-gif
+      - run: just build-acados
+      - run: just mpc --scenario c
+      - run: just compare demo --allow-missing-human

@@ -43,6 +43,20 @@ def _wk_sos(fs: float) -> np.ndarray:
     return signal.zpk2sos(zd, pd, kd)
 
 
+class WkStream:
+    def __init__(self, dt: float):
+        self._sos = _wk_sos(1.0 / dt)
+        self._zi = np.zeros((self._sos.shape[0], 2))
+        self._primed = False
+
+    def step(self, x: float) -> float:
+        if not self._primed:
+            self._zi = signal.sosfilt_zi(self._sos) * x
+            self._primed = True
+        y, self._zi = signal.sosfilt(self._sos, [x], zi=self._zi)
+        return float(y[0])
+
+
 def weight_wk(x, dt: float) -> np.ndarray:
     x = np.asarray(x, float)
     if x.size < 2:

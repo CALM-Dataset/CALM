@@ -25,10 +25,6 @@ def list_scenarios() -> list[str]:
     for p in (root / 'config' / 'eval' / 'scenarios').rglob('*.yaml'):
         if p.name != 'manifest.yaml':
             seen.add(p.stem)
-    dataset_dir = root / 'config' / 'eval' / 'dataset'
-    if dataset_dir.is_dir():
-        for p in dataset_dir.rglob('*.yaml'):
-            seen.add(p.stem)
     return sorted(seen)
 
 
@@ -51,21 +47,13 @@ def _find_scenario_path(name_or_path: str) -> Path:
                if p.name != 'manifest.yaml']
     if matches:
         return matches[0]
-    dataset_dir = root / 'config' / 'eval' / 'dataset'
-    if dataset_dir.is_dir():
-        matches = list(dataset_dir.rglob(f'{name_or_path}.yaml'))
-        if matches:
-            return matches[0]
     available = list_scenarios()
     raise FileNotFoundError(
         f"Scenario '{name_or_path}' not found. Available: {available}"
     )
 
 
-def load_scenario(
-    name_or_path: str,
-    include_holes: bool = True,
-) -> tuple[list, float, str, str]:
+def load_scenario(name_or_path: str) -> tuple[list, float, str, str]:
     path = _find_scenario_path(name_or_path)
 
     with open(path) as fh:
@@ -83,8 +71,6 @@ def load_scenario(
         else:
             h = float(entry['height_m'])
             w = float(entry['width_m'])
-        if not include_holes and h < 0:
-            continue
         obstacles.append((x_start, h, w))
 
     speed_m_s = float(cfg['vehicle_speed_kmh']) / 3.6
@@ -125,7 +111,23 @@ def list_real_scenarios(kind: str = 'real') -> list[str]:
     return sorted(p.stem for p in d.glob('*.json') if p.name != 'manifest.json')
 
 
+FLAT_SUITE = 'flat'
+EVAL_RUNOUT_M = 40.0
+FLAT_LENGTH_M = 200.0
+FLAT_SPEEDS_KMH = (30, 50)
+
+
+def flat_road(speed_kmh: float, length_m: float = FLAT_LENGTH_M, ds: float = 0.05):
+    from road.road_generator import RoadGenerator
+
+    return RoadGenerator.from_profile(np.zeros(int(length_m / ds)), ds, vehicle_speed=speed_kmh / 3.6)
+
+
 def load_scenario_any(name_or_path: str):
+    flat = re.fullmatch(r'flat(\d+)', str(name_or_path))
+    if flat:
+        road = flat_road(float(flat.group(1)))
+        return road, None, road.speed, 'flat road'
     real = next((f for f in (_real_scenarios_dir().parent / k / f'{name_or_path}.json'
                              for k in REAL_SUITES) if f.is_file()), _real_scenarios_dir() / f'{name_or_path}.json')
     p = Path(name_or_path)
@@ -133,7 +135,9 @@ def load_scenario_any(name_or_path: str):
         road, track = load_scenario_json(real if real.is_file() else p)
         return road, track, road.speed, 'real dataset'
     bumps, speed, name, desc = load_scenario(name_or_path)
-    return make_road_generator(name_or_path), None, speed, desc
+    gen = make_road_generator(name_or_path)
+    gen._runout_m = EVAL_RUNOUT_M
+    return gen, None, speed, desc
 
 
 def _load_trim_cfg() -> dict:
@@ -171,10 +175,12 @@ def load_scenario_json(path):
     r = d["road"]
     ds = float(r["ds_m"])
     start, end = edge_trim_indices(r["z"], ds, d.get("bumps") or [], _load_trim_cfg())
+    prior = float((d.get("meta") or {}).get("trim", {}).get("offset_m", 0.0))
     offset = start * ds
     z = r["z"][start:end]
     s_bump = float(d["bumps"][0]["s_bump_m"]) - offset if d.get("bumps") else d.get("s_bump_m")
     gen = RoadGenerator.from_profile(z, ds, s_bump=s_bump)
+    gen._trim_offset_m = prior + offset
     gen._bumps = [(float(b["s_bump_m"]) - offset, float(b.get("peak_z_m", 0.0)),
                    float(b.get("width_m", 1.0))) for b in (d.get("bumps") or [])]
     label = _real_label(d["name"]) if d.get("name") else _prettify_scenario_name(d.get("source_sequence", ""))
@@ -195,6 +201,8 @@ def enabled_eval_suites(selected: Optional[list] = None) -> list[tuple[str, list
             reals = list_real_scenarios(name)
             if reals:
                 out.append((name, reals))
+        elif name == FLAT_SUITE:
+            out.append((FLAT_SUITE, [f'flat{v}' for v in FLAT_SPEEDS_KMH]))
         elif name == "real_all":
             reals = sorted(set(list_real_scenarios('real')) | set(list_real_scenarios('real_train')))
             if reals:

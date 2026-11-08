@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -15,18 +14,6 @@ from stable_baselines3.common.callbacks import (
 from stable_baselines3.common.vec_env import VecNormalize
 
 
-@contextmanager
-def base_speed_weight():
-    from gym_env.common.reward import get_track_scale_override, set_track_scale_override
-
-    saved = get_track_scale_override()
-    set_track_scale_override(None)
-    try:
-        yield
-    finally:
-        set_track_scale_override(saved)
-
-
 class MetricsCallback(BaseCallback):
 
     def _on_step(self) -> bool:
@@ -36,7 +23,7 @@ class MetricsCallback(BaseCallback):
         spd_kmh, spd_err   = [], []
         ep_reward                   = []
         pitch_a                     = []
-        J_heave, J_pitch, J_speed, J_jerk, J_floor, J_total = [], [], [], [], [], []
+        J_heave, J_pitch, J_speed, J_jerk, J_total = [], [], [], [], []
         term_reasons: list[str] = []
 
         for info in infos:
@@ -51,7 +38,6 @@ class MetricsCallback(BaseCallback):
             if "J_pitch"        in info: J_pitch.append(info["J_pitch"])
             if "J_long_vel"     in info: J_speed.append(info["J_long_vel"])
             if "J_long_jerk"    in info: J_jerk.append(info["J_long_jerk"])
-            if "J_floor"        in info: J_floor.append(info["J_floor"])
             if "J_total"        in info: J_total.append(info["J_total"])
             if info.get("termination_reason"): term_reasons.append(info["termination_reason"])
 
@@ -68,7 +54,6 @@ class MetricsCallback(BaseCallback):
         if J_pitch: log("reward/J_pitch", float(np.mean(J_pitch)))
         if J_speed: log("reward/J_speed", float(np.mean(J_speed)))
         if J_jerk:  log("reward/J_jerk",  float(np.mean(J_jerk)))
-        if J_floor: log("reward/J_floor", float(np.mean(J_floor)))
         if J_total: log("reward/J_total", float(np.mean(J_total)))
 
         try:
@@ -147,8 +132,7 @@ class PerformanceCurriculumCallback(EvalCallback):
 
     def _on_step(self) -> bool:
         eval_ran = self.eval_freq > 0 and (self.n_calls % self.eval_freq) == 0
-        with base_speed_weight():
-            result = super()._on_step()
+        result = super()._on_step()
         if eval_ran and self.last_mean_reward > -np.inf:
             self._on_eval_result(float(self.last_mean_reward))
 
@@ -302,8 +286,7 @@ class RealValidationCallback(BaseCallback):
         if self._eval_freq <= 0 or self.n_calls % self._eval_freq != 0 or not self._scenarios:
             return True
         self._venv.obs_rms = self._train_venv.obs_rms
-        with base_speed_weight():
-            returns = [self._rollout(road, track) for _, road, track in self._scenarios]
+        returns = [self._rollout(road, track) for _, road, track in self._scenarios]
         mean_ret = float(np.mean(returns))
         self.logger.record("real_val/mean_return", mean_ret)
         self.logger.record("real_val/n_scenarios", len(returns))
@@ -367,34 +350,3 @@ def build_callbacks(
 
     return CallbackList([eval_cb, ckpt_cb, metrics_cb, sync_cb]), curriculum_cb
 
-
-class SpeedWeightController(BaseCallback):
-    def __init__(self, target: float, init: float, gain: float, w_max: float):
-        super().__init__()
-        self._target, self._w, self._gain, self._w_max = float(target), float(init), float(gain), float(w_max)
-        self._ratios: list[float] = []
-
-    def _on_training_start(self) -> None:
-        from gym_env.common.reward import set_track_scale_override
-        set_track_scale_override(self._w)
-
-    def _on_step(self) -> bool:
-        for info in self.locals.get("infos", []):
-            v, v_nom = info.get("speed"), info.get("v_init")
-            if v is not None and v_nom:
-                self._ratios.append(float(v) / float(v_nom))
-        return True
-
-    def _on_rollout_end(self) -> None:
-        from gym_env.common.reward import set_track_scale_override
-        if self._ratios:
-            rho = sum(self._ratios) / len(self._ratios)
-            self._w = min(max(self._w + self._gain * (self._target - rho), 0.0), self._w_max)
-            self.logger.record("reward/speed_ratio", rho)
-            self._ratios.clear()
-        set_track_scale_override(self._w)
-        self.logger.record("reward/track_scale", self._w)
-
-    def _on_training_end(self) -> None:
-        from gym_env.common.reward import set_track_scale_override
-        set_track_scale_override(None)

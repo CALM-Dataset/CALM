@@ -154,10 +154,6 @@ class HalfCarODE:
         damper_r = float(x[_X_ZW_R]) - (float(x[_X_ZB]) + self._lr * float(x[_X_PHI]))
         return susp_travel, abs(float(x[_X_POS])), max(abs(damper_f), abs(damper_r))
 
-    def perturb(self, x, rng) -> None:
-        x[0:4] += rng.normal(0.0, 0.005, size=4)
-        x[_X_POS] += rng.normal(0.0, 0.001)
-
     def step(self, x, road, s_pos, v, a=0.0):
         dt = DT_SIM
         L = self._L

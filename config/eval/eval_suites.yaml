@@ -2,23 +2,5 @@ suites:
   01_single_bump:
     count: 5
     enabled: false
-  02_two_bumps:
-    count: 15
-    enabled: false
-  03_three_bumps:
-    count: 35
-    enabled: false
-  04_four_bumps:
-    count: 70
-    enabled: false
-  05_one_bump_one_hole:
-    count: 25
-    enabled: false
-  06_two_bumps_one_hole:
-    count: 15
-    enabled: false
-  07_two_bumps_two_holes:
-    count: 15
-    enabled: false
   real:
     enabled: true

@@ -15,18 +15,20 @@ from utils.paths import ROOT as _ROOT
 
 import gymnasium as gym
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv
 
+from gym_env.common.wrappers.action_repeat import with_action_repeat
+from gym_env.common.wrappers.decision import with_decisions
 from gym_env.common import PreviewWrapper, TerminationWrapper
-from gym_env.common.render import RenderQuit
+from gym_env.common.render.render import RenderQuit
 from gym_env.vehicles import get_vehicle
-from gym_env.common.reward_utils import reward_bounds
-from gym_env.common.reward_params import load_reward_config
+from gym_env.common.utils.reward_utils import reward_bounds
+from gym_env.common.reward.reward_params import load_reward_config
 from gym_env.common.env_params import EPISODE_STEPS, DT
 from utils.scenario_loader import load_scenario_any, enabled_eval_suites, scenario_title
 
 from utils.gif import keep, save_gif, shrink
-from eval.data_logger import RunLogger, EpisodeData
+from utils.portable import load_vecnormalize
 
 
 _ALGO_MAP: dict[str, type] = {"PPO": PPO}
@@ -61,7 +63,7 @@ def parse_args() -> argparse.Namespace:
                    help="Fixed single eval scenario name or path")
     p.add_argument("--suites", nargs="+", metavar="FOLDER", default=None,
                    help="Suite folder names to run (default: enabled suites from eval_suites.yaml). "
-                        "Example: --suites 01_single_bump 09_italy_full")
+                        "Example: --suites 01_single_bump")
     p.add_argument("--n-episodes", type=int, default=5)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--render", action="store_true")
@@ -69,14 +71,19 @@ def parse_args() -> argparse.Namespace:
                    help="Save matplotlib figures next to the JSON results.")
     p.add_argument("--save-gif", action="store_true",
                    help="Save an animated GIF for each episode.")
-    p.add_argument("--log-data", metavar="DIR", default='data',
-                   help="Save run data (.mat/.npz) to DIR/PPO/<road>/<exp_N>/. "
-                        "Default root is <repo>/data/ when flag is given without value.",
-                   nargs="?", const="__default__")
     return p.parse_args()
 
 
 def _infer_vecnorm(model_path: Path) -> Path:
+    if model_path.suffix == ".safetensors":
+        for parent in [model_path.parent, *model_path.parents]:
+            candidate = parent / "vecnormalize.json"
+            if candidate.exists():
+                return candidate
+        raise FileNotFoundError(
+            f"Could not find vecnormalize.json for {model_path}.\n"
+            "Place vecnormalize.json next to the model."
+        )
     paired = model_path.with_name(f"{model_path.stem}_vec_normalize.pkl")
     if paired.exists():
         return paired
@@ -90,6 +97,13 @@ def _infer_vecnorm(model_path: Path) -> Path:
     )
 
 
+def _build_env(vehicle: str, render_mode: str):
+    env = gym.make(get_vehicle(vehicle).env_id, render_mode=render_mode,
+                   random_road_on_reset=False)
+    env = TerminationWrapper(env)
+    return with_decisions(with_action_repeat(PreviewWrapper(env), record_inner=True), record_inner=True)
+
+
 def load_model(algo: str, model_path: str, vecnorm_path: str | None = None):
     mp = Path(model_path)
     if not mp.exists():
@@ -98,6 +112,14 @@ def load_model(algo: str, model_path: str, vecnorm_path: str | None = None):
     vp = Path(vecnorm_path) if vecnorm_path else _infer_vecnorm(mp)
     if not vp.exists():
         raise FileNotFoundError(f"VecNormalize file not found: {vp}")
+
+    if mp.suffix == ".safetensors":
+        from utils.portable import load_policy
+        from train.agent import load_algo_config
+
+        env = DummyVecEnv([lambda: _build_env("half", "none")])
+        model = load_policy(mp, env, load_algo_config(_ROOT / "config" / "agent" / "algo_configs.yaml")[algo.upper()]["policy_kwargs"])
+        return model, vp
 
     cls   = _ALGO_MAP[algo.upper()]
     model = cls.load(str(mp))
@@ -145,14 +167,8 @@ def run_episode(
     else:
         render_mode = "none"
 
-    def _env_fn():
-        env = gym.make(get_vehicle(vehicle).env_id, render_mode=render_mode,
-                       random_road_on_reset=False)
-        env = TerminationWrapper(env)
-        return PreviewWrapper(env)
-
-    venv = DummyVecEnv([_env_fn])
-    venv = VecNormalize.load(str(vecnorm_path), venv)
+    venv = DummyVecEnv([lambda: _build_env(vehicle, render_mode)])
+    venv = load_vecnormalize(vecnorm_path, venv)
     venv.training    = False
     venv.norm_reward = False
 
@@ -164,7 +180,7 @@ def run_episode(
 
     reset_opts = {"road": scenario_road} if scenario_road is not None else None
     if reset_opts is not None:
-        raw_obs_single, _ = venv.venv.envs[0].reset(seed=seed, options=reset_opts)
+        raw_obs_single, reset_info = venv.venv.envs[0].reset(seed=seed, options=reset_opts)
         raw_obs = np.expand_dims(raw_obs_single, axis=0)
         venv.ret = np.zeros(venv.num_envs)
         obs: np.ndarray = venv.normalize_obs(raw_obs)
@@ -172,11 +188,30 @@ def run_episode(
         venv.seed(seed)
         reset_out       = venv.reset()
         obs: np.ndarray = reset_out[0] if isinstance(reset_out, tuple) else reset_out
+        reset_info      = venv.venv.reset_infos[0]
 
     done   = np.array([False])
     ep: dict = defaultdict(list)
+    for sub in (reset_info or {}).get("inner", []):
+        _record(ep, 0.0, sub["step_reward"], sub)
     frames: list = []
     nav_override = None
+
+    if capture_frames:
+        outer = venv.venv.envs[0]
+        core = outer.unwrapped
+        core_step = core.step
+        ticks = [0]
+
+        def step_and_capture(action):
+            result = core_step(action)
+            frame = outer.render()
+            if frame is not None and keep(ticks[0]):
+                frames.append(shrink(frame))
+            ticks[0] += 1
+            return result
+
+        core.step = step_and_capture
 
     while not done[0]:
         t0, c0 = time.perf_counter(), time.process_time()
@@ -186,18 +221,14 @@ def run_episode(
         step_result = venv.step(action)
         obs    = step_result[0]
         reward = step_result[1]
-        if len(step_result) == 5:
-            done      = np.logical_or(step_result[2], step_result[3])
-            info_list = step_result[4]
+        done      = step_result[2]
+        info_list = step_result[3]
+        inner = info_list[0].get("inner")
+        if inner:
+            for sub in inner:
+                _record(ep, float(np.asarray(action).ravel()[0]), sub["step_reward"], sub)
         else:
-            done      = step_result[2]
-            info_list = step_result[3]
-        _record(ep, float(action[0, 0]), float(reward[0]), info_list[0])
-
-        if capture_frames:
-            frame = venv.venv.envs[0].render()
-            if frame is not None and keep(len(ep["speeds"])):
-                frames.append(shrink(frame))
+            _record(ep, float(np.asarray(action).ravel()[0]), float(reward[0]), info_list[0])
 
         if render_mode == 'human':
             base_env = venv.venv.envs[0].unwrapped
@@ -217,16 +248,6 @@ def run_episode(
 
     venv.close()
     return dict(ep), frames, nav
-
-
-def _count_params(model) -> float:
-    policy = getattr(model, "policy", None)
-    if policy is None or not hasattr(policy, "parameters"):
-        return 0.0
-    try:
-        return float(sum(p.numel() for p in policy.parameters()))
-    except Exception:
-        return 0.0
 
 
 def episode_metrics(ep: dict) -> dict:
@@ -391,7 +412,7 @@ def plot_timeseries(ep: dict, ep_i: int, rcfg, bounds: dict, save_dir: Path | No
     ax_action.plot(t, ep["actions"], color="#E65100", lw=1.4, label="action u")
     ax_action.axhline(0, color="gray", ls=":", lw=0.8)
     ax_action.set_ylim(-1.15, 1.15)
-    ax_action.set_ylabel("action [-1, 1]", fontsize=9)
+    ax_action.set_ylabel("action", fontsize=9)
     ax_action.legend(fontsize=7, loc="upper right")
 
     ax_reward.plot(t, ep["rewards"], color="#212121", lw=1.4, label="step reward")
@@ -558,7 +579,6 @@ def _run_one_scenario(
     rcfg,
     save_dir: Path,
     ep_index: int,
-    log_root: Path | None = None,
 ) -> tuple[str, str, float, dict] | None:
     while True:
         scenario_road, perception_track, speed_ms, sc_desc = load_scenario_any(sc_name)
@@ -602,28 +622,6 @@ def _run_one_scenario(
         save_dir.mkdir(parents=True, exist_ok=True)
         plot_timeseries(ep, ep_index, rcfg, bounds, save_dir)
 
-    if log_root is not None:
-        logger = RunLogger(
-            method=args.algo, road=sc_name, out_root=log_root,
-            dt=DT, v_max_kmh=rcfg.v_limit * 3.6,
-            a_comfort=rcfg.a_comfort, a_limit=rcfg.a_limit,
-            run_subdir=False,
-            bumps=getattr(scenario_road, '_bumps', None),
-        )
-        logger.add(EpisodeData(
-            v=ep["speeds"], v_init=ep["v_inits"],
-            z_B_ddot=ep["body_accels"], z_W_ddot=ep["wheel_accels"],
-            susp_defl=ep["susp_defl"], tire_defl=ep["tire_defl"],
-            action=ep["actions"], reward=ep["rewards"],
-            episode_return=m["total_return"],
-            rms_accel=m["rms_accel"],
-            comfort_score=m["comfort_score"],
-            solve_ms_mean=float(np.mean(ep["solve_ms"])) if ep.get("solve_ms") else float("nan"),
-            cpu_ms_mean=float(np.mean(ep["cpu_ms"])) if ep.get("cpu_ms") else float("nan"),
-            n_params=_count_params(model),
-        ))
-        logger.save()
-
     return sc_name, sc_desc, speed_ms, m
 
 
@@ -662,12 +660,6 @@ def _run_suite(args, model, vecnorm_path: Path, deterministic: bool,
                bounds: dict, rcfg, exp_tag: str | None) -> None:
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     save_dir = _ROOT / "logs" / "eval" / "results" / f"eval_{args.algo}_suite_{exp_tag or 'run'}"
-    log_root = (
-        _ROOT / "data"
-        if args.log_data == "__default__"
-        else Path(args.log_data) if args.log_data
-        else None
-    )
 
     suites = enabled_eval_suites(args.suites)
     if not suites:
@@ -697,7 +689,6 @@ def _run_suite(args, model, vecnorm_path: Path, deterministic: bool,
             result = _run_one_scenario(
                 sc_name, model, vecnorm_path, args,
                 deterministic, bounds, rcfg, save_dir / suite_name, ep_index,
-                log_root=log_root,
             )
             if result is None:
                 aborted = True
@@ -739,8 +730,6 @@ def _run_suite(args, model, vecnorm_path: Path, deterministic: bool,
     out = save_dir / f"suite_{args.algo}_{ts}.json"
     out.write_text(json.dumps(export, indent=2))
     print(f"  JSON saved → {out}")
-    if log_root:
-        print(f"  data logged → {log_root}/{args.algo}/")
 
 
 def main() -> None:
@@ -759,46 +748,19 @@ def main() -> None:
         _run_suite(args, model, vecnorm_path, deterministic, bounds, rcfg, exp_tag)
         return
 
-    scenario_road  = None
-    scenario_track = None
-    scenario_label = 'speed_bump'
-    if args.scenario:
-        scenario_road, scenario_track, _, sc_desc = load_scenario_any(args.scenario)
-        sc_name        = args.scenario
-        scenario_label = Path(args.scenario).stem
+    scenario_road, scenario_track, _, sc_desc = load_scenario_any(args.scenario)
+    sc_name        = args.scenario
+    scenario_label = Path(args.scenario).stem
 
     save_dir = _ROOT / "logs" / "eval" / "results" / f"eval_{args.algo}_{scenario_label}_{exp_tag or 'run'}"
 
     print(f"\n{'═'*60}")
     print("  CALM EVAL")
     print(f"  algo={args.algo}  road={scenario_label}  episodes={args.n_episodes}")
-    if args.scenario:
-        print(f"  scenario: {sc_name} - {sc_desc}")
+    print(f"  scenario: {sc_name} - {sc_desc}")
     print(f"  model: {args.model_path}")
     print(f"  deterministic={deterministic}  render={args.render}  save_plots={args.save_plots}  save_gif={args.save_gif}")
     print(f"{'═'*60}\n")
-
-    log_root = (
-        _ROOT / "data"
-        if args.log_data == "__default__"
-        else Path(args.log_data) if args.log_data
-        else None
-    )
-    run_logger: RunLogger | None = (
-        RunLogger(
-            method=args.algo,
-            road=scenario_label,
-            out_root=log_root,
-            dt=DT,
-            v_max_kmh=rcfg.v_limit * 3.6,
-            a_comfort=rcfg.a_comfort,
-            a_limit=rcfg.a_limit,
-            run_id=exp_tag,
-            run_subdir=False,
-            bumps=getattr(scenario_road, '_bumps', None),
-        )
-        if log_root is not None else None
-    )
 
     all_eps:     list[dict] = []
     all_metrics: list[dict] = []
@@ -831,24 +793,6 @@ def main() -> None:
         if nav == 'quit':
             break
 
-        if run_logger is not None:
-            run_logger.add(EpisodeData(
-                v=ep["speeds"],
-                v_init=ep["v_inits"],
-                z_B_ddot=ep["body_accels"],
-                z_W_ddot=ep["wheel_accels"],
-                susp_defl=ep["susp_defl"],
-                tire_defl=ep["tire_defl"],
-                action=ep["actions"],
-                reward=ep["rewards"],
-                episode_return=m["total_return"],
-                rms_accel=m["rms_accel"],
-                comfort_score=m["comfort_score"],
-                solve_ms_mean=float(np.mean(ep["solve_ms"])) if ep.get("solve_ms") else float("nan"),
-                cpu_ms_mean=float(np.mean(ep["cpu_ms"])) if ep.get("cpu_ms") else float("nan"),
-                n_params=_count_params(model),
-            ))
-
         if args.save_gif and frames:
             save_dir.mkdir(parents=True, exist_ok=True)
             gif_path = save_dir / f"ep{ep_i + 1}.gif"
@@ -863,12 +807,6 @@ def main() -> None:
 
     save_dir.mkdir(parents=True, exist_ok=True)
     save_json(agg, all_metrics, args.algo, args.model_path, save_dir)
-
-    if run_logger is not None:
-        saved = run_logger.save()
-        print(f"  data logged → {run_logger.save_dir}")
-        if "mat" not in saved:
-            print("  (install scipy for .mat output: pip install scipy)")
 
     if args.save_plots:
         print("\n  Generating summary figures ...")

@@ -1,0 +1,15 @@
+.git
+.github
+logs
+.venv
+venv
+__pycache__
+*.pyc
+*.egg-info
+assets/music
+acados
+.env
+config/eval/scenarios/real
+config/eval/scenarios/real_train
+config/train/scenarios
+config/perception

@@ -1,9 +1,9 @@
 import gymnasium as gym
 import numpy as np
 
-from gym_env.common.reward_params import load_reward_config
+from gym_env.common.reward.reward_params import load_reward_config
 from gym_env.half_car.envs import HalfCarEnv
-from gym_env.common.reward import compute_reward
+from gym_env.common.reward.reward import compute_reward
 from gym_env.common import TerminationWrapper
 from utils.paths import ROOT
 
@@ -51,17 +51,6 @@ def test_observations_stay_in_the_space():
                 break
 
 
-def test_target_speed_stays_below_scenario_speed():
-    env = gym.make("gym_env/HalfCar", action_mode="target_speed")
-    env.reset(seed=3)
-    top = env.unwrapped._v_episode_ref
-    for _ in range(300):
-        _, _, terminated, truncated, info = env.step(np.ones(1, dtype=np.float32))
-        assert info["speed"] <= top + 1e-9
-        if terminated or truncated:
-            break
-
-
 def test_body_acceleration_costs_reward():
     cfg = load_reward_config()
     calm, _ = compute_reward(5.0, 0.0, 0.0, 0.0, 0.0, cfg, v_ref=5.0)
@@ -71,20 +60,196 @@ def test_body_acceleration_costs_reward():
 
 def test_same_seed_same_training_episodes():
 
-    from gym_env.common.curriculum import load_curriculum_config
+    from gym_env.common.wrappers.curriculum import load_curriculum_config
     from train.environment import _make_env
 
     cfg = load_curriculum_config(ROOT / "config" / "curriculum" / "curriculum.yaml")
 
     def rollout(seed):
         env = _make_env(seed, None, {"render_mode": "none"}, cfg)()
-        rng = np.random.default_rng(0)
+        env.action_space.seed(0)
         out = []
         for _ in range(4):
             out.append(env.reset()[0])
             for _ in range(30):
-                out.append(env.step(rng.uniform(-1, 1, 1).astype(np.float32))[0])
+                step = env.step(env.action_space.sample())
+                out.append(step[0])
+                if step[2] or step[3]:
+                    break
         return np.array(out)
 
     assert np.array_equal(rollout(5), rollout(5))
     assert not np.array_equal(rollout(5), rollout(6))
+
+
+def test_slowdown_mode_never_exceeds_scenario_speed_and_can_slow():
+    env = gym.make("gym_env/HalfCar", action_mode="slowdown")
+    env.reset(seed=3)
+    top = env.unwrapped._v_episode_ref
+    speeds = []
+    for u in [1.0] * 20 + [-1.0] * 60:
+        _, _, terminated, truncated, info = env.step(np.full(1, u, dtype=np.float32))
+        speeds.append(info["speed"])
+        if terminated or truncated:
+            break
+    assert max(speeds) <= top + 1e-9
+    assert min(speeds) < top
+
+
+def test_time_cost_makes_slowing_down_cost_reward():
+    from dataclasses import replace
+    cfg = replace(load_reward_config(), time_cost=10.0, track_scale=0.0)
+    fast, _ = compute_reward(10.0, 0.0, 0.0, 0.0, 0.0, cfg, v_ref=10.0, dt=0.02)
+    slow, _ = compute_reward(5.0, 0.0, 0.0, 0.0, 0.0, cfg, v_ref=10.0, dt=0.02)
+    assert fast == slow
+    assert fast < 0.0
+    free, _ = compute_reward(10.0, 0.0, 0.0, 0.0, 0.0, replace(cfg, time_cost=0.0), v_ref=10.0, dt=0.02)
+    assert free > fast
+
+
+def test_weighted_heave_ignores_a_constant_offset():
+    from eval.iso2631 import WkStream
+    f = WkStream(0.02)
+    out = [f.step(3.0) for _ in range(2000)]
+    assert abs(out[-1]) < 1e-3
+
+
+def test_action_repeat_sums_rewards_and_advances_several_steps():
+    from gym_env.common.wrappers.action_repeat import ActionRepeat
+
+    one = HalfCarEnv(action_mode="slowdown")
+    one.reset(seed=4)
+    ref = sum(one.step(np.zeros(1, dtype=np.float32))[1] for _ in range(5))
+    rep = ActionRepeat(HalfCarEnv(action_mode="slowdown"), 5)
+    rep.reset(seed=4)
+    _, reward, _, _, _ = rep.step(np.zeros(1, dtype=np.float32))
+    assert abs(reward - ref) < 1e-9
+    assert rep.unwrapped._step_count == 5
+
+
+def test_action_repeat_can_expose_every_inner_step():
+    from gym_env.common.wrappers.action_repeat import ActionRepeat
+
+    rep = ActionRepeat(HalfCarEnv(action_mode="slowdown"), 4, record_inner=True)
+    rep.reset(seed=4)
+    _, reward, _, _, info = rep.step(np.zeros(1, dtype=np.float32))
+    assert len(info["inner"]) == 4
+    assert abs(sum(i["step_reward"] for i in info["inner"]) - reward) < 1e-9
+
+
+def test_speed_floor_ratio_keeps_slowdown_above_the_floor(monkeypatch):
+    import gym_env.common.car_env as ce
+
+    monkeypatch.setattr(ce, "SPEED_FLOOR_RATIO", 0.7)
+    env = HalfCarEnv(action_mode="slowdown")
+    env.reset(seed=3)
+    top = env._v_episode_ref
+    low = min(env.step(np.full(1, -1.0, dtype=np.float32))[4]["speed"] for _ in range(600))
+    assert low >= 0.7 * top - 1e-6
+
+
+def test_depth_mode_holds_at_the_hold_action_and_slows_when_pushed():
+    env = HalfCarEnv(action_mode="depth")
+    env.reset(seed=3)
+    top = env._v_episode_ref
+    held = []
+    for _ in range(600):
+        env.step(env.hold_action)
+        held.append(env._v)
+    assert max(held) <= top + 1e-9
+    assert held[-1] > top - 1e-3
+
+    env.reset(seed=3)
+    pushed = []
+    for _ in range(400):
+        env.step(np.array([env.action_space.high[0]], dtype=np.float32))
+        pushed.append(env._v)
+    assert min(pushed) < top * 0.5
+
+
+def test_depth_mode_slows_more_for_larger_actions():
+    def final_speed(a):
+        env = HalfCarEnv(action_mode="depth")
+        env.reset(seed=3)
+        for _ in range(300):
+            env.step(np.array([a], dtype=np.float32))
+        return env._v
+    assert final_speed(1.0) > final_speed(2.0) > final_speed(4.0)
+
+
+def test_template_mode_only_slows_around_the_bumps():
+    from road.road_generator import RoadGenerator
+
+    road = RoadGenerator.from_scenario(vehicle_speed=6.0, flat_start=60.0, obstacles=[(0.06, 2.0)])
+    env = HalfCarEnv(action_mode="template")
+    env.reset(seed=1, options={"road": road})
+    top = env._v_episode_ref
+    push = np.array([env.action_space.high[0]], dtype=np.float32)
+    far, near = [], []
+    for _ in range(3000):
+        env.step(push)
+        (far if env._s_pos < 60.0 - 30.0 else near).append(env._v)
+        if env._s_pos > 66.0:
+            break
+    assert min(far) > top - 1e-3
+    assert min(near) < top * 0.7
+
+
+def test_template_window_is_smooth_and_bounded():
+    from road.road_generator import RoadGenerator
+
+    road = RoadGenerator.from_scenario(vehicle_speed=6.0, flat_start=60.0, obstacles=[(0.06, 2.0)])
+    env = HalfCarEnv(action_mode="template")
+    env.reset(seed=1, options={"road": road})
+    s = np.linspace(0.0, 90.0, 900)
+    w = np.array([env._slowdown_window(x) for x in s])
+    assert w.min() >= 0.0 and w.max() <= 1.0 + 1e-12
+    assert np.max(np.abs(np.diff(w))) < 0.1
+    assert w[0] == 0.0 and w[-1] == 0.0 and w.max() == 1.0
+
+
+def _choice_run(first, later=None):
+    from road.road_generator import RoadGenerator
+
+    road = RoadGenerator.from_scenario(vehicle_speed=6.0, flat_start=60.0, obstacles=[(0.06, 2.0)])
+    env = HalfCarEnv(action_mode="choice")
+    env.reset(seed=1, options={"road": road})
+    top = env._v_episode_ref
+    speeds, far = [], []
+    seen = False
+    for step in range(3000):
+        window = env._slowdown_window(env._s_pos)
+        action = first
+        if window > 0.0:
+            action = later if (seen and later is not None) else first
+            seen = True
+        env.step(np.array([action]))
+        (far if env._s_pos < 60.0 - 30.0 else speeds).append(env._v)
+        if env._s_pos > 70.0:
+            break
+    return top, far, speeds
+
+
+def test_choice_mode_menu_depth_sets_how_much_the_car_slows():
+    n = int(HalfCarEnv(action_mode="choice").action_space.n)
+    assert n >= 3
+    top, far, hold = _choice_run(0)
+    _, _, mid = _choice_run(n // 2)
+    _, _, deep = _choice_run(n - 1)
+    assert min(hold) > top - 1e-6
+    assert min(deep) < min(mid) < min(hold)
+
+
+def test_choice_mode_never_slows_away_from_the_bump():
+    n = int(HalfCarEnv(action_mode="choice").action_space.n)
+    top, far, _ = _choice_run(n - 1)
+    assert min(far) > top - 1e-6
+
+
+def test_choice_mode_keeps_the_depth_picked_when_the_bump_came_into_view():
+    n = int(HalfCarEnv(action_mode="choice").action_space.n)
+    _, _, kept = _choice_run(n - 1, later=0)
+    _, _, switched = _choice_run(0, later=n - 1)
+    _, _, deep = _choice_run(n - 1)
+    assert abs(min(kept) - min(deep)) < 1e-9
+    assert min(switched) > min(deep)

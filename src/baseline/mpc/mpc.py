@@ -11,7 +11,12 @@ _acados = _repo_acados if (_repo_acados / 'lib').is_dir() else _Path(os.environ.
 os.environ['ACADOS_SOURCE_DIR'] = str(_acados)
 _lib = str(_acados / 'lib')
 if _lib not in os.environ.get('LD_LIBRARY_PATH', ''):
-    os.environ['LD_LIBRARY_PATH'] = _lib + ':' + os.environ.get('LD_LIBRARY_PATH', '')
+    os.environ['LD_LIBRARY_PATH'] = _lib + os.pathsep + os.environ.get('LD_LIBRARY_PATH', '')
+if os.name == 'nt':
+    for _d in (_acados / 'bin', _acados / 'lib'):
+        if _d.is_dir():
+            os.add_dll_directory(str(_d))
+            os.environ['PATH'] = str(_d) + os.pathsep + os.environ.get('PATH', '')
 
 import argparse
 import gc
@@ -28,18 +33,17 @@ if _acados_py not in sys.path:
     sys.path.insert(0, _acados_py)
 
 from gym_env.common import TerminationWrapper
-from gym_env.common.env_params import DT, EPISODE_STEPS
-from gym_env.common.preview_params import load_preview_config
-from gym_env.common.reward_params import load_reward_config
-from gym_env.common.reward_utils import reward_bounds
+from gym_env.common.env_params import EPISODE_STEPS
+from gym_env.common.preview.preview_params import load_preview_config
+from gym_env.common.reward.reward_params import load_reward_config
+from gym_env.common.utils.reward_utils import reward_bounds
 from gym_env.vehicles import get_vehicle
 from baseline import runner
-from gym_env.common.render import RenderQuit
+from gym_env.common.render.render import RenderQuit
 from utils.gif import save_gif
 from baseline.mpc.config import load_mpc_cfg, reward_config as mpc_reward_config
 from baseline.mpc.controller import MPCController
 from utils.scenario_loader import load_scenario_any, scenario_title
-from eval.data_logger import RunLogger, EpisodeData
 
 
 def make_env(bits: dict, cfg, render_mode: str = 'none'):
@@ -68,9 +72,9 @@ def run_episode(env, ctrl: MPCController, seed: int, scenario_road=None,
 
 
 def _run_suite_mpc(env, ctrl: MPCController, args, save_dir: Path,
-                   log_root, cfg, terminal_out=None, preview_cfg=None) -> None:
+                   terminal_out=None, preview_cfg=None) -> None:
     runner.run_suite(env, lambda e, seed, **kw: run_episode(e, ctrl, seed, **kw), args, save_dir,
-                     log_root, cfg, 'MPC', 'mpc', preview_cfg, terminal_out, time_header='Solve ms')
+                     'MPC', 'mpc', preview_cfg, terminal_out, time_header='Solve ms')
 
 
 def _render_scenarios(env, ctrl: MPCController, args, terminal_out=None,
@@ -103,7 +107,7 @@ def main() -> None:
             mcfg = load_mpc_cfg()
 
             ap = argparse.ArgumentParser('MPC baseline (quarter- or half-car)')
-            runner.add_common_args(ap, 'MPC')
+            runner.add_common_args(ap)
             ap.add_argument('--horizon', type=int, default=mcfg.get('N', 50), help='prediction horizon (steps)')
             args = ap.parse_args()
 
@@ -130,8 +134,6 @@ def main() -> None:
             scenario_label = args.scenario or 'eval_scenarios'
             save_dir = _ROOT / 'logs' / 'eval' / 'results' / 'mpc' / scenario_label
 
-            log_root = runner.log_root(args)
-
             if args.render and not args.scenario:
                 _render_scenarios(env, ctrl, args, terminal_out,
                                   nav_fn=bits['wait_for_episode_nav'],
@@ -140,7 +142,7 @@ def main() -> None:
                 return
 
             if not args.scenario:
-                _run_suite_mpc(env, ctrl, args, save_dir, log_root, cfg, terminal_out,
+                _run_suite_mpc(env, ctrl, args, save_dir, terminal_out,
                                preview_cfg=preview_cfg)
                 env.close()
                 return
@@ -164,21 +166,6 @@ def main() -> None:
                   f'{"Comfort":>8}  {"Bumps":>7}  {"Solve ms":>9}')
             print(f'  {"-"*w}  {"-"*9}  {"-"*10}{p_sep}  {"-"*8}  {"-"*7}  {"-"*9}')
 
-            run_logger: RunLogger | None = (
-                RunLogger(
-                    method='MPC',
-                    road=scenario_label,
-                    out_root=log_root,
-                    dt=DT,
-                    v_max_kmh=cfg.v_limit * 3.6,
-                    a_comfort=cfg.a_comfort,
-                    a_limit=cfg.a_limit,
-                    run_subdir=False,
-                    bumps=getattr(sc_road, '_bumps', None),
-                )
-                if log_root is not None else None
-            )
-
             if args.render:
                 wait_for_episode_nav = bits['wait_for_episode_nav']
                 env.unwrapped.set_render_label(scenario_title(sc_name, 'MPC'))
@@ -199,20 +186,6 @@ def main() -> None:
                     continue
                 break
 
-            if run_logger is not None:
-                run_logger.add(EpisodeData(
-                    v=r['_speeds'],
-                    v_init=r['_v_inits'],
-                    z_B_ddot=r['_accels'],
-                    action=r['_actions'],
-                    susp_defl=r.get('_susp'), tire_defl=r.get('_tire'),
-                    episode_return=r['episode_return'],
-                    rms_accel=r['rms_accel'],
-                    comfort_score=r['comfort_score'],
-                    solve_ms_mean=r['solve_ms_mean'],
-                    cpu_ms_mean=r['cpu_ms_mean'],
-                    n_params=r['n_params'],
-                ))
             if args.save_plots or args.save_gif:
                 save_dir.mkdir(parents=True, exist_ok=True)
             if args.save_plots:
@@ -244,12 +217,6 @@ def main() -> None:
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text(json.dumps(summary, indent=2))
             print(f'\n  Results → {out}')
-
-            if run_logger is not None:
-                saved = run_logger.save()
-                print(f'  data logged → {run_logger.save_dir}')
-                if 'mat' not in saved:
-                    print('  (install scipy for .mat output: pip install scipy)')
 
             del ctrl
             del env

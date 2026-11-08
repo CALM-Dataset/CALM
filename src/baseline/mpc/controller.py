@@ -9,7 +9,7 @@ from typing import Optional
 import numpy as np
 
 from gym_env.common.env_params import DT
-from gym_env.common.reward_params import RewardConfig, load_reward_config
+from gym_env.common.reward.reward_params import RewardConfig, load_reward_config
 from gym_env.vehicles import get_vehicle
 from road.road_generator import RoadGenerator
 from baseline.mpc.config import ocp_weights
@@ -47,6 +47,7 @@ class MPCController:
         nlp_solver_max_iter:  int   = 10,
         vehicle:              str   = "half",
         weights:              Optional[dict] = None,
+        objective:            str   = "comfort_map",
     ):
         self._cfg     = cfg or load_reward_config()
         veh = get_vehicle(vehicle)
@@ -65,6 +66,11 @@ class MPCController:
         self._gen_base            = Path(tempfile.gettempdir()) / 'acados_qc'
 
         self._comfort_map = ComfortMap(self._cfg, self._physics, vehicle=vehicle)
+        self._crossing: list[float] = []
+        self._planner = None
+        if objective == "frontier":
+            from baseline.mpc.frontier_objective import FrontierPlanner
+            self._planner = FrontierPlanner(self._cfg, vehicle, self._physics)
 
         gen_dir = str(self._gen_base / f'{_OCP_VERSION}_N{self._N}_{os.getpid()}')
         os.makedirs(gen_dir, exist_ok=True)
@@ -80,6 +86,10 @@ class MPCController:
     def reset(self, road: RoadGenerator) -> None:
         self._prev_u = 0.0
         self._v_nom = float(getattr(road, 'speed', self._cfg.v_limit))
+        if self._planner is not None:
+            from eval.comfort_score import end_point
+            self._crossing = self._planner.plan(road, self._v_nom, end_point(road, self._wheelbase))
+            return
         for _, A, L in getattr(road, '_bumps', []) or []:
             self._comfort_map.optimal_speed(A, L, self._v_nom)
 
@@ -90,7 +100,7 @@ class MPCController:
         dt    = self._dt
         v_max = float(cfg.v_limit)
         v_min = float(cfg.v_min)
-        a_max = float(cfg.a_max)
+        a_max = self._planner.ramp_decel if self._planner is not None else float(cfg.a_max)
 
         v_nom   = self._v_nom
         s_nodes = s_pos + v_current * np.arange(N + 1) * dt
@@ -99,9 +109,12 @@ class MPCController:
         if not (hasattr(road, '_bumps') and road._bumps):
             return v_ref
 
-        for x0, A, L in road._bumps:
-            v_c = float(np.clip(self._comfort_map.optimal_speed(A, L, v_nom),
-                                v_min, v_max))
+        for i, (x0, A, L) in enumerate(road._bumps):
+            if self._planner is not None:
+                v_c = float(np.clip(self._crossing[i], v_min, v_max))
+            else:
+                v_c = float(np.clip(self._comfort_map.optimal_speed(A, L, v_nom),
+                                    v_min, v_max))
             v_approach = max(float(v_current), float(v_nom))
             d_app  = max(0.0, (v_approach**2 - v_c**2)) / (2.0 * max(a_max, 1e-6))
             d_rec  = (v_nom**2 - v_c**2) / (2.0 * max(a_max, 1e-6))
@@ -126,9 +139,6 @@ class MPCController:
 
 
     def act(self, x: np.ndarray, s_pos: float, road: RoadGenerator) -> float:
-        if self._solver is None:
-            self.reset(road)
-
         solver  = self._solver
         v_refs  = self._compute_speed_profile(s_pos, float(x[self._v_idx]), road)
 

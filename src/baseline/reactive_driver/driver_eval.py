@@ -12,17 +12,16 @@ import gymnasium as gym
 from utils.paths import ROOT as _ROOT
 
 from gym_env.common import TerminationWrapper
-from gym_env.common.render import RenderQuit
-from gym_env.common.env_params import DT, EPISODE_STEPS
-from gym_env.common.preview_params import load_preview_config
-from gym_env.common.reward_params import load_reward_config
-from gym_env.common.reward_utils import reward_bounds
+from gym_env.common.render.render import RenderQuit
+from gym_env.common.env_params import EPISODE_STEPS
+from gym_env.common.preview.preview_params import load_preview_config
+from gym_env.common.reward.reward_params import load_reward_config
+from gym_env.common.utils.reward_utils import reward_bounds
 from gym_env.vehicles import get_vehicle
 from baseline import runner
 from utils.gif import save_gif
 from baseline.reactive_driver.driver import ReactiveController
 from utils.scenario_loader import load_scenario_any, scenario_title
-from eval.data_logger import RunLogger, EpisodeData
 
 
 def _vehicle_bits(vehicle: str) -> dict:
@@ -37,7 +36,7 @@ def run_episode(env, ctrl: ReactiveController, seed: int, scenario_road=None,
                 collect_frames: bool = False, render_live: bool = False,
                 perception_track=None, preview_cfg=None) -> dict:
     def steps(road):
-        speed = max(float(road.speed), 1.0) if road is not None else 1.0
+        speed = max(0.2 * float(road.speed), 1.0) if road is not None else 1.0
         return runner.steps_for_road(road, speed, no_bumps=1200, floor=600)
 
     def on_start(plan_road, road):
@@ -53,10 +52,9 @@ def run_episode(env, ctrl: ReactiveController, seed: int, scenario_road=None,
 
 
 def _run_suite_reactive(env, ctrl: ReactiveController, args,
-                        save_dir: Path, log_root: Path | None, cfg,
-                        preview_cfg=None) -> None:
+                        save_dir: Path, preview_cfg=None) -> None:
     runner.run_suite(env, lambda e, seed, **kw: run_episode(e, ctrl, seed, **kw), args, save_dir,
-                     log_root, cfg, 'Reactive', 'reactive', preview_cfg)
+                     'Reactive', 'reactive', preview_cfg)
 
 
 def _render_scenarios(env, ctrl: ReactiveController, args, nav_fn=None,
@@ -74,7 +72,7 @@ def _save_plot(result: dict, ep_i: int, save_dir: Path) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser('Reactive driver baseline (intuition-based)')
-    runner.add_common_args(ap, 'Reactive')
+    runner.add_common_args(ap)
     ap.add_argument('--preview', type=float, default=None, help='preview distance in m (default: preview.yaml)')
     args = ap.parse_args()
 
@@ -105,8 +103,6 @@ def main() -> None:
         render_mode = 'none'
     env = bits['TerminationWrapper'](gym.make(bits['env_id'], render_mode=render_mode,
                                                action_mode='acceleration'))
-
-    log_root = runner.log_root(args)
 
     if args.render and not args.scenario:
         _render_scenarios(env, ctrl, args, nav_fn=bits['wait_for_episode_nav'],
@@ -139,24 +135,9 @@ def main() -> None:
     print(f'  {"-"*w}  {"-"*9}  {"-"*10}{p_sep}  {"-"*8}  {"-"*7}  {"-"*8}')
 
     if not args.scenario:
-        _run_suite_reactive(env, ctrl, args, save_dir, log_root, cfg, preview_cfg)
+        _run_suite_reactive(env, ctrl, args, save_dir, preview_cfg)
         env.close()
         return
-
-    run_logger: RunLogger | None = (
-        RunLogger(
-            method='Reactive',
-            road=scenario_label,
-            out_root=log_root,
-            dt=DT,
-            v_max_kmh=cfg.v_limit * 3.6,
-            a_comfort=cfg.a_comfort,
-            a_limit=cfg.a_limit,
-            run_subdir=False,
-            bumps=getattr(scenario_road, '_bumps', None),
-        )
-        if log_root is not None else None
-    )
 
     if args.render:
         wait_for_episode_nav = bits['wait_for_episode_nav']
@@ -180,20 +161,6 @@ def main() -> None:
 
     env.close()
 
-    if run_logger is not None:
-        run_logger.add(EpisodeData(
-            v=r['_speeds'],
-            v_init=r['_v_inits'],
-            z_B_ddot=r['_accels'],
-            action=r['_actions'],
-            susp_defl=r.get('_susp'), tire_defl=r.get('_tire'),
-            episode_return=r['episode_return'],
-            rms_accel=r['rms_accel'],
-            comfort_score=r['comfort_score'],
-            solve_ms_mean=r['act_ms_mean'],
-            cpu_ms_mean=r['cpu_ms_mean'],
-            n_params=r['n_params'],
-        ))
     if args.save_plots or args.save_gif:
         save_dir.mkdir(parents=True, exist_ok=True)
     if args.save_plots:
@@ -226,12 +193,6 @@ def main() -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(summary, indent=2))
     print(f'\n  Results → {out}')
-
-    if run_logger is not None:
-        saved = run_logger.save()
-        print(f'  data logged → {run_logger.save_dir}')
-        if 'mat' not in saved:
-            print('  (install scipy for .mat output: pip install scipy)')
 
 
 if __name__ == '__main__':
