@@ -40,6 +40,7 @@ desktop.ini
 ._*
 
 logs/
+/data/
 models/
 runs/
 outputs/
