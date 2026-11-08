@@ -4,7 +4,7 @@
 
 <p align="center">
   <img src="images/vehicle-halfcar.png" alt="Half-car model" width="720"><br>
-  <em>Half-car: body mass m<sub>B</sub> and pitch inertia I<sub>B</sub>, axles at l<sub>f</sub> and l<sub>r</sub> from the centre of gravity, pitch lever arms h<sub>T</sub> and h<sub>B</sub> (from the BSc thesis).</em>
+  <em>Half-car: body mass m<sub>B</sub> and pitch inertia I<sub>B</sub>, axles at l<sub>f</sub> and l<sub>r</sub> from the center of gravity, pitch lever arms h<sub>T</sub> and h<sub>B</sub> (from the BSc thesis).</em>
 </p>
 
 ## This implements
@@ -15,7 +15,7 @@
 
 State vector (11), displacements from static equilibrium, so gravity does not appear:
 
-- 0, 2: tyre deflection rear, front [m]
+- 0, 2: tire deflection rear, front [m]
 - 1, 3: wheel vertical velocity rear, front [m/s]
 - 4, 6: suspension deflection rear, front, wheel minus body at the axle, positive in compression [m]
 - 5: body heave velocity [m/s]
@@ -26,7 +26,7 @@ State vector (11), displacements from static equilibrium, so gravity does not ap
 
 ## Equations
 
-For axle $i \in \{f, r\}$, suspension deflection $\delta_S$, its rate $v_S$, tyre deflection $\delta_T$:
+For axle $i \in \{f, r\}$, suspension deflection $\delta_S$, its rate $v_S$, tire deflection $\delta_T$:
 
 $$F_{S,i} = k_{S,i}\,\delta_{S,i} + F^{nl}_{S,i}(\delta_{S,i}) + F_{C,i}(v_{S,i}), \qquad F_{T,i} = k_T\,\delta_{T,i} + c_T(\dot\zeta_i - \dot z_{W,i})$$
 
@@ -54,12 +54,12 @@ Values in `src/gym_env/half_car/config/env_params.py` (body, axles) and `config/
 <details><summary>Parameter list</summary>
 
 - `m_B`, `I_B`: body mass in kg, pitch inertia in kg m² [0, inf, 803, 1430]
-- `l_f`, `l_r`: centre of gravity to front, rear axle in m, wheelbase $L$ = 2.870 [0, inf, 1.206, 1.664]
+- `l_f`, `l_r`: center of gravity to front, rear axle in m, wheelbase $L$ = 2.870 [0, inf, 1.206, 1.664]
 - `h_T`, `h_B`: pitch lever arm accelerating, braking, in m [0, inf, 0.600, 0.222]
 - `m_W`: wheel mass in kg [0, inf, 50.4]
 - `k_S` front, rear: suspension stiffness in N/m [0, inf, 27915, 20231]
 - `D` front, rear: mean damping in N s/m [0, inf, 3530, 3515]
-- `k_T`, `c_T`: tyre stiffness in N/m, damping in N s/m [0, inf, 262200, 500]
+- `k_T`, `c_T`: tire stiffness in N/m, damping in N s/m [0, inf, 262200, 500]
 - `A`: compression to rebound damping ratio [0, 1, 0.5]
 - `v_d`, `v_z`: damper knee velocities in m/s [0, inf, 0.2, 0.2]
 - `dz_cmp`, `dz_rbd`: bump-stop clearances in m [0, inf, 0.02, 0.08]

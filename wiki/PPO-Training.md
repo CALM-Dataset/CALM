@@ -16,7 +16,7 @@ flowchart LR
 
 - `src/train/train.py`: arguments, run folder, callbacks, final save, `summary.json`
 - `src/train/agent.py`: builds `PPO`, parses the `lin_` learning rate, loads a model for `--resume`
-- `src/train/environment.py`: wrapper stack, vectorised training and evaluation environments, `VecNormalize`
+- `src/train/environment.py`: wrapper stack, vectorized training and evaluation environments, `VecNormalize`
 - `src/train/monitoring.py`: curriculum evaluation, checkpoints, TensorBoard metrics, validation on real roads
 - `src/utils/portable.py`: pickle-free export and loading
 - one training step is one decision (one bump); the wrappers repeat the action in between ([Action space](Action-Space))

@@ -1,6 +1,6 @@
 # Reactive driver
 
-A rule-based planner that slows for each bump by how steep it looks. It has no vehicle model and solves no optimisation.
+A rule-based planner that slows for each bump by how steep it looks. It has no vehicle model and solves no optimization.
 
 ```mermaid
 flowchart LR
@@ -32,7 +32,7 @@ The command is `-a_brake` if any bump asks for braking. Otherwise 0 while on a b
 ## Inputs and outputs
 
 - reads speed `v`, position `s_pos`, and `(x0, height, length)` for each bump of the road
-- outputs normalised acceleration `u` in [-1, 1], `a_max` = 5 m/s2
+- outputs normalized acceleration `u` in [-1, 1], `a_max` = 5 m/s2
 - results in `logs/eval/results/reactive_driver/<scenario>/`: `summary.json` for one road, `suite_reactive_<time>.json` for suites
 
 ## Parameters
