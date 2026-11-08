@@ -43,7 +43,7 @@ flowchart LR
 - `speed`, `speed_kmh`, `v_init`, `v_init_kmh`: current speed, top speed of the episode.
 - `step_count`, `episode_time`: 20 ms steps, simulated seconds.
 - `z_B_ddot`, `z_W_ddot`, `phi_ddot`: body, front wheel, pitch acceleration of the last step, unweighted.
-- `rms_accel`, `peak_accel`, `susp_defl`, `tire_defl`: running RMS and peak of the body acceleration, front suspension and tyre deflection.
+- `rms_accel`, `peak_accel`, `susp_defl`, `tire_defl`: running RMS and peak of the body acceleration, front suspension and tire deflection.
 - `bumps_passed`, `bumps_total`, `holes_passed`, `holes_total`: obstacles behind the car and on the road.
 - `J_heave`, `J_wheel`, `J_pitch`, `J_long_acc`, `J_long_jerk`, `J_long_vel`, `J_act_smooth`, `J_total`: weighted reward terms of the last step.
 - `termination_reason`: `completed`, `timeout` or `crash_*`, set on the last step.

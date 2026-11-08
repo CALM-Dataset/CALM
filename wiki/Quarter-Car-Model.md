@@ -1,10 +1,10 @@
 # Quarter-car model
 
-`QuarterCarODE` is the one-corner vehicle: a sprung mass on a nonlinear suspension, an unsprung mass on a tyre. Select it with `--vehicle quarter`, id `gym_env/QuarterCar`.
+`QuarterCarODE` is the one-corner vehicle: a sprung mass on a nonlinear suspension, an unsprung mass on a tire. Select it with `--vehicle quarter`, id `gym_env/QuarterCar`.
 
 <p align="center">
   <img src="images/vehicle-quartercar.png" alt="Quarter-car model" width="720"><br>
-  <em>Quarter-car: sprung mass m<sub>B</sub>, unsprung mass m<sub>W</sub>, suspension (k<sub>S</sub>, c<sub>S</sub>), tyre (k<sub>T</sub>, c<sub>T</sub>) and road height ζ (from the BSc thesis).</em>
+  <em>Quarter-car: sprung mass m<sub>B</sub>, unsprung mass m<sub>W</sub>, suspension (k<sub>S</sub>, c<sub>S</sub>), tire (k<sub>T</sub>, c<sub>T</sub>) and road height ζ (from the BSc thesis).</em>
 </p>
 
 ## This implements
@@ -15,7 +15,7 @@
 
 State vector (6):
 
-- 0: tyre deflection [m]
+- 0: tire deflection [m]
 - 1: wheel vertical velocity [m/s]
 - 2: suspension deflection, wheel minus body, positive in compression [m]
 - 3: body heave velocity [m/s]
@@ -51,7 +51,7 @@ In `config/gym_env/env.yaml`: `name`: meaning [min, max, default].
 - `D`: mean damping in N s/m [0, inf, 3530]
 - `A`: compression to rebound damping ratio [0, 1, 0.5]
 - `v_d`, `v_z`: damper knee velocities in m/s [0, inf, 0.2, 0.2]
-- `k_T`, `c_T`: tyre stiffness in N/m, damping in N s/m [0, inf, 262200, 500]
+- `k_T`, `c_T`: tire stiffness in N/m, damping in N s/m [0, inf, 262200, 500]
 - `dz_cmp`, `dz_rbd`: bump-stop clearances in m [0, inf, 0.02, 0.08]
 - `f1_cmp`, `f2_cmp`, `f1_rbd`, `f2_rbd`: bump-stop shape [0, inf, 1/3, 4, 1, 8]
 - `F_ks_nlin_max`: bump-stop force clip in N [0, inf, 100000]

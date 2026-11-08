@@ -82,7 +82,7 @@ Box action $u \in [-1, 1]$. Only negative values act:
 
 $$v_\text{target} = v_\text{top} + (v_\text{top} - v_\text{floor})\,\min(u, 0)$$
 
-So $u = -1$ targets $v_\text{floor}$, $u = 0$ and above target $v_\text{top}$. No window. With the training penalty on (`action_saturation_penalty` above 0), `ActionSaturationPenalty` uses an upper bound of 0 for this mode, so positive actions are penalised.
+So $u = -1$ targets $v_\text{floor}$, $u = 0$ and above target $v_\text{top}$. No window. With the training penalty on (`action_saturation_penalty` above 0), `ActionSaturationPenalty` uses an upper bound of 0 for this mode, so positive actions are penalized.
 
 ## acceleration
 

@@ -1,13 +1,13 @@
 # Reward function
 
-The per-step reward penalises Wk-weighted body acceleration and the longitudinal acceleration of the speed change. In training, `RelativeComfort` rescales it against constant-speed drives on the same road.
+The per-step reward penalizes Wk-weighted body acceleration and the longitudinal acceleration of the speed change. In training, `RelativeComfort` rescales it against constant-speed drives on the same road.
 
 ```mermaid
 flowchart LR
     CE["CarEnv.step<br/>compute_reward: J_heave, J_acc, J_jerk, J_smooth"] --> RC["RelativeComfort<br/>comfort rescaling, time price"]
     RC --> TW["TerminationWrapper<br/>+100 completed, -250 crash or timeout"]
     TW --> DW["DecisionWrapper<br/>sum over the decision"]
-    DW --> VN["VecNormalize<br/>reward normalised in training"]
+    DW --> VN["VecNormalize<br/>reward normalized in training"]
     FR[("Frontier: 8 constant-speed drives per road")] --> RC
 ```
 

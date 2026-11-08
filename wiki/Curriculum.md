@@ -43,7 +43,7 @@ Generator `config/train/scenario_gen.yaml` (`calm gen-scenes`, also writes `conf
 - `obstacle_mode`: `bumps`, `potholes` or `both`; `--mode` overrides [`bumps`]
 - `per_level`: scenarios per tier [200]
 - `v_min_kmh`, `v_max_kmh`: road speed range [15, 30]
-- `flat_start_range`: metres of flat road before the obstacle [[10, 20]]
+- `flat_start_range`: meters of flat road before the obstacle [[10, 20]]
 - `real_range.height_mm`, `real_range.width_m`: log-uniform sampling range of bumps, matched to the real crossings [[30, 120], [1.5, 7]]
 - `real_range.samples`: sampled bumps [1500]
 - `difficulty_thresholds`: upper limits of the tiers [easy 0.30, medium 0.57, hard 0.78, expert 1.01]

@@ -77,6 +77,6 @@ Config: `config/gym_env/render.yaml`. Legend: `name`: meaning [default].
 - `RENDER_MUSIC`: background music with mute button and volume slider, needs pygame [false].
 
 > [!NOTE]
-> While a wheel is on an obstacle, its tyre and contact point turn red.
+> While a wheel is on an obstacle, its tire and contact point turn red.
 
 See also: [Command line](Command-Line), [Half-car model](Half-Car-Model), [Comfort metric](Comfort-Metric), [Troubleshooting](Troubleshooting)

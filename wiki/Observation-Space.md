@@ -58,7 +58,7 @@ with $D$ = `preview_distance`, $L_\text{clip}$ = `length_clip`, $A_\text{clip}$ 
 
 The frequency uses the top speed, so it describes the bump as it would be met without slowing. An empty slot is $(1, 0, 0, 0)$. Bumps start at most `preview_distance` ahead and the front axle has not passed their end, nearest first. Holes (negative height) are not listed.
 
-Normalisation: $\mathrm{clip}\big((o - \mu)/\sqrt{\sigma^2 + \epsilon},\ -10,\ 10\big)$ with $\epsilon = 10^{-8}$ and `clip_obs` 10. The statistics are saved next to the model as `vecnormalize.pkl` and frozen for evaluation. `utils.portable` writes `vecnormalize.json` for the safetensors format.
+Normalization: $\mathrm{clip}\big((o - \mu)/\sqrt{\sigma^2 + \epsilon},\ -10,\ 10\big)$ with $\epsilon = 10^{-8}$ and `clip_obs` 10. The statistics are saved next to the model as `vecnormalize.pkl` and frozen for evaluation. `utils.portable` writes `vecnormalize.json` for the safetensors format.
 
 ## Parameters
 

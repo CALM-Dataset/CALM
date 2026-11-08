@@ -67,7 +67,7 @@ The real roads are built on the CARD recordings. Cite CARD too:
 }
 ```
 
-## Acknowledgement
+## Acknowledgment
 
 - CARD, the recordings behind the real roads.
 - acados, the solver of the MPC planner.
