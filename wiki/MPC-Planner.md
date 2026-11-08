@@ -23,13 +23,13 @@ The half-car is not part of the online problem. The crossing speeds are chosen w
 
 Crossing speed:
 - `comfort_map`: for each bump alone on a flat road the half-car drives it at every speed of a grid from `v_min` to `v_limit` in steps of `dv`; the speed with the best window reward wins. The window reward is the sum of `Q_zBddot`, `Q_zWddot`, `Q_pitch` terms plus `track_scale * Q_v * (-|v - v_nom| / v_nom)` per step. The half-car uses `comfort_map.vehicle` (stiffness x1.06, damping x0.16).
-- `frontier`: coordinate search over all bumps of the road, up to 2 passes, grid of 0.4 m/s, maximising the return the policy is trained on. Weights come from `config/reward/reward.yaml` (`rel_scale`, `rel_time_quad`, `Q_a`, `w_jerk`, `w_action_smooth`). The constant-speed reference uses 8 speeds from `v_hard_min` to `v_nom`. Select it with `calm compare --mpc-objective frontier`.
+- `frontier`: coordinate search over all bumps of the road, up to 2 passes, grid of 0.4 m/s, maximising the return the policy is trained on. Weights come from `config/reward/reward.yaml` (`rel_scale`, `rel_time_quad`, `Q_a`, `w_jerk`, `w_action_smooth`). The constant-speed reference uses 8 speeds from `v_hard_min` to `v_nom`. The ramps before and after a bump use `frontier.ramp_decel` (1.0 m/s²) in `config/baseline/mpc.yaml`, not `a_max`. Select it with `calm compare --mpc-objective frontier`.
 
 ## Inputs and outputs
 
 Reads:
 - road with `(x0, height, length)` per bump, current speed `v`, position `s`
-- parameter per node: `v_ref`, ramped down from `max(v, v_nom)` to `v_c` at `a_max` before the bump, held until the rear axle has left it (`x0 + L + wheelbase`), ramped back to `v_nom`, clipped to `[v_min, v_limit]`
+- parameter per node: `v_ref`, ramped down from `max(v, v_nom)` to `v_c` at `a_max` before the bump (`frontier.ramp_decel` with the frontier objective), held until the rear axle has left it (`x0 + L + wheelbase`), ramped back to `v_nom`, clipped to `[v_min, v_limit]`
 
 Outputs:
 - `u` in [-1, 1], acceleration `a_max * u`, `a_max` = 5 m/s2
