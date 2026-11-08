@@ -11,9 +11,6 @@ CALM recommends how much a car should slow down for a speed bump so that the peo
 
 *The half-car simulator on a real bump from Augsburg, with body motion, pitch, speed and acceleration traced on the right.*
 
-> [!NOTE]
-> The real roads are gated on Hugging Face. Synthetic roads need no download, so a first run works without access.
-
 ## Installation
 
 You need Python 3.10 or newer and [just](https://github.com/casey/just).
