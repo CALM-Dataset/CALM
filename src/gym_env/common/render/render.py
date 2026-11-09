@@ -18,7 +18,7 @@ mpl.rcParams['font.family'] = 'serif'
 mpl.rcParams['font.serif'] = ['Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'Times', 'DejaVu Serif']
 mpl.rcParams['mathtext.fontset'] = 'stix'
 
-_BUMP_COLOURS = ['#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#d35400']
+_BUMP_COLORS = ['#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#d35400']
 _SPEED_SEQ = (0.1, 0.25, 0.5, 1, 2, 4, 8, 16)
 _CONTROLS = (
     ('Space', 'pause / resume'),
@@ -114,10 +114,10 @@ class Wheel:
     def update(self, y_W, y_road, on_obstacle, rot, rx):
         g, x_c = self._g, self._x
         self._contact.set_data([x_c] if on_obstacle else [], [y_road] if on_obstacle else [])
-        colour = _C_TIRE_HIT if on_obstacle else _C_TIRE_PART
+        color = _C_TIRE_HIT if on_obstacle else _C_TIRE_PART
         for ln in self._tire_lines:
-            ln.set_color(colour)
-        self._pist.set_facecolor(colour)
+            ln.set_color(color)
+        self._pist.set_facecolor(color)
 
         y_top = y_W - g['hub_h'] / 2
         if y_top > y_road + 0.05:
@@ -206,7 +206,7 @@ def build_bump_vlines(env, ax_r):
         return bump_vlines, bump_signature(bumps)
 
     for i, (x0, A, L) in enumerate(bumps):
-        col  = _BUMP_COLOURS[i % len(_BUMP_COLOURS)]
+        col  = _BUMP_COLORS[i % len(_BUMP_COLORS)]
         name = labels[i] if i < len(labels) else None
         if A is None:
             name  = name or f'Bump {i+1}'
