@@ -18,7 +18,7 @@ flowchart LR
 - `HalfCarODE` and `QuarterCarODE` in `src/gym_env/*/core/ode_model.py`: right-hand side and RK4 loop compiled with Numba.
 - Parameters and observation bounds in `src/gym_env/*/config/env_params.py` and `config/gym_env/env.yaml`.
 - Live drawing per vehicle in `src/gym_env/*/envs/render.py`.
-- Shared parts: linear spring with exponential bump stops (`_spring_nonlin`), asymmetric damper (`_damper`), linear tyre spring and damper without lift-off.
+- Shared parts: linear spring with exponential bump stops (`_spring_nonlin`), asymmetric damper (`_damper`), linear tire spring and damper without lift-off.
 
 | | [Half-Car-Model](Half-Car-Model) | [Quarter-Car-Model](Quarter-Car-Model) |
 |---|---|---|

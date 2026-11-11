@@ -17,7 +17,7 @@ flowchart LR
 - `WkStream` in the reward (`src/gym_env/common/car_env.py`) when `wk_heave` is true in `config/reward/reward.yaml`
 - a test against the standard's table: `tests/comfort/test_iso2631.py` (absolute tolerance 0.005)
 
-Filter: analogue `Wk(s)` from a second-order band limit (high pass `f1`, low pass `f2`, Butterworth), the acceleration-velocity transition (`f3`, `f4`, `Q4`) and the upward step (`f5`, `f6`, `Q5`, `Q6`, gain `K`), with `w = 2 pi f`:
+Filter: analog `Wk(s)` from a second-order band limit (high pass `f1`, low pass `f2`, Butterworth), the acceleration-velocity transition (`f3`, `f4`, `Q4`) and the upward step (`f5`, `f6`, `Q5`, `Q6`, gain `K`), with `w = 2 pi f`:
 
 ```
 Wk(s) = s^2 w2^2 * w4^2 (s/w3 + 1) * K (s^2/w5^2 + s/(Q5 w5) + 1)
