@@ -88,6 +88,7 @@ scratch/
 # results and figures stay local until they are published on purpose
 results/
 figures/
+!assets/figures/
 stats/
 *.csv
 !config/**/*.csv
