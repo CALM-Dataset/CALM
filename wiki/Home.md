@@ -48,6 +48,16 @@ Hugging Face, CC BY-NC 4.0, access on request.
 ## Citing CALM
 
 ```bibtex
+@thesis{azab2026calm,
+  title  = {Comfort-Aware Speed Planning over Road Anomalies: A Reinforcement-Learning Approach},
+  author = {Mohammed El Said Azab Abdelazim},
+  institution = {Technische Universit{\"a}t Berlin},
+  type   = {Bachelor's thesis},
+  year   = {2026}
+}
+```
+
+```bibtex
 @misc{calm_dataset,
   title  = {CALM: Comfort-Aware Longitudinal Motion Planning},
   author = {Mohammed El Said Azab Abdelazim},
@@ -59,7 +69,7 @@ Hugging Face, CC BY-NC 4.0, access on request.
 The real roads are built on the CARD recordings. Cite CARD too:
 
 ```bibtex
-@inproceedings{elazab2025card,
+@inproceedings{elazab2026card,
   title     = {CARD: A Multi-Modal Automotive Dataset for Dense 3D Reconstruction in Challenging Road Topography},
   author    = {Elazab, Gasser and Neuhaus, Frank and Ko{\ss}, Tilman and Splietker, Malte and Date, Aditya and Unterreiner, Michael and Jansen, Maximilian and Hellwich, Olaf},
   booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},

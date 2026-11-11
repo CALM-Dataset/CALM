@@ -264,8 +264,8 @@ def init_render(env):
     ts = {}
     for i, ax in enumerate(ax_r):
         series, ylabel = ts_specs[i]
-        for key, label, colour, style in series:
-            ts[key], = ax.plot([], [], style, color=colour, lw=1.2, label=label)
+        for key, label, color, style in series:
+            ts[key], = ax.plot([], [], style, color=color, lw=1.2, label=label)
 
         ax.spines[['top', 'right']].set_visible(False)
         ax.tick_params(labelsize=7.5, direction='in', top=False, right=False)

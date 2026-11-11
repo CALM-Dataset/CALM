@@ -9,6 +9,7 @@ pip  := env("CALM_PIP", bindir + if os() == "windows" { "/pip.exe" } else { "/pi
 calm := venv + " -m calm"
 
 export PYTHONPATH := "src"
+export PYTHONUTF8 := "1"
 export ACADOS_SOURCE_DIR := justfile_directory() + "/acados"
 export LD_LIBRARY_PATH := justfile_directory() + "/acados/lib:" + env("LD_LIBRARY_PATH", "")
 
