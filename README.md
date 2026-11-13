@@ -99,7 +99,9 @@ The first quarter-car implementation is kept at the git tag `thesis-quarter-car`
   author = {Mohammed El Said Azab Abdelazim},
   institution = {Technische Universit{\"a}t Berlin},
   type   = {Bachelor's thesis},
-  year   = {2026}
+  year   = {2026},
+  doi    = {10.14279/depositonce-26841},
+  url    = {https://doi.org/10.14279/depositonce-26841}
 }
 ```
 
