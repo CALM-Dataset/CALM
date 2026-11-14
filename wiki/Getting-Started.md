@@ -75,7 +75,7 @@ calm fetch
 calm gen-scenes
 ```
 
-- `calm fetch` skips crossings marked `low_confidence` and the one under `exclude` in `split.yaml`.
+- `calm fetch` skips crossings marked `low_confidence` and any under `exclude` in `split.yaml`.
 - It fills `config/train/scenarios/real/` (90 crossings), `config/eval/scenarios/real_train/` (a copy) and `config/eval/scenarios/real/` (14 held-out crossings).
 - `calm gen-scenes` writes the generated training roads, 200 per difficulty level.
 
