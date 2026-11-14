@@ -5,7 +5,7 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab)
 [![Hugging Face](https://img.shields.io/badge/Hugging%20Face-CALM--Dataset-ffd21e)](https://huggingface.co/CALM-Dataset)
 
-CALM recommends how much a car should slow down for a speed bump so that the people inside barely feel it, without wasting time. It is a half-car and quarter-car simulator with nonlinear suspension, wrapped as Gymnasium environments, with a PPO policy, an acados MPC and a rule-based driver on top. Comfort is measured with the ISO 2631-1 weighted acceleration, on 159 recorded bump crossings from Germany and Italy built on CARD.
+CALM is an open-source stack and benchmark for comfort-aware speed planning over real speed bumps. It has half-car and quarter-car simulators with nonlinear suspension, wrapped as Gymnasium environments, an ISO 2631-1 scorer, and roads built from 159 recorded bump crossings in Germany and Italy (105 usable) from CARD. An acados MPC, a PPO policy and a rule-based driver are included as reference planners, and any other planner can be scored on the same roads.
 
 ![The CALM simulator](assets/gym_env.png)
 
