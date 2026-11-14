@@ -16,7 +16,7 @@ flowchart LR
 ## This implements
 
 - 10 synthetic roads in two suites, 30 km/h, obstacle at 40 m
-- 105 qualified real crossings (64 Germany, 41 Italy): 14 held out for evaluation, 90 for training, `augsburg_sb06` excluded
+- 105 qualified real crossings (64 Germany, 41 Italy): 14 held out for evaluation, 91 for training
 - `calm fetch` (`just fetch-scenarios`): download and placement by `ensure_local` in `src/utils/dataset.py`
 - trimming of the profile on load (`config/gym_env/scenario_trim.yaml`)
 
@@ -56,7 +56,7 @@ Fields of the crossing JSON are on [Dataset format](Dataset-Format).
 
 `split.yaml`:
 - `eval`: the 14 held-out roads
-- `exclude`: `augsburg_sb06`, the same bump as the held-out `augsburg_sb13` driven the other way
+- `exclude`: crossings left out of both sets; empty, so all 105 qualified crossings are placed
 
 ## Basic use
 
